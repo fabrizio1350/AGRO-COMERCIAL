@@ -6,10 +6,10 @@
 <div class="row g-4">
     <div class="col-md-4">
         <div class="bg-white border rounded-3 p-4 shadow-sm text-center">
-            <img src="/static/imagenes/finca_productor.jpg" alt="Perfil" class="img-referencia mx-auto mb-3 d-block" style="width: 140px; height: 140px;">
+            <img src="/static/imagenes/finca_productor.jpg" alt="Perfil" class="img-referencia mx-auto mb-3 d-block" style="width: 130px; height: 130px;">
             <h4 class="h5 fw-bold mb-1">{{ user.first_name|default:user.username }} {{ user.last_name }}</h4>
             <p class="text-muted small mb-2">@{{ user.username }}</p>
-            <span class="badge {% if perfil.rol == 'PRODUCTOR' %}bg-success{% else %}bg-info text-dark{% endif %} mb-3">
+            <span class="badge {% if perfil.rol == 'PRODUCTOR' %}bg-success{% else %}bg-secondary{% endif %} mb-3">
                 {{ perfil.get_rol_display }}
             </span>
 
@@ -18,8 +18,9 @@
                 <div class="mb-1"><strong>Correo:</strong> {{ user.email|default:"No especificado" }}</div>
                 <div class="mb-1"><strong>Teléfono:</strong> {{ perfil.telefono|default:"No especificado" }}</div>
                 <div class="mb-1"><strong>Ubicación:</strong> {{ perfil.ubicacion|default:"No especificada" }}</div>
-                {% if perfil.nombre_finca %}
-                <div><strong>Finca / Empresa:</strong> {{ perfil.nombre_finca }}</div>
+                {% if perfil.rol == 'PRODUCTOR' %}
+                <div class="mb-1"><strong>Finca / Asociación:</strong> {{ perfil.nombre_finca|default:"No especificada" }}</div>
+                <div><strong>Cuenta en Soles:</strong> {{ perfil.cuenta_bancaria|default:"No registrada" }}</div>
                 {% endif %}
             </div>
         </div>
@@ -27,7 +28,7 @@
 
     <div class="col-md-8">
         <div class="bg-white border rounded-3 p-4 shadow-sm">
-            <h3 class="h5 fw-bold mb-3">Actualizar Información de Perfil y Rol</h3>
+            <h3 class="h5 fw-bold mb-3">Actualizar Información de Mi Cuenta</h3>
             <form method="post">
                 {% csrf_token %}
                 <div class="row g-3">
@@ -52,17 +53,29 @@
                         {{ form.ruc_dni }}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Teléfono de contacto</label>
+                        <label class="form-label small fw-semibold">Teléfono / Celular de contacto</label>
                         {{ form.telefono }}
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <label class="form-label small fw-semibold">Ubicación / Región</label>
                         {{ form.ubicacion }}
                     </div>
+
+                    {% if perfil.rol == 'PRODUCTOR' %}
                     <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Finca, Asociación o Empresa</label>
+                        <label class="form-label small fw-semibold">Finca o Asociación Agrícola</label>
                         {{ form.nombre_finca }}
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Cuenta Bancaria en Soles (para transferencias)</label>
+                        {{ form.cuenta_bancaria }}
+                    </div>
+                    {% else %}
+                    <div class="d-none">
+                        {{ form.nombre_finca }}
+                        {{ form.cuenta_bancaria }}
+                    </div>
+                    {% endif %}
                 </div>
                 <button type="submit" class="btn btn-success fw-semibold mt-4 px-4">
                     Guardar Cambios
