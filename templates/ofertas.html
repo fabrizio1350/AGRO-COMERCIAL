@@ -9,7 +9,7 @@
         {% if rol_actual == 'PRODUCTOR' %}
             <p class="text-muted small mb-0">Revisa y responde las ofertas de compra enviadas por los compradores sobre tus productos.</p>
         {% else %}
-            <p class="text-muted small mb-0">Aprovecha productos con descuento directo o propón un precio por cantidad al vendedor.</p>
+            <p class="text-muted small mb-0">Aprovecha productos con descuento directo o filtra el catálogo para proponer un precio por cantidad al vendedor.</p>
         {% endif %}
     </div>
 </div>
@@ -100,20 +100,47 @@
 
 {% else %}
     <!-- VISTA EXCLUSIVA PARA EL COMPRADOR / VISITANTE -->
+
+    <!-- Buscador y filtro de productos para encontrar rápido qué producto ofertar o comprar con descuento -->
+    <div class="bg-white border p-3 mb-4">
+        <form method="get" action="{% url 'ventas_por_oferta' %}" class="row g-2 align-items-end">
+            <input type="hidden" name="tab" id="inputTabActiva" value="{{ request.GET.tab|default:'descuentos' }}">
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold mb-1">Buscar producto para ofertar o comprar</label>
+                <input type="text" name="q" value="{{ busqueda }}" class="form-control form-control-sm" placeholder="Ej. Papa, Café, Limón, Quinua...">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold mb-1">Filtrar por Categoría Agrícola</label>
+                <select name="categoria" class="form-select form-select-sm">
+                    <option value="">Todas las categorías</option>
+                    {% for cat in categorias %}
+                        <option value="{{ cat.id }}" {% if categoria_id == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-success btn-sm w-100">Filtrar Productos</button>
+                {% if busqueda or categoria_id %}
+                    <a href="{% url 'ventas_por_oferta' %}?tab={{ request.GET.tab|default:'proponer' }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-descuentos" type="button" role="tab">
+            <button class="nav-link {% if request.GET.tab != 'proponer' and request.GET.tab != 'mis-ofertas' %}active{% endif %} fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-descuentos" type="button" role="tab" onclick="document.getElementById('inputTabActiva').value='descuentos'">
                 1. Productos con Descuento ({{ productos_remate.count }})
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-proponer" type="button" role="tab">
-                2. Proponer Oferta por Cantidad
+            <button class="nav-link {% if request.GET.tab == 'proponer' %}active{% endif %} fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-proponer" type="button" role="tab" onclick="document.getElementById('inputTabActiva').value='proponer'">
+                2. Proponer Oferta por Cantidad ({{ productos_negociables.count }})
             </button>
         </li>
         {% if user.is_authenticated %}
         <li class="nav-item" role="presentation">
-            <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-mis-ofertas" type="button" role="tab">
+            <button class="nav-link {% if request.GET.tab == 'mis-ofertas' %}active{% endif %} fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-mis-ofertas" type="button" role="tab" onclick="document.getElementById('inputTabActiva').value='mis-ofertas'">
                 3. Mis Ofertas Enviadas ({{ mis_ofertas_enviadas|length }})
             </button>
         </li>
@@ -122,7 +149,7 @@
 
     <div class="tab-content">
         <!-- Pestaña 1: Descuentos directos -->
-        <div class="tab-pane fade show active" id="tab-descuentos" role="tabpanel">
+        <div class="tab-pane fade {% if request.GET.tab != 'proponer' and request.GET.tab != 'mis-ofertas' %}show active{% endif %}" id="tab-descuentos" role="tabpanel">
             <div class="row g-4">
                 {% for prod in productos_remate %}
                 <div class="col-md-6 col-lg-4">
@@ -144,36 +171,46 @@
                                     <span class="fs-5 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
                                     <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
                                 </div>
-                                {% if user.is_authenticated %}
-                                <form action="{% url 'agregar_al_carrito' prod.id %}" method="post">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
-                                    <input type="hidden" name="comprar_ahora" value="1">
-                                    <button type="submit" class="btn btn-success btn-sm">Comprar</button>
-                                </form>
-                                {% else %}
-                                <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-success btn-sm">Ver Oferta</a>
-                                {% endif %}
+                                <div class="d-flex gap-1">
+                                    <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-secondary btn-sm">Detalle</a>
+                                    {% if user.is_authenticated %}
+                                    <form action="{% url 'agregar_al_carrito' prod.id %}" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
+                                        <input type="hidden" name="comprar_ahora" value="1">
+                                        <button type="submit" class="btn btn-success btn-sm">Comprar</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="bg-white border p-4 text-center text-muted small">
+                        No se encontraron productos en oferta con ese filtro.
                     </div>
                 </div>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- Pestaña 2: Proponer oferta -->
-        <div class="tab-pane fade" id="tab-proponer" role="tabpanel">
+        <!-- Pestaña 2: Proponer oferta con filtro integrado -->
+        <div class="tab-pane fade {% if request.GET.tab == 'proponer' %}show active{% endif %}" id="tab-proponer" role="tabpanel">
             <div class="row g-3">
                 {% for prod in productos_negociables %}
                 <div class="col-md-6">
                     <div class="bg-white border p-3 h-100">
                         <div class="d-flex gap-3 align-items-center mb-3">
                             <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia flex-shrink-0" style="width: 90px; height: 80px;">
-                            <div>
-                                <h6 class="fw-bold mb-1">{{ prod.nombre }}</h6>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="fw-bold mb-1">{{ prod.nombre }}</h6>
+                                    <a href="{% url 'detalle_producto' prod.id %}" class="text-success small text-decoration-none">Ver ficha</a>
+                                </div>
                                 <div class="text-muted small">Precio actual: <strong>S/ {{ prod.precio_actual }} / {{ prod.get_unidad_display }}</strong></div>
-                                <div class="text-muted small">Origen: {{ prod.origen }} ({{ prod.stock }} disponibles)</div>
+                                <div class="text-muted small">Origen: {{ prod.origen }} • Stock: {{ prod.stock }}</div>
                             </div>
                         </div>
 
@@ -181,7 +218,7 @@
                         <form action="{% url 'detalle_producto' prod.id %}" method="post" class="p-2 rounded border bg-light">
                             {% csrf_token %}
                             <input type="hidden" name="tipo_accion" value="enviar_oferta">
-                            <div class="row g-2">
+                            <div class="row g-2 align-items-center">
                                 <div class="col-4">
                                     <input type="number" name="cantidad" class="form-control form-control-sm" value="{{ prod.minimo_compra }}" min="1" max="{{ prod.stock }}" placeholder="Cant." required>
                                 </div>
@@ -194,10 +231,16 @@
                             </div>
                         </form>
                         {% else %}
-                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-primary btn-sm w-100">
+                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-success btn-sm w-100">
                             Inicia sesión como Comprador para ofertar
                         </a>
                         {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="bg-white border p-4 text-center text-muted small">
+                        No se encontraron productos negociables con ese filtro. Prueba buscando otra categoría o nombre.
                     </div>
                 </div>
                 {% endfor %}
@@ -206,7 +249,7 @@
 
         <!-- Pestaña 3: Mis ofertas enviadas (Comprador) -->
         {% if user.is_authenticated %}
-        <div class="tab-pane fade" id="tab-mis-ofertas" role="tabpanel">
+        <div class="tab-pane fade {% if request.GET.tab == 'mis-ofertas' %}show active{% endif %}" id="tab-mis-ofertas" role="tabpanel">
             <div class="bg-white border p-4">
                 {% if mis_ofertas_enviadas %}
                 <div class="table-responsive">
