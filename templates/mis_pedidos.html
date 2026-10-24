@@ -1,20 +1,21 @@
 {% extends 'base.html' %}
 
-{% block title %}Mis Pedidos | AgroComercial{% endblock %}
+{% block title %}Mis Compras y Comprobantes | AgroComercial{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
-        <h1 class="h3 fw-bold mb-1">Mis Pedidos Realizados</h1>
-        <p class="text-muted mb-0">Revisa el estado de tus compras directas a productores agrícolas.</p>
+        <span class="badge bg-info text-dark mb-1">HISTORIAL DEL COMPRADOR</span>
+        <h1 class="h3 fw-bold mb-1">Mis Compras y Comprobantes de Pago</h1>
+        <p class="text-muted mb-0">Revisa el estado de tus pedidos, método de pago en pasarela y boletas electrónicas.</p>
     </div>
     <div class="mt-3 mt-md-0 d-flex align-items-center gap-3">
         <div class="bg-white border rounded-3 px-3 py-2 shadow-sm">
             <span class="text-muted small">Total acumulado:</span>
             <strong class="text-success ms-1">S/ {{ total_gastado|default:"0.00" }}</strong>
         </div>
-        <a href="{% url 'catalogo' %}" class="btn btn-success">
-            + Nuevo Pedido
+        <a href="{% url 'catalogo' %}" class="btn btn-success fw-semibold">
+            + Ir al Marketplace
         </a>
     </div>
 </div>
@@ -30,9 +31,12 @@
                         [Espacio para Imagen]
                     </div>
                 </div>
-                <div class="col-md-5">
-                    <div class="d-flex align-items-center gap-2 mb-1">
+                <div class="col-md-4">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                         <span class="badge bg-light text-dark border">Pedido #{{ ped.id }}</span>
+                        {% if ped.codigo_transaccion %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ ped.codigo_transaccion }}</span>
+                        {% endif %}
                         <span class="text-muted small">{{ ped.fecha_pedido|date:"d/m/Y H:i" }}</span>
                     </div>
                     <h5 class="fw-bold mb-1">
@@ -41,39 +45,41 @@
                         </a>
                     </h5>
                     <div class="text-muted small">
-                        Productor: <strong>{{ ped.producto.productor.first_name|default:ped.producto.productor.username }} {{ ped.producto.productor.last_name }}</strong>
-                        {% if ped.producto.productor.perfil.telefono %}
-                            | Tel: {{ ped.producto.productor.perfil.telefono }}
-                        {% endif %}
+                        Vendedor: <strong>{{ ped.producto.productor.first_name|default:ped.producto.productor.username }} {{ ped.producto.productor.last_name }}</strong>
                     </div>
                     <div class="text-secondary small mt-1">
-                        Dirección de entrega: {{ ped.direccion_entrega }}
+                        Entrega: {{ ped.direccion_entrega }} ({{ ped.ciudad_destino }})
                     </div>
                 </div>
-                <div class="col-md-3 text-md-center">
+                <div class="col-md-3">
                     <div class="small text-muted">Cantidad: <strong>{{ ped.cantidad }}</strong> ({{ ped.producto.get_unidad_display }})</div>
                     <div class="fs-5 fw-bold text-success">Total: S/ {{ ped.total }}</div>
+                    <div class="small text-secondary mt-1">
+                        Pasarela: <strong>{{ ped.get_metodo_pago_display }}</strong>
+                    </div>
                 </div>
-                <div class="col-md-2 text-md-end">
+                <div class="col-md-3 text-md-end">
                     <div class="mb-2">
-                        {% if ped.estado == 'PENDIENTE' %}
-                            <span class="badge bg-warning text-dark">{{ ped.get_estado_display }}</span>
-                        {% elif ped.estado == 'CONFIRMADO' or ped.estado == 'EN_CAMINO' %}
-                            <span class="badge bg-info text-dark">{{ ped.get_estado_display }}</span>
-                        {% elif ped.estado == 'ENTREGADO' %}
-                            <span class="badge bg-success">{{ ped.get_estado_display }}</span>
-                        {% else %}
-                            <span class="badge bg-danger">{{ ped.get_estado_display }}</span>
-                        {% endif %}
+                        <span class="badge {% if ped.estado == 'CANCELADO' %}bg-danger{% elif ped.estado == 'ENTREGADO' %}bg-success{% else %}bg-info text-dark{% endif %}">
+                            {{ ped.get_estado_display }}
+                        </span>
                     </div>
 
-                    {% if ped.estado == 'PENDIENTE' %}
-                    <form action="{% url 'cambiar_estado_pedido' ped.id %}" method="post" onsubmit="return confirm('¿Deseas cancelar este pedido?');">
-                        {% csrf_token %}
-                        <input type="hidden" name="estado" value="CANCELADO">
-                        <button type="submit" class="btn btn-outline-danger btn-sm">Cancelar pedido</button>
-                    </form>
-                    {% endif %}
+                    <div class="d-flex flex-wrap justify-content-md-end gap-1">
+                        {% if ped.codigo_transaccion %}
+                        <a href="{% url 'comprobante_pago' ped.codigo_transaccion %}" class="btn btn-outline-primary btn-sm">
+                            Ver Comprobante
+                        </a>
+                        {% endif %}
+
+                        {% if ped.estado == 'PENDIENTE' or ped.estado == 'CONFIRMADO' %}
+                        <form action="{% url 'cambiar_estado_pedido' ped.id %}" method="post" onsubmit="return confirm('¿Deseas cancelar este pedido?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="estado" value="CANCELADO">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Cancelar</button>
+                        </form>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,9 +88,9 @@
 </div>
 {% else %}
 <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
-    <h5 class="fw-bold text-secondary">Todavía no has realizado ningún pedido</h5>
-    <p class="text-muted mb-3">Explora el catálogo agrícola para comprar lotes directamente a los productores.</p>
-    <a href="{% url 'catalogo' %}" class="btn btn-success">Ir al Catálogo Agrícola</a>
+    <h5 class="fw-bold text-secondary">Todavía no has realizado ninguna compra</h5>
+    <p class="text-muted mb-3">Explora el Marketplace o las Ventas por Oferta para agregar productos al carrito y pagar en la pasarela.</p>
+    <a href="{% url 'catalogo' %}" class="btn btn-success">Ir al Marketplace Agrícola</a>
 </div>
 {% endif %}
 {% endblock %}
