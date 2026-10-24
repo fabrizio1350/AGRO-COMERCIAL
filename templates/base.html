@@ -214,6 +214,20 @@
             color: var(--agro-verde) !important;
             border-color: var(--agro-border) var(--agro-border) #fff !important;
         }
+        .navbar-nav .nav-link {
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.38rem;
+            padding: 0.45rem 0.75rem !important;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            color: rgba(255, 255, 255, 0.88) !important;
+        }
+        .navbar-nav .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+            color: #ffffff !important;
+        }
     </style>
 </head>
 <body>
@@ -265,15 +279,15 @@
     {% endif %}
 
     <!-- Barra de navegacion principal -->
-    <nav class="navbar navbar-expand-xl navbar-dark {% if rol_actual == 'PRODUCTOR' %}navbar-vendedor{% elif rol_actual == 'COMPRADOR' %}navbar-comprador{% else %}navbar-general{% endif %} py-3 shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark {% if rol_actual == 'PRODUCTOR' %}navbar-vendedor{% elif rol_actual == 'COMPRADOR' %}navbar-comprador{% else %}navbar-general{% endif %} py-2 shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{% url 'inicio' %}">
+            <a class="navbar-brand fw-bold d-inline-flex align-items-center gap-2 me-3" href="{% url 'inicio' %}">
                 <i class="bi bi-basket2-fill"></i>
                 <span>AgroComercial</span>
                 {% if rol_actual == 'PRODUCTOR' %}
-                    <span class="badge rounded-pill bg-light text-dark ms-1" style="font-size: 0.7rem;">Vendedor</span>
+                    <span class="badge rounded-pill bg-light text-dark" style="font-size: 0.7rem;">Vendedor</span>
                 {% elif rol_actual == 'COMPRADOR' %}
-                    <span class="badge rounded-pill bg-light text-dark ms-1" style="font-size: 0.7rem;">Comprador</span>
+                    <span class="badge rounded-pill bg-light text-dark" style="font-size: 0.7rem;">Comprador</span>
                 {% endif %}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuNavegacion">
@@ -281,79 +295,99 @@
             </button>
 
             <div class="collapse navbar-collapse" id="menuNavegacion">
-                <ul class="navbar-nav me-auto mb-2 mb-xl-0 gap-1">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'inicio' %}"><i class="bi bi-house-door me-1"></i>Inicio</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'catalogo' %}"><i class="bi bi-grid me-1"></i>Marketplace</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'ventas_por_oferta' %}">
-                            <i class="bi bi-tag me-1"></i>Ventas por Oferta
-                            {% if rol_actual == 'PRODUCTOR' and ofertas_pendientes_vendedor > 0 %}
-                                <span class="badge rounded-pill bg-light text-dark ms-1">{{ ofertas_pendientes_vendedor }}</span>
-                            {% elif rol_actual == 'COMPRADOR' and ofertas_listas_comprador > 0 %}
-                                <span class="badge rounded-pill bg-light text-dark ms-1">{{ ofertas_listas_comprador }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'productores' %}"><i class="bi bi-people me-1"></i>Productores</a>
-                    </li>
-
-                    {% if user.is_authenticated %}
-                        {% if rol_actual == 'PRODUCTOR' %}
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold text-white" href="{% url 'panel_productor' %}">
-                                    <i class="bi bi-speedometer2 me-1"></i>Panel Vendedor
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold text-white" href="{% url 'crear_producto' %}">
-                                    <i class="bi bi-plus-circle me-1"></i>Publicar Producto
-                                </a>
-                            </li>
-                        {% else %}
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold text-white" href="{% url 'panel_comprador' %}">
-                                    <i class="bi bi-layout-text-window-reverse me-1"></i>Panel Comprador
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'carrito' %}">
-                                    <i class="bi bi-cart3 me-1"></i>Carrito ({{ total_items_carrito }})
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'pasarela_pago' %}">
-                                    <i class="bi bi-credit-card me-1"></i>Pasarela de Pago
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'mis_pedidos' %}">
-                                    <i class="bi bi-box-seam me-1"></i>Mis Compras
-                                </a>
-                            </li>
-                        {% endif %}
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-lg-center gap-1">
+                    {% if user.is_authenticated and rol_actual == 'PRODUCTOR' %}
+                        <!-- Menu exclusivo y ordenado para Vendedor -->
+                        <li class="nav-item">
+                            <a class="nav-link fw-semibold text-white" href="{% url 'panel_productor' %}">
+                                <i class="bi bi-speedometer2"></i><span>Panel Vendedor</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-semibold text-white" href="{% url 'crear_producto' %}">
+                                <i class="bi bi-plus-circle"></i><span>Publicar Producto</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'ventas_por_oferta' %}">
+                                <i class="bi bi-tag"></i><span>Ofertas Recibidas</span>
+                                {% if ofertas_pendientes_vendedor > 0 %}
+                                    <span class="badge rounded-pill bg-light text-dark">{{ ofertas_pendientes_vendedor }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'catalogo' %}">
+                                <i class="bi bi-grid"></i><span>Ver Catálogo</span>
+                            </a>
+                        </li>
+                    {% elif user.is_authenticated and rol_actual == 'COMPRADOR' %}
+                        <!-- Menu exclusivo y ordenado para Comprador -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inicio' %}">
+                                <i class="bi bi-house-door"></i><span>Inicio</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'catalogo' %}">
+                                <i class="bi bi-grid"></i><span>Marketplace</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'ventas_por_oferta' %}">
+                                <i class="bi bi-tag"></i><span>Ofertas</span>
+                                {% if ofertas_listas_comprador > 0 %}
+                                    <span class="badge rounded-pill bg-light text-dark">{{ ofertas_listas_comprador }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'productores' %}">
+                                <i class="bi bi-people"></i><span>Productores</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-semibold text-white" href="{% url 'carrito' %}">
+                                <i class="bi bi-cart3"></i><span>Carrito ({{ total_items_carrito }})</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'mis_pedidos' %}">
+                                <i class="bi bi-box-seam"></i><span>Mis Compras</span>
+                            </a>
+                        </li>
+                    {% else %}
+                        <!-- Menu para visitante sin sesion -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inicio' %}"><i class="bi bi-house-door"></i><span>Inicio</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'catalogo' %}"><i class="bi bi-grid"></i><span>Marketplace</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'ventas_por_oferta' %}"><i class="bi bi-tag"></i><span>Ofertas</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'productores' %}"><i class="bi bi-people"></i><span>Productores</span></a>
+                        </li>
                     {% endif %}
                 </ul>
 
-                <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-nowrap ms-lg-3">
                     {% if user.is_authenticated %}
-                        <a href="{% url 'perfil' %}" class="btn btn-outline-light btn-sm">
-                            <i class="bi bi-person-circle me-1"></i>{{ user.first_name|default:user.username }}
+                        <a href="{% url 'perfil' %}" class="btn btn-outline-light btn-sm text-nowrap d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-person-circle"></i><span>{{ user.first_name|default:user.username }}</span>
                         </a>
-                        <form action="{% url 'logout' %}" method="post" class="d-inline">
+                        <form action="{% url 'logout' %}" method="post" class="d-inline m-0">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-light btn-sm">
+                            <button type="submit" class="btn btn-light btn-sm text-nowrap">
                                 Salir
                             </button>
                         </form>
                     {% else %}
-                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-light btn-sm">Soy Comprador</a>
-                        <a href="{% url 'login' %}?modo=vendedor" class="btn btn-light btn-sm text-dark">Soy Vendedor</a>
-                        <a href="{% url 'registro' %}" class="btn btn-warning btn-sm">Crear Cuenta</a>
+                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-light btn-sm text-nowrap">Soy Comprador</a>
+                        <a href="{% url 'login' %}?modo=vendedor" class="btn btn-light btn-sm text-dark text-nowrap">Soy Vendedor</a>
+                        <a href="{% url 'registro' %}" class="btn btn-warning btn-sm text-nowrap">Crear Cuenta</a>
                     {% endif %}
                 </div>
             </div>
