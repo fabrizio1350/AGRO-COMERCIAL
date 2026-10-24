@@ -8,17 +8,12 @@
         <div class="bg-white border p-4 p-md-5">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <span class="badge bg-success-subtle mb-1">Publicación de Producto Agrícola</span>
-                    <h2 class="h4 fw-bold mb-0">{{ accion }}</h2>
-                    <p class="text-muted small mb-0">Completa los datos básicos de tu producto de forma sencilla.</p>
+                    <h2 class="h4 fw-bold mb-1">{{ accion }}</h2>
+                    <p class="text-muted small mb-0">Completa los datos del producto agrícola que vas a poner a la venta.</p>
                 </div>
                 <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i>Volver
+                    &larr; Volver
                 </a>
-            </div>
-
-            <div class="mb-4">
-                <img src="{% if producto %}{{ producto.url_imagen }}{% else %}/static/imagenes/banner_agro.jpg{% endif %}" alt="Vista previa del producto" class="img-referencia" style="height: 150px;">
             </div>
 
             <form method="post">
@@ -26,18 +21,16 @@
 
                 {% if form.errors %}
                 <div class="alert alert-danger small">
-                    Por favor revisa los campos indicados abajo.
+                    Por favor verifica los datos ingresados.
                 </div>
                 {% endif %}
 
-                <!-- Paso 1: Datos faciles de entender -->
-                <div class="p-3 rounded-3 mb-4" style="background-color: #faf8f4; border: 1px solid #e6e1d6;">
-                    <h6 class="fw-bold mb-3" style="color: var(--agro-verde);">
-                        <i class="bi bi-card-checklist me-1"></i>1. Datos del Producto
-                    </h6>
+                <!-- 1. Datos del Producto (Simples y directos) -->
+                <div class="p-3 rounded border bg-light mb-4">
+                    <h6 class="fw-bold mb-3 text-success">1. Datos del Producto</h6>
                     <div class="row g-3">
                         <div class="col-md-7">
-                            <label class="form-label small fw-semibold">¿Qué producto vas a vender?</label>
+                            <label class="form-label small fw-semibold">Nombre del Producto</label>
                             {{ form.nombre }}
                             {% if form.nombre.errors %}
                                 <div class="text-danger small mt-1">{{ form.nombre.errors|striptags }}</div>
@@ -48,75 +41,65 @@
                             {{ form.categoria }}
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">
-                                <i class="bi bi-calendar3 me-1"></i>Día de Cosecha
-                            </label>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Fecha de Cosecha</label>
                             {{ form.fecha_cosecha }}
-                            <div class="form-text" style="font-size: 0.74rem;">Selecciona el día en el calendario.</div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Calidad / Tamaño</label>
-                            {{ form.calidad }}
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Forma de Cultivo</label>
-                            {{ form.tipo_cultivo }}
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Ciudad o Valle de Origen</label>
+                        <div class="col-md-7">
+                            <label class="form-label small fw-semibold">Lugar / Ciudad de Origen</label>
                             {{ form.origen }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Presentación o Tipo <span class="text-muted fw-normal">(Opcional)</span></label>
-                            {{ form.variedad }}
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label small fw-semibold">Descripción breve para el comprador</label>
+                            <label class="form-label small fw-semibold">Imagen de Referencia del Producto (Enlace de Internet)</label>
+                            {{ form.imagen_url }}
+                            <div class="form-text small">
+                                Puedes pegar el enlace (URL) de cualquier foto de tu producto o chacra sacada de internet. Si lo dejas en blanco, se asignará una imagen de referencia automáticamente.
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Descripción del Producto</label>
                             {{ form.descripcion }}
                         </div>
                     </div>
                 </div>
 
-                <!-- Paso 2: Precio, Cantidad y Oferta -->
-                <div class="p-3 rounded-3 mb-4" style="background-color: #faf8f4; border: 1px solid #e6e1d6;">
-                    <h6 class="fw-bold mb-3" style="color: var(--agro-verde);">
-                        <i class="bi bi-cash-coin me-1"></i>2. Precio, Cantidad y Opciones de Oferta
-                    </h6>
-                    <div class="row g-3">
-                        <div class="col-sm-6 col-md-3">
-                            <label class="form-label small fw-semibold">Precio Normal (S/)</label>
+                <!-- 2. Precio, Cantidad y Oferta (Inputs perfectamente alineados en la misma fila) -->
+                <div class="p-3 rounded border bg-light mb-4">
+                    <h6 class="fw-bold mb-3 text-success">2. Precio, Cantidad y Opciones de Oferta</h6>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small fw-semibold mb-1">Precio (S/)</label>
                             {{ form.precio }}
                             {% if form.precio.errors %}
                                 <div class="text-danger small mt-1">{{ form.precio.errors|striptags }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-sm-6 col-md-3">
-                            <label class="form-label small fw-semibold">Se vende por</label>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label small fw-semibold mb-1">Unidad de Venta</label>
                             {{ form.unidad }}
                         </div>
-                        <div class="col-sm-6 col-md-3">
-                            <label class="form-label small fw-semibold">Cantidad Disponible</label>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small fw-semibold mb-1">Stock Disponible</label>
                             {{ form.stock }}
                         </div>
-                        <div class="col-sm-6 col-md-3">
-                            <label class="form-label small fw-semibold">Compra Mínima</label>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small fw-semibold mb-1">Mínimo</label>
                             {{ form.minimo_compra }}
                         </div>
 
                         <div class="col-12"><hr class="my-1 text-muted"></div>
 
                         <div class="col-md-6">
-                            <div class="p-3 bg-white rounded-3 border h-100">
+                            <div class="p-3 bg-white rounded border h-100">
                                 <div class="form-check mb-2">
                                     {{ form.en_oferta }}
                                     <label class="form-check-label fw-semibold small" for="{{ form.en_oferta.id_for_label }}">
-                                        Activar Precio de Oferta / Descuento
+                                        Poner en Oferta / Descuento
                                     </label>
                                 </div>
-                                <label class="form-label small text-muted mb-1">Precio rebajado de oferta (S/)</label>
+                                <label class="form-label small text-muted mb-1">Precio de Oferta (S/)</label>
                                 {{ form.precio_oferta }}
                                 {% if form.precio_oferta.errors %}
                                     <div class="text-danger small mt-1">{{ form.precio_oferta.errors|striptags }}</div>
@@ -125,18 +108,17 @@
                         </div>
 
                         <div class="col-md-6">
-                            <div class="p-3 bg-white rounded-3 border h-100 d-flex flex-column justify-content-center">
+                            <div class="p-3 bg-white rounded border h-100 d-flex flex-column justify-content-center">
                                 <div class="form-check mb-2">
                                     {{ form.acepta_ofertas }}
                                     <label class="form-check-label fw-semibold small" for="{{ form.acepta_ofertas.id_for_label }}">
-                                        Permitir que compradores me propongan ofertas
+                                        Aceptar ofertas de precio de compradores
                                     </label>
-                                    <div class="text-muted" style="font-size: 0.75rem;">Los compradores por mayor podrán enviarte propuestas de precio.</div>
                                 </div>
-                                <div class="form-check mt-2">
+                                <div class="form-check mt-1">
                                     {{ form.disponible }}
                                     <label class="form-check-label fw-semibold small" for="{{ form.disponible.id_for_label }}">
-                                        Mostrar producto disponible en el Marketplace
+                                        Producto disponible en el catálogo
                                     </label>
                                 </div>
                             </div>
@@ -146,9 +128,7 @@
 
                 <div class="d-flex justify-content-end gap-2">
                     <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary px-4">Cancelar</a>
-                    <button type="submit" class="btn btn-success px-4">
-                        <i class="bi bi-check2-circle me-1"></i>Guardar y Publicar Producto
-                    </button>
+                    <button type="submit" class="btn btn-success px-4">Guardar Producto</button>
                 </div>
             </form>
         </div>
