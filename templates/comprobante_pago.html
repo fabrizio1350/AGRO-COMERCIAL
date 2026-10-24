@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Comprobante de Pago {{ codigo }} | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="bg-white border rounded-3 p-4 p-md-5 shadow-sm">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center border-bottom pb-3 mb-4">
+                <div>
+                    <span class="badge bg-success mb-1">TRANSACCIÓN APROBADA EN PASARELA</span>
+                    <h2 class="h4 fw-bold mb-0">Comprobante Electrónico de Compra Agrícola</h2>
+                    <span class="text-muted small">Fecha de emisión: {{ primer_pedido.fecha_pedido|date:"d/m/Y H:i" }}</span>
+                </div>
+                <div class="text-md-end mt-3 mt-md-0 border rounded p-2 bg-light">
+                    <div class="small text-muted">Código de Operación</div>
+                    <div class="fw-bold text-dark fs-5">{{ codigo }}</div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4 small">
+                <div class="col-md-6">
+                    <div class="bg-light rounded p-3 h-100">
+                        <strong class="d-block text-dark mb-1">Datos del Comprador:</strong>
+                        <div>Nombre: {{ user.first_name|default:user.username }} {{ user.last_name }}</div>
+                        <div>DNI / RUC: {{ user.perfil.ruc_dni|default:"10456789012" }}</div>
+                        <div>Teléfono: {{ primer_pedido.telefono_contacto }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="bg-light rounded p-3 h-100">
+                        <strong class="d-block text-dark mb-1">Datos de Pago y Despacho:</strong>
+                        <div>Método de Pago: <strong>{{ primer_pedido.get_metodo_pago_display }}</strong></div>
+                        <div>Estado en Pasarela: <span class="badge bg-success">{{ primer_pedido.get_estado_pago_display }}</span></div>
+                        <div>Entrega: {{ primer_pedido.direccion_entrega }} ({{ primer_pedido.ciudad_destino }})</div>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="fw-bold mb-2">Detalle de Lotes Adquiridos</h6>
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th># Pedido</th>
+                            <th>Producto Agrícola</th>
+                            <th>Vendedor / Origen</th>
+                            <th>Cant.</th>
+                            <th>P. Unitario</th>
+                            <th class="text-end">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in pedidos_tx %}
+                        <tr>
+                            <td>#{{ p.id }}</td>
+                            <td class="fw-semibold">{{ p.producto.nombre }}</td>
+                            <td class="small text-muted">{{ p.producto.productor.first_name|default:p.producto.productor.username }} ({{ p.producto.origen }})</td>
+                            <td>{{ p.cantidad }} ({{ p.producto.get_unidad_display }})</td>
+                            <td>S/ {{ p.precio_unitario }}</td>
+                            <td class="text-end fw-bold">S/ {{ p.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" class="text-end text-muted small">Subtotal Lotes:</td>
+                            <td class="text-end fw-semibold">S/ {{ subtotal_tx }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5" class="text-end text-muted small">Servicio Logístico y Guía de Remisión:</td>
+                            <td class="text-end fw-semibold">S/ {{ costo_logistica }}</td>
+                        </tr>
+                        <tr class="table-success">
+                            <td colspan="5" class="text-end fw-bold">TOTAL PAGADO:</td>
+                            <td class="text-end fw-bold fs-5 text-success">S/ {{ total_tx }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="placeholder-imagen mb-4" style="height: 75px;">
+                [Espacio para Imagen - Código de Barras / Sello Digital de Comprobante Electrónico]
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between gap-2">
+                <button type="button" onclick="window.print();" class="btn btn-outline-dark">
+                    Imprimir / Guardar Boleta PDF
+                </button>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'mis_pedidos' %}" class="btn btn-primary fw-semibold">
+                        Ver Seguimiento en Mis Compras
+                    </a>
+                    <a href="{% url 'catalogo' %}" class="btn btn-success fw-semibold">
+                        Volver al Marketplace
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
