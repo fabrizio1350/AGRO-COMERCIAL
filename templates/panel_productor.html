@@ -3,50 +3,49 @@
 {% block title %}Panel del Vendedor | AgroComercial{% endblock %}
 
 {% block content %}
-<div class="bg-white border border-success-subtle rounded-3 p-4 mb-4 shadow-sm">
+<div class="bg-white border p-4 mb-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
         <div>
-            <span class="badge bg-success mb-1">PANEL EXCLUSIVO DEL VENDEDOR / PRODUCTOR AGRÍCOLA</span>
-            <h1 class="h3 fw-bold mb-1">Gestión de Finca y Ventas: {{ perfil.nombre_finca|default:user.username }}</h1>
-            <p class="text-muted mb-0">
-                Administra tus lotes publicados, activa descuentos de campaña, responde ofertas por volumen y despacha pedidos pagados.
+            <h1 class="h4 fw-bold mb-1">Panel de Vendedor: {{ perfil.nombre_finca|default:user.username }}</h1>
+            <p class="text-muted small mb-0">
+                Gestiona tus productos publicados, responde ofertas de compradores y actualiza tus despachos.
             </p>
         </div>
-        <div class="mt-3 mt-md-0 d-flex gap-2">
-            <a href="{% url 'crear_producto' %}" class="btn btn-success fw-semibold">
-                + Publicar Nuevo Lote
+        <div class="mt-3 mt-md-0 d-flex flex-wrap gap-2">
+            <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm">
+                + Publicar Nuevo Producto
             </a>
-            <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning text-dark fw-semibold">
-                Sala de Ofertas ({{ ofertas_recibidas.count }})
+            <a href="{% url 'ventas_por_oferta' %}" class="btn btn-outline-secondary btn-sm">
+                Ofertas Recibidas ({{ ofertas_recibidas.count }})
             </a>
         </div>
     </div>
 </div>
 
-<!-- Tarjetas de resumen del vendedor -->
+<!-- Tarjetas de resumen del vendedor con la misma altura exacta -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-        <div class="bg-white border rounded-3 p-3 shadow-sm">
-            <span class="text-muted small d-block">Mis Lotes Publicados</span>
-            <h3 class="fw-bold text-dark mb-0">{{ mis_productos.count }}</h3>
+        <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
+            <span class="text-muted small d-block mb-1">Productos Publicados</span>
+            <h3 class="h4 fw-bold text-dark mb-0">{{ mis_productos.count }}</h3>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="bg-white border rounded-3 p-3 shadow-sm">
-            <span class="text-muted small d-block">Ofertas por Responder</span>
-            <h3 class="fw-bold text-warning mb-0">{{ ofertas_recibidas.count }}</h3>
+        <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
+            <span class="text-muted small d-block mb-1">Ofertas Recibidas</span>
+            <h3 class="h4 fw-bold text-dark mb-0">{{ ofertas_recibidas.count }}</h3>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="bg-white border rounded-3 p-3 shadow-sm">
-            <span class="text-muted small d-block">Ventas en Pasarela</span>
-            <h3 class="fw-bold text-primary mb-0">{{ pedidos_recibidos.count }}</h3>
+        <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
+            <span class="text-muted small d-block mb-1">Pedidos Realizados</span>
+            <h3 class="h4 fw-bold text-dark mb-0">{{ pedidos_recibidos.count }}</h3>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="bg-white border rounded-3 p-3 shadow-sm">
-            <span class="text-muted small d-block">Ingresos Confirmados</span>
-            <h3 class="fw-bold text-success mb-0">S/ {{ ingresos_estimados|default:"0.00" }}</h3>
+        <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
+            <span class="text-muted small d-block mb-1">Total de Ventas</span>
+            <h3 class="h4 fw-bold text-success mb-0">S/ {{ ingresos_estimados|default:"0.00" }}</h3>
         </div>
     </div>
 </div>
