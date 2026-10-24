@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class PerfilUsuario(models.Model):
@@ -53,18 +54,24 @@ class Producto(models.Model):
 
     TIPOS_CULTIVO = [
         ('TRADICIONAL', 'Cultivo Tradicional de Campo'),
-        ('ORGANICO', 'Orgánico Libre de Pesticidas'),
-        ('TECNIFICADO', 'Riego Tecnificado / Invernadero'),
+        ('ORGANICO', 'Orgánico Natural (Sin químicos)'),
+        ('INVERNADERO', 'Huerto / Riego Tecnificado'),
+    ]
+
+    NIVELES_CALIDAD = [
+        ('PRIMERA', 'Primera Calidad (Seleccionado / Grande)'),
+        ('ESTANDAR', 'Calidad Estándar (Mediano / Comercial)'),
+        ('ECONOMICA', 'Económico (Ideal para negocio o restaurante)'),
     ]
 
     productor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='productos')
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, related_name='productos')
     nombre = models.CharField(max_length=120)
     descripcion = models.TextField()
-    variedad = models.CharField(max_length=80, default='Seleccionada de Primera')
+    variedad = models.CharField(max_length=80, blank=True, default='Fresco de campo')
     tipo_cultivo = models.CharField(max_length=20, choices=TIPOS_CULTIVO, default='TRADICIONAL')
-    fecha_cosecha = models.CharField(max_length=60, default='Cosecha reciente de la semana')
-    calidad = models.CharField(max_length=60, default='Calibre Extra / Exportación')
+    fecha_cosecha = models.DateField(default=timezone.now)
+    calidad = models.CharField(max_length=20, choices=NIVELES_CALIDAD, default='PRIMERA')
     precio = models.DecimalField(max_digits=8, decimal_places=2)
     en_oferta = models.BooleanField(default=False)
     precio_oferta = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
