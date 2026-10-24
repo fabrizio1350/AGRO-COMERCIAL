@@ -28,24 +28,24 @@ from .forms import (
 
 def asegurar_datos_iniciales():
     """Crea datos de prueba iniciales si la base de datos esta vacia."""
-    if Categoria.objects.exists():
+    if Producto.objects.exists():
         return
 
-    cat_tuberculos = Categoria.objects.create(
+    cat_tuberculos, _ = Categoria.objects.get_or_create(
         nombre="Tubérculos y Raíces",
-        descripcion="Papas nativas, camotes, yucas y ollucos cosechados en sierra y costa."
+        defaults={"descripcion": "Papas nativas, camotes, yucas y ollucos cosechados en sierra y costa."}
     )
-    cat_hortalizas = Categoria.objects.create(
+    cat_hortalizas, _ = Categoria.objects.get_or_create(
         nombre="Hortalizas y Verduras",
-        descripcion="Verduras frescas de huerta listas para distribución directa."
+        defaults={"descripcion": "Verduras frescas de huerta listas para distribución directa."}
     )
-    cat_frutas = Categoria.objects.create(
+    cat_frutas, _ = Categoria.objects.get_or_create(
         nombre="Frutas de Estación",
-        descripcion="Frutas seleccionadas directamente de los valles productores."
+        defaults={"descripcion": "Frutas seleccionadas directamente de los valles productores."}
     )
-    cat_granos = Categoria.objects.create(
+    cat_granos, _ = Categoria.objects.get_or_create(
         nombre="Granos y Cereales",
-        descripcion="Quinua, maíz amiláceo, habas secas y menestras andinas."
+        defaults={"descripcion": "Quinua, maíz amiláceo, habas secas y menestras andinas."}
     )
 
     productor1, creado1 = User.objects.get_or_create(
