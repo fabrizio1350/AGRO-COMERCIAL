@@ -375,22 +375,24 @@ def detalle_producto(request, producto_id):
 
         tipo_accion = request.POST.get('tipo_accion', '')
 
-        # 1. Enviar propuesta de oferta (negociacion de precio)
+        # 1. Enviar propuesta de oferta (solo permitido para COMPRADOR)
         if tipo_accion == 'enviar_oferta':
+            perfil_usr = obtener_o_crear_perfil(request.user)
+            if perfil_usr.rol != 'COMPRADOR':
+                messages.warning(request, "Solo las cuentas de Comprador pueden enviar ofertas de compra.")
+                return redirect('detalle_producto', producto_id=producto.id)
+
             oferta_form = OfertaNegociacionForm(request.POST)
             if oferta_form.is_valid():
-                if producto.productor == request.user:
-                    messages.warning(request, "No puedes enviar una oferta sobre tu propio lote.")
-                else:
-                    propuesta = oferta_form.save(commit=False)
-                    propuesta.producto = producto
-                    propuesta.comprador = request.user
-                    propuesta.save()
-                    messages.success(
-                        request,
-                        f"¡Oferta enviada al vendedor! Propusiste S/ {propuesta.precio_unitario_ofrecido} por {propuesta.cantidad} unidades."
-                    )
-                    return redirect('ventas_por_oferta')
+                propuesta = oferta_form.save(commit=False)
+                propuesta.producto = producto
+                propuesta.comprador = request.user
+                propuesta.save()
+                messages.success(
+                    request,
+                    f"Oferta enviada al vendedor: S/ {propuesta.precio_unitario_ofrecido} por {propuesta.cantidad} unidades."
+                )
+                return redirect('ventas_por_oferta')
 
         # 2. Publicar resena o comentario del producto
         elif tipo_accion == 'publicar_resena':
@@ -453,11 +455,12 @@ def responder_oferta(request, oferta_id):
 
 @login_required
 def agregar_al_carrito(request, producto_id):
-    producto = get_object_or_404(Producto, id=producto_id)
-    if producto.productor == request.user:
-        messages.warning(request, "Este producto te pertenece como vendedor.")
-        return redirect('detalle_producto', producto_id=producto.id)
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'COMPRADOR':
+        messages.warning(request, "Estás en una cuenta de Vendedor. Cambia a cuenta de Comprador para realizar compras.")
+        return redirect('detalle_producto', producto_id=producto_id)
 
+    producto = get_object_or_404(Producto, id=producto_id)
     cantidad = int(request.POST.get('cantidad', producto.minimo_compra or 1))
     if cantidad < 1:
         cantidad = 1
@@ -485,6 +488,11 @@ def agregar_al_carrito(request, producto_id):
 
 @login_required
 def carrito_vista(request):
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'COMPRADOR':
+        messages.warning(request, "El carrito de compras es exclusivo para cuentas de Comprador.")
+        return redirect('panel_productor')
+
     items = ItemCarrito.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')
     subtotal = sum(i.subtotal() for i in items)
     costo_logistica = Decimal("15.00") if subtotal > 0 else Decimal("0.00")
@@ -510,13 +518,17 @@ def eliminar_del_carrito(request, item_id):
 
 @login_required
 def pasarela_pago(request):
-    """Apartado de Pasarela de Pago con multiples metodos (Tarjeta, Yape/Plin QR, Transferencia, Contraentrega)."""
+    """Apartado de Pasarela de Pago exclusivo para Compradores."""
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'COMPRADOR':
+        messages.warning(request, "La pasarela de pago es exclusiva para cuentas de Comprador.")
+        return redirect('panel_productor')
+
     items = ItemCarrito.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')
     if not items.exists():
-        messages.warning(request, "Tu carrito está vacío. Agrega productos antes de pasar a la pasarela de pago.")
+        messages.warning(request, "Tu carrito está vacío. Agrega productos antes de ir a pagar.")
         return redirect('catalogo')
 
-    perfil = obtener_o_crear_perfil(request.user)
     subtotal = sum(i.subtotal() for i in items)
     costo_logistica = Decimal("15.00")
     total_pagar = subtotal + costo_logistica
@@ -528,12 +540,11 @@ def pasarela_pago(request):
             metodo = form.cleaned_data['metodo_pago']
             estado_pago = 'PENDIENTE_VERIFICACION' if metodo == 'CONTRAENTREGA' else 'PAGADO'
 
-            ultimo_pedido = None
             for item in items:
                 prod = item.producto
                 cant = min(item.cantidad, prod.stock) if prod.stock > 0 else item.cantidad
                 precio_unit = item.precio_aplicado()
-                ultimo_pedido = Pedido.objects.create(
+                Pedido.objects.create(
                     comprador=request.user,
                     producto=prod,
                     cantidad=cant,
@@ -647,12 +658,14 @@ def login_vista(request):
         modo_elegido = request.POST.get('modo_rol', '')
         usuario = authenticate(request, username=username, password=password)
         if usuario is not None:
-            login(request, usuario)
             perfil = obtener_o_crear_perfil(usuario)
             if modo_elegido in ['PRODUCTOR', 'COMPRADOR'] and perfil.rol != modo_elegido:
-                perfil.rol = modo_elegido
-                perfil.save()
-            messages.success(request, f"Bienvenido(a) {usuario.first_name or usuario.username} — Modo activo: {perfil.get_rol_display()}.")
+                rol_nombre = "Vendedor" if modo_elegido == 'PRODUCTOR' else "Comprador"
+                messages.error(request, f"El usuario '{username}' no pertenece al perfil de {rol_nombre}. Usa la pestaña correcta.")
+                return render(request, 'login.html', {'modo_acceso': 'vendedor' if modo_elegido == 'PRODUCTOR' else 'comprador'})
+
+            login(request, usuario)
+            messages.success(request, f"Sesión iniciada como {usuario.first_name or usuario.username} ({perfil.get_rol_display()}).")
             if perfil.rol == 'PRODUCTOR':
                 return redirect('panel_productor')
             return redirect('panel_comprador')
@@ -664,17 +677,22 @@ def login_vista(request):
 
 @login_required
 def cambiar_modo_vista(request):
-    """Permite alternar rapidamente entre la vista de Comprador y la vista de Vendedor para demostraciones."""
+    """Cambia entre la cuenta real de Vendedor (productor_mantaro) y la cuenta real de Comprador (comprador_lima)."""
+    asegurar_datos_iniciales()
     if request.method == 'POST':
-        perfil = obtener_o_crear_perfil(request.user)
         nuevo_rol = request.POST.get('nuevo_rol')
-        if nuevo_rol in ['PRODUCTOR', 'COMPRADOR']:
-            perfil.rol = nuevo_rol
-            perfil.save()
-            messages.info(request, f"Cambiaste tu interfaz visual a: {perfil.get_rol_display()}.")
-            if nuevo_rol == 'PRODUCTOR':
+        if nuevo_rol == 'PRODUCTOR':
+            usuario_vendedor = User.objects.filter(username='productor_mantaro').first()
+            if usuario_vendedor:
+                login(request, usuario_vendedor)
+                messages.info(request, "Cambiaste a la cuenta de Vendedor: Mateo Huamán (productor_mantaro).")
                 return redirect('panel_productor')
-            return redirect('panel_comprador')
+        elif nuevo_rol == 'COMPRADOR':
+            usuario_comprador = User.objects.filter(username='comprador_lima').first()
+            if usuario_comprador:
+                login(request, usuario_comprador)
+                messages.info(request, "Cambiaste a la cuenta de Comprador: Carlos Mendoza (comprador_lima).")
+                return redirect('panel_comprador')
     return redirect('inicio')
 
 
@@ -689,6 +707,10 @@ def logout_vista(request):
 def panel_comprador(request):
     """Apartado visual exclusivo para el Comprador."""
     perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'COMPRADOR':
+        messages.warning(request, "Esa sección es exclusiva para Compradores. Te redirigimos a tu Panel de Vendedor.")
+        return redirect('panel_productor')
+
     compras_recientes = Pedido.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')[:5]
     mis_ofertas = OfertaNegociacion.objects.filter(comprador=request.user).select_related('producto')[:5]
     items_carrito = ItemCarrito.objects.filter(comprador=request.user).select_related('producto')
@@ -711,6 +733,10 @@ def panel_comprador(request):
 def panel_productor(request):
     """Apartado visual exclusivo para el Vendedor / Productor Agricola."""
     perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'PRODUCTOR':
+        messages.warning(request, "El Panel de Vendedor es exclusivo para Productores Agrícolas.")
+        return redirect('panel_comprador')
+
     mis_productos = Producto.objects.filter(productor=request.user)
     pedidos_recibidos = Pedido.objects.filter(producto__productor=request.user).select_related('comprador', 'producto')
     ofertas_recibidas = OfertaNegociacion.objects.filter(producto__productor=request.user).select_related('comprador', 'producto')
@@ -732,23 +758,32 @@ def panel_productor(request):
 
 @login_required
 def crear_producto(request):
-    obtener_o_crear_perfil(request.user)
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'PRODUCTOR':
+        messages.error(request, "Solo los Vendedores / Productores pueden publicar productos.")
+        return redirect('panel_comprador')
+
     if request.method == 'POST':
         form = ProductoForm(request.POST)
         if form.is_valid():
             producto = form.save(commit=False)
             producto.productor = request.user
             producto.save()
-            messages.success(request, f"El lote '{producto.nombre}' fue publicado exitosamente.")
+            messages.success(request, f"El producto '{producto.nombre}' fue publicado exitosamente.")
             return redirect('panel_productor')
     else:
         form = ProductoForm()
 
-    return render(request, 'form_producto.html', {'form': form, 'accion': 'Publicar Nuevo Lote Agrícola'})
+    return render(request, 'form_producto.html', {'form': form, 'accion': 'Publicar Nuevo Producto'})
 
 
 @login_required
 def editar_producto(request, producto_id):
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'PRODUCTOR':
+        messages.error(request, "Un Comprador no puede editar productos.")
+        return redirect('panel_comprador')
+
     producto = get_object_or_404(Producto, id=producto_id, productor=request.user)
     if request.method == 'POST':
         form = ProductoForm(request.POST, instance=producto)
@@ -762,12 +797,17 @@ def editar_producto(request, producto_id):
     return render(request, 'form_producto.html', {
         'form': form,
         'producto': producto,
-        'accion': 'Editar Lote y Ficha Técnica'
+        'accion': 'Editar mi Producto Agrícola'
     })
 
 
 @login_required
 def eliminar_producto(request, producto_id):
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'PRODUCTOR':
+        messages.error(request, "Acción no permitida para Compradores.")
+        return redirect('panel_comprador')
+
     producto = get_object_or_404(Producto, id=producto_id, productor=request.user)
     if request.method == 'POST':
         nombre = producto.nombre
@@ -778,18 +818,19 @@ def eliminar_producto(request, producto_id):
 
 @login_required
 def cambiar_estado_pedido(request, pedido_id):
+    perfil = obtener_o_crear_perfil(request.user)
     pedido = get_object_or_404(Pedido, id=pedido_id)
     if request.method == 'POST':
         nuevo_estado = request.POST.get('estado')
         estados_validos = dict(Pedido.ESTADOS).keys()
 
-        if pedido.producto.productor == request.user and nuevo_estado in estados_validos:
+        if perfil.rol == 'PRODUCTOR' and pedido.producto.productor == request.user and nuevo_estado in estados_validos:
             pedido.estado = nuevo_estado
             pedido.save()
             messages.success(request, f"Estado del pedido #{pedido.id} actualizado a '{pedido.get_estado_display()}'.")
             return redirect('panel_productor')
 
-        if pedido.comprador == request.user and pedido.estado in ['PENDIENTE', 'CONFIRMADO'] and nuevo_estado == 'CANCELADO':
+        if perfil.rol == 'COMPRADOR' and pedido.comprador == request.user and pedido.estado in ['PENDIENTE', 'CONFIRMADO'] and nuevo_estado == 'CANCELADO':
             pedido.estado = 'CANCELADO'
             pedido.estado_pago = 'REEMBOLSADO'
             pedido.save()
@@ -804,6 +845,10 @@ def cambiar_estado_pedido(request, pedido_id):
 
 @login_required
 def mis_pedidos(request):
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'COMPRADOR':
+        return redirect('panel_productor')
+
     compras = Pedido.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')
     total_gastado = sum(c.total for c in compras if c.estado != 'CANCELADO')
     return render(request, 'mis_pedidos.html', {
