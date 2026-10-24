@@ -65,8 +65,14 @@ def asegurar_datos_iniciales():
             ruc_dni="10445566771",
             telefono="964112233",
             ubicacion="Huancayo, Junín",
-            nombre_finca="Asociación Agrícola Valle del Mantaro"
+            nombre_finca="Asociación Agrícola Valle del Mantaro",
+            cuenta_bancaria="BCP Soles: 355-98765432-0-11"
         )
+    else:
+        p1 = PerfilUsuario.objects.filter(usuario=productor1).first()
+        if p1 and not p1.cuenta_bancaria:
+            p1.cuenta_bancaria = "BCP Soles: 355-98765432-0-11"
+            p1.save()
 
     productor2, creado2 = User.objects.get_or_create(
         username="productor_huaral",
@@ -85,8 +91,14 @@ def asegurar_datos_iniciales():
             ruc_dni="20556677889",
             telefono="945887766",
             ubicacion="Huaral, Lima",
-            nombre_finca="Fundo Santa Elena"
+            nombre_finca="Fundo Santa Elena",
+            cuenta_bancaria="BBVA Soles: 0011-0234-0200112233"
         )
+    else:
+        p2 = PerfilUsuario.objects.filter(usuario=productor2).first()
+        if p2 and not p2.cuenta_bancaria:
+            p2.cuenta_bancaria = "BBVA Soles: 0011-0234-0200112233"
+            p2.save()
 
     comprador_demo, creado3 = User.objects.get_or_create(
         username="comprador_lima",
@@ -249,13 +261,16 @@ def obtener_o_crear_perfil(usuario):
 
 def inicio(request):
     asegurar_datos_iniciales()
+    if not request.user.is_authenticated:
+        return redirect('login')
+
     categorias = Categoria.objects.all()
     productos_destacados = Producto.objects.filter(disponible=True, stock__gt=0)[:6]
-    productos_en_oferta = Producto.objects.filter(disponible=True, en_oferta=True, stock__gt=0)[:3]
+    productos_en_oferta = Producto.objects.filter(disponible=True, en_oferta=True, stock__gt=0)
     total_productos = Producto.objects.filter(disponible=True).count()
     total_productores = PerfilUsuario.objects.filter(rol='PRODUCTOR').count()
     total_pedidos = Pedido.objects.count()
-    total_ofertas = Producto.objects.filter(disponible=True, en_oferta=True).count()
+    total_ofertas = productos_en_oferta.count()
 
     contexto = {
         'categorias': categorias,
@@ -335,10 +350,22 @@ def catalogo(request):
 
 
 def ventas_por_oferta(request):
-    """Apartado de Ventas por Oferta: Remates de Cosecha + Negociacion de Lotes por Volumen."""
+    """Apartado de Ventas por Oferta con buscador y filtro para proponer ofertas."""
     asegurar_datos_iniciales()
+    busqueda = request.GET.get('q', '').strip()
+    categoria_id = request.GET.get('categoria', '').strip()
+    categorias = Categoria.objects.all()
+
     productos_remate = Producto.objects.filter(disponible=True, en_oferta=True, stock__gt=0)
     productos_negociables = Producto.objects.filter(disponible=True, acepta_ofertas=True, stock__gt=0)
+
+    if busqueda:
+        filtro_q = Q(nombre__icontains=busqueda) | Q(origen__icontains=busqueda) | Q(descripcion__icontains=busqueda)
+        productos_remate = productos_remate.filter(filtro_q)
+        productos_negociables = productos_negociables.filter(filtro_q)
+    if categoria_id.isdigit():
+        productos_remate = productos_remate.filter(categoria_id=int(categoria_id))
+        productos_negociables = productos_negociables.filter(categoria_id=int(categoria_id))
 
     mis_ofertas_enviadas = []
     ofertas_recibidas_vendedor = []
@@ -351,6 +378,9 @@ def ventas_por_oferta(request):
         'productos_negociables': productos_negociables,
         'mis_ofertas_enviadas': mis_ofertas_enviadas,
         'ofertas_recibidas_vendedor': ofertas_recibidas_vendedor,
+        'categorias': categorias,
+        'busqueda': busqueda,
+        'categoria_seleccionada': categoria_id,
     }
     return render(request, 'ofertas.html', contexto)
 
@@ -628,10 +658,11 @@ def registro_vista(request):
             PerfilUsuario.objects.create(
                 usuario=usuario,
                 rol=form.cleaned_data['rol'],
-                ruc_dni=form.cleaned_data['ruc_dni'],
-                telefono=form.cleaned_data['telefono'],
-                ubicacion=form.cleaned_data['ubicacion'],
-                nombre_finca=form.cleaned_data['nombre_finca'],
+                ruc_dni=form.cleaned_data.get('ruc_dni', ''),
+                telefono=form.cleaned_data.get('telefono', ''),
+                ubicacion=form.cleaned_data.get('ubicacion', ''),
+                nombre_finca=form.cleaned_data.get('nombre_finca', ''),
+                cuenta_bancaria=form.cleaned_data.get('cuenta_bancaria', '') if form.cleaned_data['rol'] == 'PRODUCTOR' else '',
             )
             login(request, usuario)
             messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Cuenta creada como {form.cleaned_data['rol']}.")
