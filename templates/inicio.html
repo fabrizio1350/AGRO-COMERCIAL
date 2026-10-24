@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio | AgroComercial{% endblock %}
+
+{% block content %}
+<!-- Seccion principal (Banner sin imagenes reales) -->
+<div class="bg-white border rounded-3 p-4 p-md-5 mb-4 shadow-sm">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-7">
+            <span class="badge bg-success-subtle text-success border border-success-subtle mb-2">
+                Comercio Directo del Campo a la Ciudad
+            </span>
+            <h1 class="display-6 fw-bold text-dark mb-3">
+                Conectamos productores agrícolas con compradores sin intermediarios
+            </h1>
+            <p class="lead text-secondary mb-4">
+                Explora cosechas frescas de distintas regiones del país, negocia directamente con asociaciones y agricultores locales y gestiona tus pedidos de manera transparente.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'catalogo' %}" class="btn btn-success btn-lg px-4">
+                    Ver Catálogo Agrícola
+                </a>
+                {% if not user.is_authenticated %}
+                <a href="{% url 'registro' %}" class="btn btn-outline-secondary btn-lg px-4">
+                    Crear Cuenta (Productor / Comprador)
+                </a>
+                {% else %}
+                <a href="{% url 'panel_productor' %}" class="btn btn-outline-success btn-lg px-4">
+                    Ir a mi Panel Productor
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="placeholder-imagen" style="height: 260px;">
+                [Espacio para Imagen - Banner Principal de Cosecha Agrícola]
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen de indicadores de la plataforma -->
+<div class="row g-3 mb-5 text-center">
+    <div class="col-md-4">
+        <div class="bg-white border rounded-3 p-3 shadow-sm">
+            <h3 class="fw-bold text-success mb-0">{{ total_productos }}</h3>
+            <span class="text-muted small">Lotes y Productos Disponibles</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-white border rounded-3 p-3 shadow-sm">
+            <h3 class="fw-bold text-success mb-0">{{ total_productores }}</h3>
+            <span class="text-muted small">Productores Agrícolas Registrados</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-white border rounded-3 p-3 shadow-sm">
+            <h3 class="fw-bold text-success mb-0">{{ total_pedidos }}</h3>
+            <span class="text-muted small">Pedidos Gestionados en Plataforma</span>
+        </div>
+    </div>
+</div>
+
+<!-- Apartado de Categorias Agricolas -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h4 fw-bold mb-0">Categorías Agrícolas</h2>
+    <a href="{% url 'catalogo' %}" class="text-success text-decoration-none fw-semibold small">
+        Ver todo el catálogo &rarr;
+    </a>
+</div>
+<div class="row g-3 mb-5">
+    {% for cat in categorias %}
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 border shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <div class="placeholder-imagen mb-3" style="height: 100px;">
+                    [Espacio para Imagen - {{ cat.nombre }}]
+                </div>
+                <h5 class="card-title h6 fw-bold">{{ cat.nombre }}</h5>
+                <p class="card-text text-muted small flex-grow-1">{{ cat.descripcion }}</p>
+                <a href="{% url 'catalogo' %}?categoria={{ cat.id }}" class="btn btn-outline-success btn-sm w-100 mt-2">
+                    Explorar categoría
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Apartado de Productos Destacados -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h4 fw-bold mb-0">Productos Recién Publicados</h2>
+    <a href="{% url 'catalogo' %}" class="btn btn-sm btn-outline-secondary">Filtrar productos</a>
+</div>
+<div class="row g-4 mb-4">
+    {% for prod in productos_destacados %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border shadow-sm">
+            <div class="p-3 pb-0">
+                <div class="placeholder-imagen" style="height: 170px;">
+                    [Espacio para Imagen del Producto]
+                </div>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-light text-dark border">{{ prod.categoria.nombre }}</span>
+                    <span class="text-muted small">Stock: {{ prod.stock }}</span>
+                </div>
+                <h5 class="card-title fw-bold mb-1">{{ prod.nombre }}</h5>
+                <p class="text-muted small mb-2">
+                    Origen: <strong>{{ prod.origen }}</strong> | Productor: {{ prod.productor.first_name|default:prod.productor.username }}
+                </p>
+                <p class="card-text text-secondary small flex-grow-1">
+                    {{ prod.descripcion|truncatewords:18 }}
+                </p>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-2">
+                    <div>
+                        <span class="fs-5 fw-bold text-success">S/ {{ prod.precio }}</span>
+                        <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
+                    </div>
+                    <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-success btn-sm">
+                        Ver Detalle
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-secondary text-center">
+            Aún no hay productos publicados en este momento.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
