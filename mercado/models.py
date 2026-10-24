@@ -26,6 +26,18 @@ class Categoria(models.Model):
     class Meta:
         verbose_name_plural = "Categorías"
 
+    def url_imagen(self):
+        nombre_low = self.nombre.lower()
+        if 'tub' in nombre_low or 'papa' in nombre_low:
+            return '/static/imagenes/papa_amarilla.jpg'
+        if 'hortaliza' in nombre_low or 'verdura' in nombre_low:
+            return '/static/imagenes/zanahoria.jpg'
+        if 'fruta' in nombre_low:
+            return '/static/imagenes/mandarina.jpg'
+        if 'grano' in nombre_low or 'cereal' in nombre_low:
+            return '/static/imagenes/quinua_blanca.jpg'
+        return '/static/imagenes/finca_productor.jpg'
+
     def __str__(self):
         return self.nombre
 
@@ -77,6 +89,24 @@ class Producto(models.Model):
             descuento = ((self.precio - self.precio_oferta) / self.precio) * 100
             return int(round(descuento))
         return 0
+
+    def url_imagen(self):
+        texto = f"{self.nombre} {self.variedad}".lower()
+        if 'papa' in texto or 'camote' in texto or 'yuca' in texto:
+            return '/static/imagenes/papa_amarilla.jpg'
+        if 'quinua' in texto or 'maíz' in texto or 'maiz' in texto or 'grano' in texto:
+            return '/static/imagenes/quinua_blanca.jpg'
+        if 'zanahoria' in texto:
+            return '/static/imagenes/zanahoria.jpg'
+        if 'mandarina' in texto or 'naranja' in texto:
+            return '/static/imagenes/mandarina.jpg'
+        if 'palta' in texto:
+            return '/static/imagenes/palta_hass.jpg'
+        if 'tomate' in texto:
+            return '/static/imagenes/tomate.jpg'
+        if self.categoria:
+            return self.categoria.url_imagen()
+        return '/static/imagenes/finca_productor.jpg'
 
     def __str__(self):
         return f"{self.nombre} - S/ {self.precio_actual()} ({self.get_unidad_display()})"
