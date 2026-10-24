@@ -43,10 +43,16 @@ class RegistroUsuarioForm(UserCreationForm):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huancayo, Junín'})
     )
     nombre_finca = forms.CharField(
-        label="Nombre de Finca, Asociación o Empresa",
+        label="Nombre de Chacra o Asociación (Solo Vendedor)",
         max_length=120,
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Fundo San Isidro / Comercial Lima'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Fundo San Isidro'})
+    )
+    cuenta_bancaria = forms.CharField(
+        label="Número de Cuenta en Soles / CCI (Solo Vendedor)",
+        max_length=120,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. BCP Soles: 191-12345678-0-99'})
     )
 
     class Meta:
@@ -58,7 +64,7 @@ class RegistroUsuarioForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['password1'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Contraseña segura'})
+        self.fields['password1'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Contraseña'})
         self.fields['password2'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Repite la contraseña'})
 
 
@@ -66,26 +72,24 @@ class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
         fields = [
-            'categoria', 'nombre', 'variedad', 'tipo_cultivo', 'fecha_cosecha',
-            'calidad', 'descripcion', 'precio', 'en_oferta', 'precio_oferta',
-            'acepta_ofertas', 'unidad', 'stock', 'minimo_compra', 'origen', 'disponible'
+            'categoria', 'nombre', 'fecha_cosecha', 'origen', 'imagen_url',
+            'descripcion', 'precio', 'en_oferta', 'precio_oferta',
+            'acepta_ofertas', 'unidad', 'stock', 'minimo_compra', 'disponible'
         ]
         widgets = {
             'categoria': forms.Select(attrs={'class': 'form-select'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Camote Morado, Papa Amarilla, Palta...'}),
-            'variedad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Amarilla, Blanca, En saco, Lavada (Opcional)'}),
-            'tipo_cultivo': forms.Select(attrs={'class': 'form-select'}),
             'fecha_cosecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
-            'calidad': forms.Select(attrs={'class': 'form-select'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Cuenta brevemente cómo está el producto, cómo viene empacado o detalles para el comprador...'}),
+            'origen': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huaral, Huancayo, Arequipa...'}),
+            'imagen_url': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pega aquí el link de una imagen de internet (o déjalo vacío para usar imagen automática)'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe el producto que vas a vender...'}),
             'precio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.50', 'placeholder': 'Ej. 3.50'}),
             'en_oferta': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'precio_oferta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'placeholder': 'Ej. 2.90 (Opcional)'}),
+            'precio_oferta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'placeholder': 'Ej. 2.90'}),
             'acepta_ofertas': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'unidad': forms.Select(attrs={'class': 'form-select'}),
             'stock': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'minimo_compra': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
-            'origen': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huaral, Huancayo, Arequipa...'}),
             'disponible': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -173,11 +177,12 @@ class PerfilForm(forms.ModelForm):
 
     class Meta:
         model = PerfilUsuario
-        fields = ['rol', 'ruc_dni', 'telefono', 'ubicacion', 'nombre_finca']
+        fields = ['rol', 'ruc_dni', 'telefono', 'ubicacion', 'nombre_finca', 'cuenta_bancaria']
         widgets = {
             'rol': forms.Select(attrs={'class': 'form-select'}),
             'ruc_dni': forms.TextInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
             'ubicacion': forms.TextInput(attrs={'class': 'form-control'}),
             'nombre_finca': forms.TextInput(attrs={'class': 'form-control'}),
+            'cuenta_bancaria': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. BCP Soles: 191-12345678-0-99'}),
         }
