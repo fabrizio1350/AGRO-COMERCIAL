@@ -4,15 +4,16 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-9">
-        <div class="bg-white border rounded-3 p-4 shadow-sm">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="col-lg-8">
+        <div class="bg-white border p-4 p-md-5">
+            <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <span class="badge bg-success mb-1">GESTIÓN DE LOTE DEL VENDEDOR</span>
+                    <span class="badge bg-success-subtle mb-1">Publicación de Producto Agrícola</span>
                     <h2 class="h4 fw-bold mb-0">{{ accion }}</h2>
+                    <p class="text-muted small mb-0">Completa los datos básicos de tu producto de forma sencilla.</p>
                 </div>
                 <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary btn-sm">
-                    &larr; Volver al Panel Vendedor
+                    <i class="bi bi-arrow-left me-1"></i>Volver
                 </a>
             </div>
 
@@ -25,105 +26,129 @@
 
                 {% if form.errors %}
                 <div class="alert alert-danger small">
-                    Por favor verifica los campos marcados del formulario.
+                    Por favor revisa los campos indicados abajo.
                 </div>
                 {% endif %}
 
-                <h6 class="fw-bold text-success border-bottom pb-2 mb-3">1. Información Principal y Ficha Técnica</h6>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-8">
-                        <label class="form-label small fw-semibold">Nombre Comercial del Producto o Lote</label>
-                        {{ form.nombre }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Categoría Agrícola</label>
-                        {{ form.categoria }}
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Variedad / Semilla</label>
-                        {{ form.variedad }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Tipo de Cultivo</label>
-                        {{ form.tipo_cultivo }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Fecha / Estado de Cosecha</label>
-                        {{ form.fecha_cosecha }}
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Calidad y Calibre</label>
-                        {{ form.calidad }}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Región / Valle de Cosecha</label>
-                        {{ form.origen }}
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label small fw-semibold">Descripción detallada del lote</label>
-                        {{ form.descripcion }}
-                    </div>
-                </div>
-
-                <h6 class="fw-bold text-success border-bottom pb-2 mb-3">2. Precios, Ventas por Oferta y Stock</h6>
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Precio Normal (S/)</label>
-                        {{ form.precio }}
-                        {% if form.precio.errors %}
-                            <div class="text-danger small">{{ form.precio.errors|striptags }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Unidad de Venta</label>
-                        {{ form.unidad }}
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Stock Disponible</label>
-                        {{ form.stock }}
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Compra Mínima</label>
-                        {{ form.minimo_compra }}
-                    </div>
-
-                    <div class="col-md-4 d-flex align-items-center pt-3">
-                        <div class="form-check">
-                            {{ form.en_oferta }}
-                            <label class="form-check-label fw-bold small text-danger">
-                                Activar en Oferta / Remate
-                            </label>
+                <!-- Paso 1: Datos faciles de entender -->
+                <div class="p-3 rounded-3 mb-4" style="background-color: #faf8f4; border: 1px solid #e6e1d6;">
+                    <h6 class="fw-bold mb-3" style="color: var(--agro-verde);">
+                        <i class="bi bi-card-checklist me-1"></i>1. Datos del Producto
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label small fw-semibold">¿Qué producto vas a vender?</label>
+                            {{ form.nombre }}
+                            {% if form.nombre.errors %}
+                                <div class="text-danger small mt-1">{{ form.nombre.errors|striptags }}</div>
+                            {% endif %}
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold text-danger">Precio de Oferta (S/)</label>
-                        {{ form.precio_oferta }}
-                        {% if form.precio_oferta.errors %}
-                            <div class="text-danger small">{{ form.precio_oferta.errors|striptags }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-4 d-flex flex-column justify-content-center pt-2">
-                        <div class="form-check">
-                            {{ form.acepta_ofertas }}
-                            <label class="form-check-label fw-semibold small">
-                                Aceptar contraofertas por volumen
-                            </label>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Categoría</label>
+                            {{ form.categoria }}
                         </div>
-                        <div class="form-check mt-1">
-                            {{ form.disponible }}
-                            <label class="form-check-label fw-semibold small">
-                                Lote activo en Marketplace
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">
+                                <i class="bi bi-calendar3 me-1"></i>Día de Cosecha
                             </label>
+                            {{ form.fecha_cosecha }}
+                            <div class="form-text" style="font-size: 0.74rem;">Selecciona el día en el calendario.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Calidad / Tamaño</label>
+                            {{ form.calidad }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Forma de Cultivo</label>
+                            {{ form.tipo_cultivo }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Ciudad o Valle de Origen</label>
+                            {{ form.origen }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Presentación o Tipo <span class="text-muted fw-normal">(Opcional)</span></label>
+                            {{ form.variedad }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Descripción breve para el comprador</label>
+                            {{ form.descripcion }}
                         </div>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
-                    <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary">Cancelar</a>
-                    <button type="submit" class="btn btn-success px-4 fw-semibold">Guardar Lote Agrícola</button>
+                <!-- Paso 2: Precio, Cantidad y Oferta -->
+                <div class="p-3 rounded-3 mb-4" style="background-color: #faf8f4; border: 1px solid #e6e1d6;">
+                    <h6 class="fw-bold mb-3" style="color: var(--agro-verde);">
+                        <i class="bi bi-cash-coin me-1"></i>2. Precio, Cantidad y Opciones de Oferta
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-sm-6 col-md-3">
+                            <label class="form-label small fw-semibold">Precio Normal (S/)</label>
+                            {{ form.precio }}
+                            {% if form.precio.errors %}
+                                <div class="text-danger small mt-1">{{ form.precio.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <label class="form-label small fw-semibold">Se vende por</label>
+                            {{ form.unidad }}
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <label class="form-label small fw-semibold">Cantidad Disponible</label>
+                            {{ form.stock }}
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <label class="form-label small fw-semibold">Compra Mínima</label>
+                            {{ form.minimo_compra }}
+                        </div>
+
+                        <div class="col-12"><hr class="my-1 text-muted"></div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded-3 border h-100">
+                                <div class="form-check mb-2">
+                                    {{ form.en_oferta }}
+                                    <label class="form-check-label fw-semibold small" for="{{ form.en_oferta.id_for_label }}">
+                                        Activar Precio de Oferta / Descuento
+                                    </label>
+                                </div>
+                                <label class="form-label small text-muted mb-1">Precio rebajado de oferta (S/)</label>
+                                {{ form.precio_oferta }}
+                                {% if form.precio_oferta.errors %}
+                                    <div class="text-danger small mt-1">{{ form.precio_oferta.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded-3 border h-100 d-flex flex-column justify-content-center">
+                                <div class="form-check mb-2">
+                                    {{ form.acepta_ofertas }}
+                                    <label class="form-check-label fw-semibold small" for="{{ form.acepta_ofertas.id_for_label }}">
+                                        Permitir que compradores me propongan ofertas
+                                    </label>
+                                    <div class="text-muted" style="font-size: 0.75rem;">Los compradores por mayor podrán enviarte propuestas de precio.</div>
+                                </div>
+                                <div class="form-check mt-2">
+                                    {{ form.disponible }}
+                                    <label class="form-check-label fw-semibold small" for="{{ form.disponible.id_for_label }}">
+                                        Mostrar producto disponible en el Marketplace
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary px-4">Cancelar</a>
+                    <button type="submit" class="btn btn-success px-4">
+                        <i class="bi bi-check2-circle me-1"></i>Guardar y Publicar Producto
+                    </button>
                 </div>
             </form>
         </div>
