@@ -20,25 +20,17 @@
                     -{{ producto.porcentaje_descuento }}% EN OFERTA
                 </span>
             {% endif %}
-            <div class="placeholder-imagen mb-3" style="height: 300px;">
-                [Espacio para Imagen Principal del Producto: {{ producto.nombre }}]
-            </div>
+            <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" class="img-referencia mb-3" style="height: 300px;">
             <!-- Miniaturas de angulos del lote agricola -->
             <div class="row g-2">
                 <div class="col-4">
-                    <div class="placeholder-imagen" style="height: 80px; font-size: 0.75rem;">
-                        [Espacio Imagen: Vista del Lote]
-                    </div>
+                    <img src="{{ producto.url_imagen }}" alt="Vista del lote" class="img-referencia" style="height: 80px;">
                 </div>
                 <div class="col-4">
-                    <div class="placeholder-imagen" style="height: 80px; font-size: 0.75rem;">
-                        [Espacio Imagen: Calibre y Calidad]
-                    </div>
+                    <img src="/static/imagenes/finca_productor.jpg" alt="Cosecha en finca" class="img-referencia" style="height: 80px;">
                 </div>
                 <div class="col-4">
-                    <div class="placeholder-imagen" style="height: 80px; font-size: 0.75rem;">
-                        [Espacio Imagen: Empaque / Saco]
-                    </div>
+                    <img src="/static/imagenes/banner_agro.jpg" alt="Campo agrícola" class="img-referencia" style="height: 80px;">
                 </div>
             </div>
         </div>
@@ -46,9 +38,7 @@
         <!-- Resumen rapido de la finca productora -->
         <div class="bg-white border rounded-3 p-3 shadow-sm">
             <div class="d-flex align-items-center gap-3">
-                <div class="placeholder-imagen flex-shrink-0" style="width: 75px; height: 75px; font-size: 0.72rem;">
-                    [Foto Finca]
-                </div>
+                <img src="/static/imagenes/finca_productor.jpg" alt="Finca" class="img-referencia flex-shrink-0" style="width: 75px; height: 75px;">
                 <div class="flex-grow-1">
                     <span class="badge bg-success-subtle text-success border border-success-subtle mb-1">Vendedor Verificado</span>
                     <h6 class="fw-bold mb-0">
@@ -371,9 +361,7 @@
         <div class="col-md-4">
             <div class="card border shadow-sm h-100">
                 <div class="card-body">
-                    <div class="placeholder-imagen mb-2" style="height: 110px;">
-                        [Espacio para Imagen]
-                    </div>
+                    <img src="{{ rel.url_imagen }}" alt="{{ rel.nombre }}" class="img-referencia mb-2" style="height: 120px;">
                     <h6 class="fw-bold mb-1">{{ rel.nombre }}</h6>
                     <p class="text-muted small mb-2">{{ rel.origen }} — S/ {{ rel.precio_actual }} / {{ rel.get_unidad_display }}</p>
                     <a href="{% url 'detalle_producto' rel.id %}" class="btn btn-outline-success btn-sm w-100">Ver descripción completa</a>
