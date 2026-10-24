@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 
-{% block title %}Registro de Comprador o Vendedor | AgroComercial{% endblock %}
+{% block title %}Crear Cuenta | AgroComercial{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
+<div class="row justify-content-center py-2">
     <div class="col-md-8 col-lg-7">
         <div class="bg-white border rounded-3 p-4 shadow-sm">
-            <h2 class="h4 fw-bold text-center mb-1">Registro de Cuenta en AgroComercial</h2>
+            <h2 class="h4 fw-bold text-center mb-1">Crear Cuenta en AgroComercial</h2>
             <p class="text-muted small text-center mb-4">
-                Regístrate como <strong>Vendedor / Productor Agrícola</strong> o como <strong>Comprador / Mayorista</strong>.
+                Completa tus datos según seas <strong>Comprador</strong> o <strong>Vendedor Agrícola</strong>
             </p>
 
             <form method="post" action="{% url 'registro' %}">
@@ -63,9 +63,22 @@
                         {{ form.ubicacion }}
                     </div>
 
-                    <div class="col-12">
-                        <label class="form-label small fw-semibold">{{ form.nombre_finca.label }}</label>
-                        {{ form.nombre_finca }}
+                    <!-- Campos adicionales exclusivos para el Vendedor / Productor -->
+                    <div class="col-12" id="bloqueDatosVendedor">
+                        <div class="p-3 rounded-3 border bg-light">
+                            <div class="fw-bold small text-success mb-2">Datos exclusivos para Vendedor / Productor</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">{{ form.nombre_finca.label }}</label>
+                                    {{ form.nombre_finca }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">{{ form.cuenta_bancaria.label }}</label>
+                                    {{ form.cuenta_bancaria }}
+                                    <div class="form-text small">Aquí recibirás los pagos por transferencia de tus compradores.</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-md-6">
@@ -85,16 +98,35 @@
                 </div>
 
                 <button type="submit" class="btn btn-success w-100 py-2 fw-semibold mt-4">
-                    Crear Cuenta y Entrar
+                    Registrar Cuenta
                 </button>
             </form>
 
             <div class="text-center mt-3 small">
                 ¿Ya tienes una cuenta?
-                <a href="{% url 'login' %}?modo=comprador" class="text-primary fw-semibold text-decoration-none me-2">Login Comprador</a> |
-                <a href="{% url 'login' %}?modo=vendedor" class="text-success fw-semibold text-decoration-none ms-2">Login Vendedor</a>
+                <a href="{% url 'login' %}?modo=comprador" class="text-success fw-semibold text-decoration-none ms-1">Iniciar sesión</a>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Muestra los campos de Finca y Cuenta Bancaria solo cuando el usuario elige registrarse como Vendedor
+    (function() {
+        const selectRol = document.getElementById('id_rol');
+        const bloqueVendedor = document.getElementById('bloqueDatosVendedor');
+        function actualizarCamposSegunRol() {
+            if (!selectRol || !bloqueVendedor) return;
+            if (selectRol.value === 'PRODUCTOR') {
+                bloqueVendedor.style.display = 'block';
+            } else {
+                bloqueVendedor.style.display = 'none';
+            }
+        }
+        if (selectRol) {
+            selectRol.addEventListener('change', actualizarCamposSegunRol);
+            actualizarCamposSegunRol();
+        }
+    })();
+</script>
 {% endblock %}
