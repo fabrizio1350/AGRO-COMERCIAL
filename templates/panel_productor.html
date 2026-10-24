@@ -50,11 +50,11 @@
     </div>
 </div>
 
-<!-- Seccion 1: Mis Lotes Publicados -->
+<!-- Seccion 1: Mis Productos Publicados -->
 <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h5 fw-bold mb-0">1. Mis Lotes y Productos Agrícolas Publicados</h2>
-        <a href="{% url 'crear_producto' %}" class="btn btn-sm btn-outline-success">+ Agregar Lote</a>
+        <h2 class="h5 fw-bold mb-0">1. Mis Productos Agrícolas Publicados</h2>
+        <a href="{% url 'crear_producto' %}" class="btn btn-sm btn-outline-success">+ Agregar Producto</a>
     </div>
     {% if mis_productos %}
     <div class="table-responsive">
@@ -62,8 +62,8 @@
             <thead class="table-light">
                 <tr>
                     <th>Imagen</th>
-                    <th>Producto y Ficha</th>
-                    <th>Precio Normal</th>
+                    <th>Producto</th>
+                    <th>Precio Base</th>
                     <th>Modalidad Oferta</th>
                     <th>Stock</th>
                     <th>Estado</th>
@@ -93,7 +93,7 @@
                             <span class="badge bg-light text-secondary border">Precio Regular</span>
                         {% endif %}
                         {% if prod.acepta_ofertas %}
-                            <div class="small text-success mt-1">Acepta contraofertas</div>
+                            <div class="small text-success mt-1">Acepta ofertas</div>
                         {% endif %}
                     </td>
                     <td class="fw-semibold">{{ prod.stock }}</td>
@@ -106,7 +106,7 @@
                     </td>
                     <td class="text-end">
                         <div class="d-inline-flex gap-1">
-                            <a href="{% url 'editar_producto' prod.id %}" class="btn btn-outline-primary btn-sm">
+                            <a href="{% url 'editar_producto' prod.id %}" class="btn btn-outline-secondary btn-sm">
                                 Editar
                             </a>
                             <form action="{% url 'eliminar_producto' prod.id %}" method="post" onsubmit="return confirm('¿Seguro que deseas eliminar este producto?');">
@@ -122,15 +122,15 @@
     </div>
     {% else %}
     <div class="text-center py-4 text-muted">
-        <p class="mb-2">Aún no has publicado ningún lote agrícola.</p>
-        <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm">Publicar mi primer lote</a>
+        <p class="mb-2">Aún no has publicado ningún producto agrícola.</p>
+        <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm">Publicar mi primer producto</a>
     </div>
     {% endif %}
 </div>
 
 <!-- Seccion 2: Ofertas de Negociacion Recibidas -->
-<div class="bg-white border border-warning rounded-3 p-4 shadow-sm mb-4">
-    <h2 class="h5 fw-bold mb-3">2. Contraofertas de Precio Recibidas de Compradores</h2>
+<div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
+    <h2 class="h5 fw-bold mb-3">2. Ofertas de Precio Recibidas de Compradores</h2>
     {% if ofertas_recibidas %}
     <div class="table-responsive">
         <table class="table align-middle mb-0">
@@ -138,7 +138,7 @@
                 <tr>
                     <th>#</th>
                     <th>Producto</th>
-                    <th>Comprador y Mensaje</th>
+                    <th>Comprador</th>
                     <th>Cantidad</th>
                     <th>Precio Ofrecido</th>
                     <th>Total</th>
@@ -158,12 +158,16 @@
                         {% endif %}
                     </td>
                     <td>{{ of.cantidad }}</td>
-                    <td class="fw-bold text-primary">S/ {{ of.precio_unitario_ofrecido }}</td>
+                    <td class="fw-bold text-dark">S/ {{ of.precio_unitario_ofrecido }}</td>
                     <td class="fw-bold text-success">S/ {{ of.total_ofrecido }}</td>
                     <td>
-                        <span class="badge {% if of.estado == 'PENDIENTE' %}bg-warning text-dark{% elif of.estado == 'ACEPTADA' %}bg-success{% else %}bg-secondary{% endif %}">
-                            {{ of.get_estado_display }}
-                        </span>
+                        {% if of.estado == 'PENDIENTE' %}
+                            <span class="badge bg-light text-secondary border">Pendiente</span>
+                        {% elif of.estado == 'ACEPTADA' %}
+                            <span class="badge bg-success">Aceptada</span>
+                        {% else %}
+                            <span class="badge bg-light text-muted border">{{ of.get_estado_display }}</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if of.estado == 'PENDIENTE' %}
@@ -174,7 +178,7 @@
                             <button type="submit" name="decision" value="RECHAZAR" class="btn btn-outline-danger btn-sm">Rechazar</button>
                         </form>
                         {% else %}
-                            <span class="small text-muted">Procesada</span>
+                            <span class="small text-muted">Respondida</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -183,13 +187,13 @@
         </table>
     </div>
     {% else %}
-    <p class="text-muted mb-0">No tienes contraofertas pendientes en este momento.</p>
+    <p class="text-muted small mb-0">No tienes ofertas pendientes en este momento.</p>
     {% endif %}
 </div>
 
-<!-- Seccion 3: Pedidos pagados en Pasarela -->
+<!-- Seccion 3: Pedidos Recibidos y Despachos -->
 <div class="bg-white border rounded-3 p-4 shadow-sm">
-    <h2 class="h5 fw-bold mb-3">3. Ventas Realizadas en Pasarela de Pago y Despachos</h2>
+    <h2 class="h5 fw-bold mb-3">3. Pedidos Recibidos y Estado de Envío</h2>
     {% if pedidos_recibidos %}
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -199,7 +203,7 @@
                     <th>Producto</th>
                     <th>Comprador y Destino</th>
                     <th>Cant. / Total</th>
-                    <th>Pago en Pasarela</th>
+                    <th>Modalidad Pago</th>
                     <th>Estado Envío</th>
                     <th>Actualizar Despacho</th>
                 </tr>
@@ -227,7 +231,7 @@
                         <span class="badge bg-success-subtle text-success border border-success-subtle">{{ ped.get_estado_pago_display }}</span>
                     </td>
                     <td>
-                        <span class="badge bg-info text-dark">{{ ped.get_estado_display }}</span>
+                        <span class="badge bg-light text-dark border">{{ ped.get_estado_display }}</span>
                     </td>
                     <td>
                         <form action="{% url 'cambiar_estado_pedido' ped.id %}" method="post" class="d-flex gap-1">
@@ -248,8 +252,8 @@
         </table>
     </div>
     {% else %}
-    <div class="text-center py-4 text-muted">
-        Aún no has recibido pedidos pagados de tus productos.
+    <div class="text-center py-4 text-muted small">
+        Aún no has recibido pedidos de tus productos.
     </div>
     {% endif %}
 </div>
