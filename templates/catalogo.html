@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Catálogo Agrícola | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h1 class="h3 fw-bold mb-1">Catálogo de Productos Agrícolas</h1>
+        <p class="text-muted mb-0">Filtra por categoría, unidad de venta o región de cosecha.</p>
+    </div>
+    {% if user.is_authenticated %}
+    <div class="mt-3 mt-md-0">
+        <a href="{% url 'crear_producto' %}" class="btn btn-success">
+            + Publicar Producto
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Barra de busqueda y filtros -->
+<form method="get" action="{% url 'catalogo' %}" class="bg-white border rounded-3 p-3 mb-4 shadow-sm">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-secondary">Buscar producto o región</label>
+            <input type="text" name="q" value="{{ busqueda }}" class="form-control" placeholder="Ej. Papa, Quinua, Huaral, Junín...">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-secondary">Categoría</label>
+            <select name="categoria" class="form-select">
+                <option value="">Todas las categorías</option>
+                {% for cat in categorias %}
+                <option value="{{ cat.id }}" {% if categoria_seleccionada == cat.id|stringformat:"s" %}selected{% endif %}>
+                    {{ cat.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-secondary">Unidad de Venta</label>
+            <select name="unidad" class="form-select">
+                <option value="">Todas las unidades</option>
+                {% for codigo, etiqueta in unidades %}
+                <option value="{{ codigo }}" {% if unidad_seleccionada == codigo %}selected{% endif %}>
+                    {{ etiqueta }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-success w-100">Filtrar</button>
+            <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary" title="Limpiar filtros">Limpiar</a>
+        </div>
+    </div>
+</form>
+
+<!-- Listado de productos -->
+<div class="row g-4">
+    {% for prod in productos %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border shadow-sm">
+            <div class="p-3 pb-0">
+                <div class="placeholder-imagen" style="height: 175px;">
+                    [Espacio para Imagen - {{ prod.nombre }}]
+                </div>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                        {{ prod.categoria.nombre|default:"General" }}
+                    </span>
+                    <span class="badge bg-light text-dark border">
+                        Stock: {{ prod.stock }}
+                    </span>
+                </div>
+                <h5 class="card-title fw-bold mb-1">{{ prod.nombre }}</h5>
+                <p class="text-muted small mb-2">
+                    Origen: <strong>{{ prod.origen }}</strong><br>
+                    Productor: {{ prod.productor.first_name|default:prod.productor.username }} {{ prod.productor.last_name }}
+                </p>
+                <p class="card-text text-secondary small flex-grow-1">
+                    {{ prod.descripcion|truncatewords:20 }}
+                </p>
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-2">
+                    <div>
+                        <span class="fs-5 fw-bold text-success">S/ {{ prod.precio }}</span>
+                        <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
+                    </div>
+                    <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-success btn-sm fw-semibold">
+                        Ver y Comprar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="bg-white border rounded-3 p-5 text-center">
+            <h5 class="fw-bold text-secondary">No se encontraron productos con esos filtros</h5>
+            <p class="text-muted mb-3">Intenta cambiar tu búsqueda o limpiar los filtros seleccionados.</p>
+            <a href="{% url 'catalogo' %}" class="btn btn-outline-success btn-sm">Ver todos los productos</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
