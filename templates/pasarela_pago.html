@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}Pasarela de Pago Segura | AgroComercial{% endblock %}
+{% block title %}Pasarela de Pago | AgroComercial{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <span class="badge bg-success mb-1">PASARELA DE PAGO ENCRIPTADA</span>
-        <h1 class="h3 fw-bold mb-0">Pasarela de Pago y Despacho Agrícola</h1>
-        <p class="text-muted small mb-0">Completa los datos de entrega y elige tu modalidad de pago preferida.</p>
+        <h1 class="h4 fw-bold mb-1">Confirmación de Compra y Pago</h1>
+        <p class="text-muted small mb-0">Completa la dirección de entrega y selecciona cómo deseas pagar tu pedido.</p>
     </div>
     <a href="{% url 'carrito' %}" class="btn btn-outline-secondary btn-sm">
         &larr; Volver al Carrito
@@ -17,11 +16,10 @@
 <form method="post" action="{% url 'pasarela_pago' %}">
     {% csrf_token %}
     <div class="row g-4">
-        <!-- Columna izquierda: Datos de envio y pestañas de la pasarela -->
         <div class="col-lg-8">
-            <!-- Paso 1: Datos de recepcion -->
-            <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
-                <h5 class="fw-bold mb-3">1. Datos de Recepción y Despacho del Lote</h5>
+            <!-- Paso 1: Datos de entrega -->
+            <div class="bg-white border p-4 mb-4">
+                <h5 class="h6 fw-bold mb-3">1. Datos de Entrega</h5>
                 <div class="row g-3">
                     <div class="col-md-8">
                         <label class="form-label small fw-semibold">{{ form.direccion_entrega.label }}</label>
@@ -42,26 +40,39 @@
                 </div>
             </div>
 
-            <!-- Paso 2: Seleccion de Metodo en la Pasarela de Pago -->
-            <div class="bg-white border rounded-3 p-4 shadow-sm">
-                <h5 class="fw-bold mb-3">2. Selecciona el Método en la Pasarela de Pago</h5>
+            <!-- Paso 2: Modalidades de Pago (Contraentrega principal + Tarjeta + Transferencia directa al productor) -->
+            <div class="bg-white border p-4">
+                <h5 class="h6 fw-bold mb-3">2. Modalidad de Pago</h5>
 
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <div class="border rounded-3 p-3 h-100 bg-light">
+                <div class="row g-3">
+                    <!-- Opcion 1: Pago Contraentrega (Preseleccionado por defecto) -->
+                    <div class="col-12">
+                        <div class="border rounded p-3 bg-light">
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoTarjeta" value="TARJETA" checked>
-                                <label class="form-check-label fw-bold" for="pagoTarjeta">
-                                    Tarjeta de Crédito / Débito
+                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoContraentrega" value="CONTRAENTREGA" checked>
+                                <label class="form-check-label fw-bold" for="pagoContraentrega">
+                                    Pago Contraentrega (Recomendado — Pagas al recibir el producto)
                                 </label>
                             </div>
-                            <p class="text-muted small mb-2 ms-4">Visa, Mastercard, Débito Bancario inmediato.</p>
-                            <div class="placeholder-imagen mb-2" style="height: 45px; font-size: 0.72rem;">
-                                [Espacio para Imagen - Logos Visa / Mastercard]
+                            <p class="text-muted small mb-0 ms-4 mt-1">
+                                El pago se realiza directamente al productor o transportista (en efectivo o billetera móvil) al momento de recibir y revisar el lote agrícola en la dirección indicada.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Opcion 2: Tarjeta de Credito / Debito (Simulacion de Pasarela) -->
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoTarjeta" value="TARJETA">
+                                <label class="form-check-label fw-bold" for="pagoTarjeta">
+                                    Tarjeta de Débito / Crédito
+                                </label>
                             </div>
+                            <p class="text-muted small mb-2 ms-4">Simulación de pasarela de pago con tarjeta Visa o Mastercard.</p>
                             <div class="row g-2 mt-1">
                                 <div class="col-12">
-                                    <input type="text" class="form-control form-control-sm" placeholder="Número de tarjeta: 4557 •••• •••• 8910" value="4557 8812 3400 8910">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Número de tarjeta" value="4557 8812 3400 8910">
                                 </div>
                                 <div class="col-6">
                                     <input type="text" class="form-control form-control-sm" placeholder="MM/AA" value="08/29">
@@ -73,54 +84,23 @@
                         </div>
                     </div>
 
+                    <!-- Opcion 3: Transferencia o Pago Directo a la cuenta del Productor -->
                     <div class="col-md-6">
-                        <div class="border rounded-3 p-3 h-100 bg-light">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoYape" value="YAPE_PLIN">
-                                <label class="form-check-label fw-bold" for="pagoYape">
-                                    Billetera Digital (Yape / Plin QR)
-                                </label>
-                            </div>
-                            <p class="text-muted small mb-2 ms-4">Escanea el código QR y coloca el código de aprobación.</p>
-                            <div class="text-center mb-2">
-                                <img src="/static/imagenes/qr_pago.svg" alt="Código QR Yape Plin" class="border rounded bg-white p-1" style="height: 110px; width: 110px;">
-                            </div>
-                            <input type="text" class="form-control form-control-sm" placeholder="Código de operación Yape / Plin (6 dígitos)">
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="border rounded-3 p-3 h-100 bg-light">
-                            <div class="form-check">
+                        <div class="border rounded p-3 h-100">
+                            <div class="form-check mb-2">
                                 <input class="form-check-input" type="radio" name="metodo_pago" id="pagoTransferencia" value="TRANSFERENCIA">
                                 <label class="form-check-label fw-bold" for="pagoTransferencia">
-                                    Transferencia Bancaria Agrícola
+                                    Transferencia Directa al Productor
                                 </label>
                             </div>
-                            <p class="text-muted small mb-1 ms-4">Cuentas recaudadoras AgroComercial:</p>
-                            <div class="bg-white border rounded p-2 small text-secondary mb-2">
-                                <div><strong>BCP Soles:</strong> 191-9876543-0-12</div>
-                                <div><strong>Banco Agrario CCI:</strong> 018-000-001234567890-24</div>
-                            </div>
-                            <div class="placeholder-imagen" style="height: 45px; font-size: 0.72rem;">
-                                [Espacio para Imagen - Constancia de Transferencia]
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="border rounded-3 p-3 h-100 bg-light">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoContraentrega" value="CONTRAENTREGA">
-                                <label class="form-check-label fw-bold" for="pagoContraentrega">
-                                    Pago Contraentrega en Almacén
-                                </label>
-                            </div>
-                            <p class="text-muted small mb-2 ms-4">
-                                Cancela el importe al momento de recibir y verificar la calidad del lote agrícola en el punto de entrega acordado.
-                            </p>
-                            <div class="placeholder-imagen" style="height: 65px; font-size: 0.72rem;">
-                                [Espacio para Imagen - Ícono de Camión / Pago en Destino]
+                            <p class="text-muted small mb-2 ms-4">Coordina el abono directo a la cuenta del agricultor titular del lote:</p>
+                            <div class="bg-light border rounded p-2 small text-secondary">
+                                {% for item in items %}
+                                    <div class="mb-1">
+                                        <strong>{{ item.producto.productor.first_name|default:item.producto.productor.username }} {{ item.producto.productor.last_name }}:</strong>
+                                        Tel. / Contacto directo: {{ item.producto.productor.perfil.telefono|default:"964112233" }}
+                                    </div>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
@@ -128,10 +108,10 @@
             </div>
         </div>
 
-        <!-- Columna derecha: Resumen de orden y boton de confirmar pago -->
+        <!-- Resumen de Compra -->
         <div class="col-lg-4">
-            <div class="bg-white border rounded-3 p-4 shadow-sm sticky-top" style="top: 1rem;">
-                <h5 class="fw-bold mb-3">Resumen de tu Compra</h5>
+            <div class="bg-white border p-4">
+                <h5 class="h6 fw-bold mb-3">Resumen del Pedido</h5>
                 <ul class="list-group list-group-flush mb-3">
                     {% for item in items %}
                     <li class="list-group-item px-0 d-flex justify-content-between align-items-start">
@@ -149,21 +129,18 @@
                     <span>S/ {{ subtotal }}</span>
                 </div>
                 <div class="d-flex justify-content-between small text-secondary mb-2">
-                    <span>Servicio de acopio y guía:</span>
+                    <span>Costo de envío / guía:</span>
                     <span>S/ {{ costo_logistica }}</span>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <span class="fw-bold">Importe Total:</span>
-                    <span class="fs-3 fw-bold text-success">S/ {{ total_pagar }}</span>
+                    <span class="fw-bold">Total del Pedido:</span>
+                    <span class="fs-4 fw-bold text-success">S/ {{ total_pagar }}</span>
                 </div>
 
-                <button type="submit" class="btn btn-success btn-lg w-100 fw-bold">
-                    Confirmar y Pagar S/ {{ total_pagar }}
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
+                    Confirmar Pedido y Generar Comprobante
                 </button>
-                <p class="text-center text-muted small mt-2 mb-0">
-                    Protección CSRF activa y emisión inmediata de Comprobante Electrónico.
-                </p>
             </div>
         </div>
     </div>
