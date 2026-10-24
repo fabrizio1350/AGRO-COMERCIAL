@@ -4,73 +4,126 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-9">
         <div class="bg-white border rounded-3 p-4 shadow-sm">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="h4 fw-bold mb-0">{{ accion }}</h2>
+                <div>
+                    <span class="badge bg-success mb-1">GESTIÓN DE LOTE DEL VENDEDOR</span>
+                    <h2 class="h4 fw-bold mb-0">{{ accion }}</h2>
+                </div>
                 <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary btn-sm">
-                    &larr; Volver al Panel
+                    &larr; Volver al Panel Vendedor
                 </a>
             </div>
 
-            <div class="placeholder-imagen mb-4" style="height: 150px;">
-                [Espacio para Imagen del Producto — Se mostrará como contenedor limpio en el catálogo]
+            <div class="placeholder-imagen mb-4" style="height: 140px;">
+                [Espacio para Imagen del Producto — Se mostrará como contenedor limpio en el Marketplace]
             </div>
 
             <form method="post">
                 {% csrf_token %}
 
-                <div class="row g-3">
+                {% if form.errors %}
+                <div class="alert alert-danger small">
+                    Por favor verifica los campos marcados del formulario.
+                </div>
+                {% endif %}
+
+                <h6 class="fw-bold text-success border-bottom pb-2 mb-3">1. Información Principal y Ficha Técnica</h6>
+                <div class="row g-3 mb-4">
                     <div class="col-md-8">
-                        <label class="form-label small fw-semibold">Nombre del Producto o Lote Agrícola</label>
+                        <label class="form-label small fw-semibold">Nombre Comercial del Producto o Lote</label>
                         {{ form.nombre }}
-                        {% if form.nombre.errors %}
-                            <div class="text-danger small">{{ form.nombre.errors|striptags }}</div>
-                        {% endif %}
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Categoría</label>
+                        <label class="form-label small fw-semibold">Categoría Agrícola</label>
                         {{ form.categoria }}
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Precio en Soles (S/)</label>
+                        <label class="form-label small fw-semibold">Variedad / Semilla</label>
+                        {{ form.variedad }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Tipo de Cultivo</label>
+                        {{ form.tipo_cultivo }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Fecha / Estado de Cosecha</label>
+                        {{ form.fecha_cosecha }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Calidad y Calibre</label>
+                        {{ form.calidad }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Región / Valle de Cosecha</label>
+                        {{ form.origen }}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Descripción detallada del lote</label>
+                        {{ form.descripcion }}
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-success border-bottom pb-2 mb-3">2. Precios, Ventas por Oferta y Stock</h6>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Precio Normal (S/)</label>
                         {{ form.precio }}
                         {% if form.precio.errors %}
                             <div class="text-danger small">{{ form.precio.errors|striptags }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Unidad de Medida</label>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Unidad de Venta</label>
                         {{ form.unidad }}
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Cantidad en Stock</label>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Stock Disponible</label>
                         {{ form.stock }}
                     </div>
-
-                    <div class="col-md-8">
-                        <label class="form-label small fw-semibold">Región / Valle de Cosecha</label>
-                        {{ form.origen }}
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Compra Mínima</label>
+                        {{ form.minimo_compra }}
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <div class="form-check mb-2">
-                            {{ form.disponible }}
-                            <label class="form-check-label fw-semibold small">
-                                Lote disponible para venta
+
+                    <div class="col-md-4 d-flex align-items-center pt-3">
+                        <div class="form-check">
+                            {{ form.en_oferta }}
+                            <label class="form-check-label fw-bold small text-danger">
+                                Activar en Oferta / Remate
                             </label>
                         </div>
                     </div>
-
-                    <div class="col-12">
-                        <label class="form-label small fw-semibold">Descripción detallada del producto</label>
-                        {{ form.descripcion }}
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-danger">Precio de Oferta (S/)</label>
+                        {{ form.precio_oferta }}
+                        {% if form.precio_oferta.errors %}
+                            <div class="text-danger small">{{ form.precio_oferta.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 d-flex flex-column justify-content-center pt-2">
+                        <div class="form-check">
+                            {{ form.acepta_ofertas }}
+                            <label class="form-check-label fw-semibold small">
+                                Aceptar contraofertas por volumen
+                            </label>
+                        </div>
+                        <div class="form-check mt-1">
+                            {{ form.disponible }}
+                            <label class="form-check-label fw-semibold small">
+                                Lote activo en Marketplace
+                            </label>
+                        </div>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2 mt-4">
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                     <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary">Cancelar</a>
-                    <button type="submit" class="btn btn-success px-4 fw-semibold">Guardar Producto</button>
+                    <button type="submit" class="btn btn-success px-4 fw-semibold">Guardar Lote Agrícola</button>
                 </div>
             </form>
         </div>
