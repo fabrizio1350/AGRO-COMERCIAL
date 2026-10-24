@@ -3,69 +3,155 @@
 {% block title %}Inicio | AgroComercial{% endblock %}
 
 {% block content %}
-<!-- Seccion principal (Banner sin imagenes reales) -->
+<!-- Banner principal con accesos diferenciados para Comprador y Vendedor -->
 <div class="bg-white border rounded-3 p-4 p-md-5 mb-4 shadow-sm">
     <div class="row align-items-center g-4">
         <div class="col-lg-7">
             <span class="badge bg-success-subtle text-success border border-success-subtle mb-2">
-                Comercio Directo del Campo a la Ciudad
+                Marketplace Agrícola + Ventas por Oferta + Pasarela de Pago
             </span>
             <h1 class="display-6 fw-bold text-dark mb-3">
-                Conectamos productores agrícolas con compradores sin intermediarios
+                Comercialización agrícola directa entre Productores y Compradores
             </h1>
             <p class="lead text-secondary mb-4">
-                Explora cosechas frescas de distintas regiones del país, negocia directamente con asociaciones y agricultores locales y gestiona tus pedidos de manera transparente.
+                Compra lotes frescos en el Marketplace con filtros avanzados, propón tu propio precio en el apartado de <strong>Ventas por Oferta</strong> y paga de forma segura en nuestra pasarela integrada.
             </p>
             <div class="d-flex flex-wrap gap-2">
-                <a href="{% url 'catalogo' %}" class="btn btn-success btn-lg px-4">
-                    Ver Catálogo Agrícola
+                <a href="{% url 'catalogo' %}" class="btn btn-success px-4 fw-semibold">
+                    Ir al Marketplace
+                </a>
+                <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning text-dark px-4 fw-semibold">
+                    Ver Ventas por Oferta
                 </a>
                 {% if not user.is_authenticated %}
-                <a href="{% url 'registro' %}" class="btn btn-outline-secondary btn-lg px-4">
-                    Crear Cuenta (Productor / Comprador)
-                </a>
+                    <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-teal btn-outline-primary px-3">
+                        Acceso Comprador
+                    </a>
+                    <a href="{% url 'login' %}?modo=vendedor" class="btn btn-outline-dark px-3">
+                        Acceso Vendedor
+                    </a>
+                {% elif rol_actual == 'PRODUCTOR' %}
+                    <a href="{% url 'panel_productor' %}" class="btn btn-outline-dark px-3">
+                        Ir a mi Panel Vendedor
+                    </a>
                 {% else %}
-                <a href="{% url 'panel_productor' %}" class="btn btn-outline-success btn-lg px-4">
-                    Ir a mi Panel Productor
-                </a>
+                    <a href="{% url 'panel_comprador' %}" class="btn btn-outline-primary px-3">
+                        Ir a mi Panel Comprador
+                    </a>
                 {% endif %}
             </div>
         </div>
         <div class="col-lg-5">
             <div class="placeholder-imagen" style="height: 260px;">
-                [Espacio para Imagen - Banner Principal de Cosecha Agrícola]
+                [Espacio para Imagen - Banner Principal de Comercialización Agrícola]
             </div>
         </div>
     </div>
 </div>
 
-<!-- Resumen de indicadores de la plataforma -->
+<!-- Tarjetas comparativas de Roles (Vendedor vs Comprador) -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="bg-white border border-success-subtle rounded-3 p-3 shadow-sm h-100 d-flex justify-content-between align-items-center">
+            <div>
+                <span class="badge bg-success mb-1">MODO VENDEDOR / PRODUCTOR</span>
+                <h5 class="h6 fw-bold mb-1">¿Eres agricultor o asociación agrícola?</h5>
+                <p class="text-muted small mb-0">Publica tus cosechas con ficha técnica, activa descuentos y acepta contraofertas por volumen.</p>
+            </div>
+            <a href="{% if user.is_authenticated %}{% url 'panel_productor' %}{% else %}{% url 'login' %}?modo=vendedor{% endif %}" class="btn btn-sm btn-outline-success ms-3 flex-shrink-0">
+                Panel Vendedor &rarr;
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="bg-white border border-info-subtle rounded-3 p-3 shadow-sm h-100 d-flex justify-content-between align-items-center">
+            <div>
+                <span class="badge bg-info text-dark mb-1">MODO COMPRADOR / MAYORISTA</span>
+                <h5 class="h6 fw-bold mb-1">¿Buscas abastecer tu negocio o mercado?</h5>
+                <p class="text-muted small mb-0">Filtra por región y cultivo, negocia precios por lote, llena tu carrito y paga en línea.</p>
+            </div>
+            <a href="{% if user.is_authenticated %}{% url 'panel_comprador' %}{% else %}{% url 'login' %}?modo=comprador{% endif %}" class="btn btn-sm btn-outline-primary ms-3 flex-shrink-0">
+                Panel Comprador &rarr;
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen de indicadores -->
 <div class="row g-3 mb-5 text-center">
-    <div class="col-md-4">
+    <div class="col-6 col-md-3">
         <div class="bg-white border rounded-3 p-3 shadow-sm">
             <h3 class="fw-bold text-success mb-0">{{ total_productos }}</h3>
-            <span class="text-muted small">Lotes y Productos Disponibles</span>
+            <span class="text-muted small">Lotes en Marketplace</span>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-6 col-md-3">
+        <div class="bg-white border rounded-3 p-3 shadow-sm">
+            <h3 class="fw-bold text-danger mb-0">{{ total_ofertas }}</h3>
+            <span class="text-muted small">Lotes en Oferta / Remate</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
         <div class="bg-white border rounded-3 p-3 shadow-sm">
             <h3 class="fw-bold text-success mb-0">{{ total_productores }}</h3>
-            <span class="text-muted small">Productores Agrícolas Registrados</span>
+            <span class="text-muted small">Vendedores Verificados</span>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-6 col-md-3">
         <div class="bg-white border rounded-3 p-3 shadow-sm">
-            <h3 class="fw-bold text-success mb-0">{{ total_pedidos }}</h3>
-            <span class="text-muted small">Pedidos Gestionados en Plataforma</span>
+            <h3 class="fw-bold text-primary mb-0">{{ total_pedidos }}</h3>
+            <span class="text-muted small">Transacciones Procesadas</span>
         </div>
+    </div>
+</div>
+
+<!-- Apartado destacado: Ventas por Oferta y Remates de Cosecha -->
+<div class="bg-white border border-warning rounded-3 p-4 mb-5 shadow-sm">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+        <div>
+            <span class="badge bg-warning text-dark mb-1">OFERTAS DE CAMPAÑA Y NEGOCIACIÓN</span>
+            <h2 class="h4 fw-bold mb-0">Lotes en Oferta y Remate Directo</h2>
+        </div>
+        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning btn-sm fw-semibold mt-2 mt-md-0">
+            Ir al Apartado de Ventas por Oferta &rarr;
+        </a>
+    </div>
+    <div class="row g-3">
+        {% for prod in productos_en_oferta %}
+        <div class="col-md-4">
+            <div class="card h-100 border">
+                <div class="p-3 pb-0 position-relative">
+                    <span class="badge bg-danger position-absolute top-0 end-0 m-4">
+                        -{{ prod.porcentaje_descuento }}% OFERTA
+                    </span>
+                    <div class="placeholder-imagen" style="height: 150px;">
+                        [Espacio para Imagen - {{ prod.nombre }}]
+                    </div>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <h6 class="fw-bold mb-1">{{ prod.nombre }}</h6>
+                    <p class="text-muted small mb-2">Origen: {{ prod.origen }} | Stock: {{ prod.stock }} ({{ prod.get_unidad_display }})</p>
+                    <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
+                        <div>
+                            <span class="text-decoration-line-through text-muted small me-1">S/ {{ prod.precio }}</span>
+                            <span class="fs-5 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
+                        </div>
+                        <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-sm btn-outline-danger fw-semibold">
+                            Comprar / Ofertar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 </div>
 
 <!-- Apartado de Categorias Agricolas -->
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h4 fw-bold mb-0">Categorías Agrícolas</h2>
+    <h2 class="h4 fw-bold mb-0">Categorías del Marketplace</h2>
     <a href="{% url 'catalogo' %}" class="text-success text-decoration-none fw-semibold small">
-        Ver todo el catálogo &rarr;
+        Ver todo el Marketplace &rarr;
     </a>
 </div>
 <div class="row g-3 mb-5">
@@ -73,13 +159,13 @@
     <div class="col-sm-6 col-lg-3">
         <div class="card h-100 border shadow-sm">
             <div class="card-body d-flex flex-column">
-                <div class="placeholder-imagen mb-3" style="height: 100px;">
+                <div class="placeholder-imagen mb-3" style="height: 95px;">
                     [Espacio para Imagen - {{ cat.nombre }}]
                 </div>
                 <h5 class="card-title h6 fw-bold">{{ cat.nombre }}</h5>
                 <p class="card-text text-muted small flex-grow-1">{{ cat.descripcion }}</p>
                 <a href="{% url 'catalogo' %}?categoria={{ cat.id }}" class="btn btn-outline-success btn-sm w-100 mt-2">
-                    Explorar categoría
+                    Filtrar categoría
                 </a>
             </div>
         </div>
@@ -87,48 +173,51 @@
     {% endfor %}
 </div>
 
-<!-- Apartado de Productos Destacados -->
+<!-- Apartado de Productos Recien Publicados -->
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h4 fw-bold mb-0">Productos Recién Publicados</h2>
-    <a href="{% url 'catalogo' %}" class="btn btn-sm btn-outline-secondary">Filtrar productos</a>
+    <h2 class="h4 fw-bold mb-0">Catálogo General del Marketplace</h2>
+    <a href="{% url 'catalogo' %}" class="btn btn-sm btn-outline-secondary">Abrir buscador y filtros</a>
 </div>
 <div class="row g-4 mb-4">
     {% for prod in productos_destacados %}
     <div class="col-md-6 col-lg-4">
         <div class="card h-100 border shadow-sm">
             <div class="p-3 pb-0">
-                <div class="placeholder-imagen" style="height: 170px;">
+                <div class="placeholder-imagen" style="height: 165px;">
                     [Espacio para Imagen del Producto]
                 </div>
             </div>
             <div class="card-body d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="badge bg-light text-dark border">{{ prod.categoria.nombre }}</span>
-                    <span class="text-muted small">Stock: {{ prod.stock }}</span>
+                    {% if prod.en_oferta %}
+                        <span class="badge bg-danger">En Oferta (-{{ prod.porcentaje_descuento }}%)</span>
+                    {% else %}
+                        <span class="text-muted small">Stock: {{ prod.stock }}</span>
+                    {% endif %}
                 </div>
                 <h5 class="card-title fw-bold mb-1">{{ prod.nombre }}</h5>
                 <p class="text-muted small mb-2">
-                    Origen: <strong>{{ prod.origen }}</strong> | Productor: {{ prod.productor.first_name|default:prod.productor.username }}
+                    Variedad: {{ prod.variedad }} | Origen: <strong>{{ prod.origen }}</strong>
                 </p>
                 <p class="card-text text-secondary small flex-grow-1">
-                    {{ prod.descripcion|truncatewords:18 }}
+                    {{ prod.descripcion|truncatewords:16 }}
                 </p>
                 <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-2">
                     <div>
-                        <span class="fs-5 fw-bold text-success">S/ {{ prod.precio }}</span>
+                        {% if prod.en_oferta and prod.precio_oferta %}
+                            <span class="text-decoration-line-through text-muted small">S/ {{ prod.precio }}</span>
+                            <span class="fs-5 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
+                        {% else %}
+                            <span class="fs-5 fw-bold text-success">S/ {{ prod.precio }}</span>
+                        {% endif %}
                         <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
                     </div>
                     <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-success btn-sm">
-                        Ver Detalle
+                        Descripción y Compra
                     </a>
                 </div>
             </div>
-        </div>
-    </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="alert alert-secondary text-center">
-            Aún no hay productos publicados en este momento.
         </div>
     </div>
     {% endfor %}
