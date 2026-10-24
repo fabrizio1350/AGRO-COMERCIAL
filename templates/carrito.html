@@ -5,11 +5,10 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <span class="badge bg-info text-dark mb-1">CARRITO DEL COMPRADOR</span>
-        <h1 class="h3 fw-bold mb-0">Mi Carrito de Lotes Agrícolas</h1>
+        <h1 class="h4 fw-bold mb-0">Mi Carrito de Compras</h1>
     </div>
     <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary btn-sm">
-        &larr; Seguir buscando en el Marketplace
+        &larr; Seguir viendo el Marketplace
     </a>
 </div>
 
@@ -84,12 +83,9 @@
                 <span class="fs-4 fw-bold text-success">S/ {{ total_pagar }}</span>
             </div>
 
-            <a href="{% url 'pasarela_pago' %}" class="btn btn-success w-100 py-2 fw-semibold mb-2">
-                Continuar a la Pasarela de Pago &rarr;
+            <a href="{% url 'pasarela_pago' %}" class="btn btn-success w-100 py-2 fw-semibold">
+                Continuar al Pago &rarr;
             </a>
-            <div class="placeholder-imagen mt-3" style="height: 60px; font-size: 0.75rem;">
-                [Espacio para Imagen - Sellos de Pago Seguro Visa / Yape / Plin / BCP]
-            </div>
         </div>
     </div>
 </div>
