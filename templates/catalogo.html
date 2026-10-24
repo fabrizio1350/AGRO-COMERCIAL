@@ -123,8 +123,8 @@
                     </a>
                 </h5>
                 <p class="text-muted small mb-2">
-                    Variedad: <strong>{{ prod.variedad }}</strong> | Origen: <strong>{{ prod.origen }}</strong><br>
-                    Vendedor: {{ prod.productor.first_name|default:prod.productor.username }} {{ prod.productor.last_name }} | Stock: {{ prod.stock }}
+                    Calidad: <strong>{{ prod.get_calidad_display }}</strong> | Origen: <strong>{{ prod.origen }}</strong><br>
+                    Cosecha: {{ prod.fecha_cosecha|date:"d/m/Y" }} | Stock: {{ prod.stock }}
                 </p>
                 <p class="card-text text-secondary small flex-grow-1 mb-3">
                     {{ prod.descripcion|truncatewords:18 }}
