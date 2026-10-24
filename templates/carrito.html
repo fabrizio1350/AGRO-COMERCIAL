@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Carrito de Compras | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <span class="badge bg-info text-dark mb-1">CARRITO DEL COMPRADOR</span>
+        <h1 class="h3 fw-bold mb-0">Mi Carrito de Lotes Agrícolas</h1>
+    </div>
+    <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary btn-sm">
+        &larr; Seguir buscando en el Marketplace
+    </a>
+</div>
+
+{% if items %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="bg-white border rounded-3 p-4 shadow-sm">
+            <h5 class="fw-bold mb-3">Lotes seleccionados ({{ items.count }})</h5>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto y Vendedor</th>
+                            <th>Precio Unitario</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td style="width: 100px;">
+                                <div class="placeholder-imagen" style="height: 65px; font-size: 0.7rem;">
+                                    [Espacio Imagen]
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{% url 'detalle_producto' item.producto.id %}" class="fw-bold text-dark text-decoration-none">
+                                    {{ item.producto.nombre }}
+                                </a>
+                                <div class="text-muted small">
+                                    Vendedor: {{ item.producto.productor.first_name|default:item.producto.productor.username }} | Origen: {{ item.producto.origen }}
+                                </div>
+                                {% if item.precio_unitario_acordado %}
+                                    <span class="badge bg-warning text-dark">Precio por Oferta Aceptada</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>S/ {{ item.precio_aplicado }}</strong>
+                                <span class="text-muted small">/ {{ item.producto.get_unidad_display }}</span>
+                            </td>
+                            <td class="fw-semibold">{{ item.cantidad }}</td>
+                            <td class="fw-bold text-success">S/ {{ item.subtotal }}</td>
+                            <td class="text-end">
+                                <form action="{% url 'eliminar_del_carrito' item.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">Quitar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="bg-white border rounded-3 p-4 shadow-sm">
+            <h5 class="fw-bold mb-3">Resumen de Liquidación</h5>
+            <div class="d-flex justify-content-between mb-2 text-secondary">
+                <span>Subtotal de productos:</span>
+                <strong>S/ {{ subtotal }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2 text-secondary">
+                <span>Gestión logística y acopio:</span>
+                <strong>S/ {{ costo_logistica }}</strong>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <span class="fw-bold">Total a Pagar:</span>
+                <span class="fs-4 fw-bold text-success">S/ {{ total_pagar }}</span>
+            </div>
+
+            <a href="{% url 'pasarela_pago' %}" class="btn btn-success w-100 py-2 fw-semibold mb-2">
+                Continuar a la Pasarela de Pago &rarr;
+            </a>
+            <div class="placeholder-imagen mt-3" style="height: 60px; font-size: 0.75rem;">
+                [Espacio para Imagen - Sellos de Pago Seguro Visa / Yape / Plin / BCP]
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="bg-white border rounded-3 p-5 text-center shadow-sm">
+    <h5 class="fw-bold text-secondary">Tu carrito de compras está vacío</h5>
+    <p class="text-muted mb-3">Explora el Marketplace o el apartado de Ventas por Oferta para agregar productos agrícolas.</p>
+    <div class="d-flex justify-content-center gap-2">
+        <a href="{% url 'catalogo' %}" class="btn btn-success">Ir al Marketplace</a>
+        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning text-dark fw-semibold">Ver Ofertas del Día</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
