@@ -14,7 +14,8 @@ class PerfilUsuario(models.Model):
     telefono = models.CharField(max_length=20, blank=True)
     ubicacion = models.CharField(max_length=120, blank=True)
     nombre_finca = models.CharField(max_length=120, blank=True, help_text="Finca, asociación o empresa comercial")
-    ruc_dni = models.CharField(max_length=20, blank=True, help_text="DNI o RUC para facturación")
+    ruc_dni = models.CharField(max_length=20, blank=True, help_text="DNI o RUC")
+    cuenta_bancaria = models.CharField(max_length=120, blank=True, help_text="Número de cuenta en soles (solo vendedores)")
 
     def __str__(self):
         return f"{self.usuario.username} ({self.get_rol_display()})"
@@ -80,6 +81,7 @@ class Producto(models.Model):
     stock = models.PositiveIntegerField(default=1)
     minimo_compra = models.PositiveIntegerField(default=1)
     origen = models.CharField(max_length=120, help_text="Región o valle de cosecha")
+    imagen_url = models.CharField(max_length=350, blank=True, help_text="Enlace de imagen de referencia (opcional)")
     disponible = models.BooleanField(default=True)
     fecha_publicacion = models.DateTimeField(auto_now_add=True)
 
@@ -98,6 +100,8 @@ class Producto(models.Model):
         return 0
 
     def url_imagen(self):
+        if self.imagen_url and self.imagen_url.strip():
+            return self.imagen_url.strip()
         texto = f"{self.nombre} {self.variedad}".lower()
         if 'papa' in texto or 'camote' in texto or 'yuca' in texto:
             return '/static/imagenes/papa_amarilla.jpg'
@@ -122,10 +126,10 @@ class Producto(models.Model):
 class OfertaNegociacion(models.Model):
     """Permite a los compradores proponer un precio por volumen/lote al vendedor."""
     ESTADOS_OFERTA = [
-        ('PENDIENTE', 'Pendiente de respuesta del vendedor'),
-        ('ACEPTADA', 'Aceptada (Lista para pagar)'),
-        ('RECHAZADA', 'Rechazada por el vendedor'),
-        ('PAGADA', 'Comprada y Pagada'),
+        ('PENDIENTE', 'Pendiente'),
+        ('ACEPTADA', 'Aceptada'),
+        ('RECHAZADA', 'Rechazada'),
+        ('PAGADA', 'Comprada'),
     ]
 
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='ofertas_recibidas')
