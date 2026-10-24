@@ -1,56 +1,71 @@
 {% extends 'base.html' %}
 
-{% block title %}Panel del Productor | AgroComercial{% endblock %}
+{% block title %}Panel del Vendedor | AgroComercial{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1">Panel de Gestión del Productor</h1>
-        <p class="text-muted mb-0">
-            Administra tus productos agrícolas publicados y responde a los pedidos de los compradores.
-        </p>
-    </div>
-    <div class="mt-3 mt-md-0">
-        <a href="{% url 'crear_producto' %}" class="btn btn-success fw-semibold">
-            + Publicar Nuevo Producto
-        </a>
+<div class="bg-white border border-success-subtle rounded-3 p-4 mb-4 shadow-sm">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+        <div>
+            <span class="badge bg-success mb-1">PANEL EXCLUSIVO DEL VENDEDOR / PRODUCTOR AGRÍCOLA</span>
+            <h1 class="h3 fw-bold mb-1">Gestión de Finca y Ventas: {{ perfil.nombre_finca|default:user.username }}</h1>
+            <p class="text-muted mb-0">
+                Administra tus lotes publicados, activa descuentos de campaña, responde ofertas por volumen y despacha pedidos pagados.
+            </p>
+        </div>
+        <div class="mt-3 mt-md-0 d-flex gap-2">
+            <a href="{% url 'crear_producto' %}" class="btn btn-success fw-semibold">
+                + Publicar Nuevo Lote
+            </a>
+            <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning text-dark fw-semibold">
+                Sala de Ofertas ({{ ofertas_recibidas.count }})
+            </a>
+        </div>
     </div>
 </div>
 
-<!-- Tarjetas de resumen del productor -->
+<!-- Tarjetas de resumen del vendedor -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
+    <div class="col-6 col-md-3">
         <div class="bg-white border rounded-3 p-3 shadow-sm">
-            <span class="text-muted small d-block">Mis Productos Publicados</span>
+            <span class="text-muted small d-block">Mis Lotes Publicados</span>
             <h3 class="fw-bold text-dark mb-0">{{ mis_productos.count }}</h3>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-6 col-md-3">
         <div class="bg-white border rounded-3 p-3 shadow-sm">
-            <span class="text-muted small d-block">Pedidos Recibidos</span>
+            <span class="text-muted small d-block">Ofertas por Responder</span>
+            <h3 class="fw-bold text-warning mb-0">{{ ofertas_recibidas.count }}</h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="bg-white border rounded-3 p-3 shadow-sm">
+            <span class="text-muted small d-block">Ventas en Pasarela</span>
             <h3 class="fw-bold text-primary mb-0">{{ pedidos_recibidos.count }}</h3>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-6 col-md-3">
         <div class="bg-white border rounded-3 p-3 shadow-sm">
-            <span class="text-muted small d-block">Ingresos Confirmados / Entregados</span>
+            <span class="text-muted small d-block">Ingresos Confirmados</span>
             <h3 class="fw-bold text-success mb-0">S/ {{ ingresos_estimados|default:"0.00" }}</h3>
         </div>
     </div>
 </div>
 
-<!-- Seccion 1: Mis Productos -->
+<!-- Seccion 1: Mis Lotes Publicados -->
 <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
-    <h2 class="h5 fw-bold mb-3">Mis Lotes y Productos Agrícolas</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 fw-bold mb-0">1. Mis Lotes y Productos Agrícolas Publicados</h2>
+        <a href="{% url 'crear_producto' %}" class="btn btn-sm btn-outline-success">+ Agregar Lote</a>
+    </div>
     {% if mis_productos %}
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
                     <th>Imagen</th>
-                    <th>Producto</th>
-                    <th>Categoría</th>
-                    <th>Precio / Unidad</th>
+                    <th>Producto y Ficha</th>
+                    <th>Precio Normal</th>
+                    <th>Modalidad Oferta</th>
                     <th>Stock</th>
                     <th>Estado</th>
                     <th class="text-end">Acciones</th>
@@ -59,7 +74,7 @@
             <tbody>
                 {% for prod in mis_productos %}
                 <tr>
-                    <td style="width: 110px;">
+                    <td style="width: 100px;">
                         <div class="placeholder-imagen" style="height: 55px; font-size: 0.7rem; padding: 0.25rem;">
                             [Espacio Imagen]
                         </div>
@@ -68,19 +83,28 @@
                         <a href="{% url 'detalle_producto' prod.id %}" class="fw-bold text-dark text-decoration-none">
                             {{ prod.nombre }}
                         </a>
-                        <div class="text-muted small">Origen: {{ prod.origen }}</div>
+                        <div class="text-muted small">Variedad: {{ prod.variedad }} | Origen: {{ prod.origen }}</div>
                     </td>
-                    <td>{{ prod.categoria.nombre|default:"-" }}</td>
                     <td>
                         <strong>S/ {{ prod.precio }}</strong>
                         <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
                     </td>
-                    <td>{{ prod.stock }}</td>
+                    <td>
+                        {% if prod.en_oferta and prod.precio_oferta %}
+                            <span class="badge bg-danger">En Oferta: S/ {{ prod.precio_oferta }} (-{{ prod.porcentaje_descuento }}%)</span>
+                        {% else %}
+                            <span class="badge bg-light text-secondary border">Precio Regular</span>
+                        {% endif %}
+                        {% if prod.acepta_ofertas %}
+                            <div class="small text-success mt-1">Acepta contraofertas</div>
+                        {% endif %}
+                    </td>
+                    <td class="fw-semibold">{{ prod.stock }}</td>
                     <td>
                         {% if prod.disponible and prod.stock > 0 %}
-                            <span class="badge bg-success">Disponible</span>
+                            <span class="badge bg-success">Activo</span>
                         {% else %}
-                            <span class="badge bg-secondary">No disponible</span>
+                            <span class="badge bg-secondary">Pausado/Agotado</span>
                         {% endif %}
                     </td>
                     <td class="text-end">
@@ -101,15 +125,74 @@
     </div>
     {% else %}
     <div class="text-center py-4 text-muted">
-        <p class="mb-2">Aún no has publicado ningún producto agrícola.</p>
-        <a href="{% url 'crear_producto' %}" class="btn btn-outline-success btn-sm">Publicar mi primer producto</a>
+        <p class="mb-2">Aún no has publicado ningún lote agrícola.</p>
+        <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm">Publicar mi primer lote</a>
     </div>
     {% endif %}
 </div>
 
-<!-- Seccion 2: Pedidos recibidos de compradores -->
+<!-- Seccion 2: Ofertas de Negociacion Recibidas -->
+<div class="bg-white border border-warning rounded-3 p-4 shadow-sm mb-4">
+    <h2 class="h5 fw-bold mb-3">2. Contraofertas de Precio Recibidas de Compradores</h2>
+    {% if ofertas_recibidas %}
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Producto</th>
+                    <th>Comprador y Mensaje</th>
+                    <th>Cantidad</th>
+                    <th>Precio Ofrecido</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Decisión del Vendedor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for of in ofertas_recibidas %}
+                <tr>
+                    <td class="fw-bold">#{{ of.id }}</td>
+                    <td>{{ of.producto.nombre }}</td>
+                    <td>
+                        <strong>{{ of.comprador.first_name|default:of.comprador.username }}</strong>
+                        {% if of.mensaje %}
+                            <div class="text-muted small fst-italic">"{{ of.mensaje }}"</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ of.cantidad }}</td>
+                    <td class="fw-bold text-primary">S/ {{ of.precio_unitario_ofrecido }}</td>
+                    <td class="fw-bold text-success">S/ {{ of.total_ofrecido }}</td>
+                    <td>
+                        <span class="badge {% if of.estado == 'PENDIENTE' %}bg-warning text-dark{% elif of.estado == 'ACEPTADA' %}bg-success{% else %}bg-secondary{% endif %}">
+                            {{ of.get_estado_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if of.estado == 'PENDIENTE' %}
+                        <form action="{% url 'responder_oferta' of.id %}" method="post" class="d-flex gap-1">
+                            {% csrf_token %}
+                            <input type="hidden" name="respuesta_vendedor" value="Oferta aprobada por el productor.">
+                            <button type="submit" name="decision" value="ACEPTAR" class="btn btn-success btn-sm">Aceptar</button>
+                            <button type="submit" name="decision" value="RECHAZAR" class="btn btn-outline-danger btn-sm">Rechazar</button>
+                        </form>
+                        {% else %}
+                            <span class="small text-muted">Procesada</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No tienes contraofertas pendientes en este momento.</p>
+    {% endif %}
+</div>
+
+<!-- Seccion 3: Pedidos pagados en Pasarela -->
 <div class="bg-white border rounded-3 p-4 shadow-sm">
-    <h2 class="h5 fw-bold mb-3">Pedidos Recibidos de Compradores</h2>
+    <h2 class="h5 fw-bold mb-3">3. Ventas Realizadas en Pasarela de Pago y Despachos</h2>
     {% if pedidos_recibidos %}
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -117,42 +200,42 @@
                 <tr>
                     <th># Pedido</th>
                     <th>Producto</th>
-                    <th>Comprador y Entrega</th>
-                    <th>Cantidad</th>
-                    <th>Total</th>
-                    <th>Estado Actual</th>
-                    <th>Actualizar Estado</th>
+                    <th>Comprador y Destino</th>
+                    <th>Cant. / Total</th>
+                    <th>Pago en Pasarela</th>
+                    <th>Estado Envío</th>
+                    <th>Actualizar Despacho</th>
                 </tr>
             </thead>
             <tbody>
                 {% for ped in pedidos_recibidos %}
                 <tr>
-                    <td class="fw-bold">#{{ ped.id }}</td>
+                    <td class="fw-bold">
+                        #{{ ped.id }}
+                        {% if ped.codigo_transaccion %}
+                            <div class="text-muted small">{{ ped.codigo_transaccion }}</div>
+                        {% endif %}
+                    </td>
                     <td>{{ ped.producto.nombre }}</td>
                     <td>
                         <div><strong>{{ ped.comprador.first_name|default:ped.comprador.username }} {{ ped.comprador.last_name }}</strong></div>
-                        <div class="text-muted small">Entrega: {{ ped.direccion_entrega }}</div>
-                        {% if ped.comentario %}
-                            <div class="text-secondary small fst-italic">Nota: "{{ ped.comentario }}"</div>
-                        {% endif %}
+                        <div class="text-muted small">{{ ped.direccion_entrega }} ({{ ped.ciudad_destino }})</div>
                     </td>
-                    <td>{{ ped.cantidad }}</td>
-                    <td class="fw-bold text-success">S/ {{ ped.total }}</td>
                     <td>
-                        {% if ped.estado == 'PENDIENTE' %}
-                            <span class="badge bg-warning text-dark">{{ ped.get_estado_display }}</span>
-                        {% elif ped.estado == 'CONFIRMADO' or ped.estado == 'EN_CAMINO' %}
-                            <span class="badge bg-info text-dark">{{ ped.get_estado_display }}</span>
-                        {% elif ped.estado == 'ENTREGADO' %}
-                            <span class="badge bg-success">{{ ped.get_estado_display }}</span>
-                        {% else %}
-                            <span class="badge bg-danger">{{ ped.get_estado_display }}</span>
-                        {% endif %}
+                        <div>{{ ped.cantidad }} unid.</div>
+                        <strong class="text-success">S/ {{ ped.total }}</strong>
+                    </td>
+                    <td>
+                        <div class="small fw-semibold">{{ ped.get_metodo_pago_display }}</div>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">{{ ped.get_estado_pago_display }}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-info text-dark">{{ ped.get_estado_display }}</span>
                     </td>
                     <td>
                         <form action="{% url 'cambiar_estado_pedido' ped.id %}" method="post" class="d-flex gap-1">
                             {% csrf_token %}
-                            <select name="estado" class="form-select form-select-sm" style="min-width: 155px;">
+                            <select name="estado" class="form-select form-select-sm" style="min-width: 150px;">
                                 {% for cod, nombre_est in estados_pedido %}
                                     <option value="{{ cod }}" {% if ped.estado == cod %}selected{% endif %}>
                                         {{ nombre_est }}
@@ -169,7 +252,7 @@
     </div>
     {% else %}
     <div class="text-center py-4 text-muted">
-        Aún no has recibido pedidos de tus productos.
+        Aún no has recibido pedidos pagados de tus productos.
     </div>
     {% endif %}
 </div>
