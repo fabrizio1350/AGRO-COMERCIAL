@@ -4,22 +4,191 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AgroComercial - Plataforma de Comercialización Agrícola{% endblock %}</title>
-    <!-- Bootstrap 5 por CDN -->
+    <!-- Tipografia amigable y moderna + Bootstrap 5 + Iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
+        :root {
+            --agro-bg: #f6f4ef;
+            --agro-surface: #ffffff;
+            --agro-border: #e3ded3;
+            --agro-verde: #355e43;
+            --agro-verde-hover: #284933;
+            --agro-verde-suave: #e9f0eb;
+            --agro-pizarra: #3e5c76;
+            --agro-pizarra-hover: #2f475c;
+            --agro-pizarra-suave: #eaeff4;
+            --agro-tierra: #b86b35;
+            --agro-tierra-suave: #f7ede4;
+            --agro-terracota: #b54d38;
+            --agro-texto: #2c3531;
+            --agro-muted: #68706b;
+        }
+
         body {
-            background-color: #f4f6f8;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background-color: var(--agro-bg);
+            color: var(--agro-texto);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
+
         main {
             flex: 1;
         }
-        .placeholder-imagen {
+
+        /* Tarjetas y contenedores amigables con bordes suaves */
+        .card, .bg-white.border {
+            border-color: var(--agro-border) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 4px 16px rgba(44, 53, 49, 0.04) !important;
+        }
+
+        /* Formularios e inputs mas comodos y amigables */
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 1px solid #d4cfc3;
+            padding: 0.58rem 0.85rem;
+            color: var(--agro-texto);
+            background-color: #fdfcfa;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
             background-color: #ffffff;
-            border: 2px dashed #adb5bd;
-            border-radius: 0.5rem;
+            border-color: var(--agro-verde);
+            box-shadow: 0 0 0 3px rgba(53, 94, 67, 0.14);
+        }
+
+        .form-label {
+            color: #3d4843;
+            margin-bottom: 0.35rem;
+        }
+
+        /* Paleta natural sin colores neon */
+        .btn {
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-success {
+            background-color: var(--agro-verde) !important;
+            border-color: var(--agro-verde) !important;
+            color: #ffffff !important;
+        }
+        .btn-success:hover {
+            background-color: var(--agro-verde-hover) !important;
+            border-color: var(--agro-verde-hover) !important;
+        }
+
+        .btn-outline-success {
+            color: var(--agro-verde) !important;
+            border-color: var(--agro-verde) !important;
+        }
+        .btn-outline-success:hover {
+            background-color: var(--agro-verde) !important;
+            color: #ffffff !important;
+        }
+
+        .btn-primary {
+            background-color: var(--agro-pizarra) !important;
+            border-color: var(--agro-pizarra) !important;
+            color: #ffffff !important;
+        }
+        .btn-primary:hover {
+            background-color: var(--agro-pizarra-hover) !important;
+            border-color: var(--agro-pizarra-hover) !important;
+        }
+
+        .btn-outline-primary {
+            color: var(--agro-pizarra) !important;
+            border-color: var(--agro-pizarra) !important;
+        }
+        .btn-outline-primary:hover {
+            background-color: var(--agro-pizarra) !important;
+            color: #ffffff !important;
+        }
+
+        .btn-warning {
+            background-color: #d99b4e !important;
+            border-color: #d99b4e !important;
+            color: #2b2114 !important;
+        }
+        .btn-warning:hover {
+            background-color: #c5883c !important;
+            border-color: #c5883c !important;
+            color: #ffffff !important;
+        }
+
+        .btn-danger {
+            background-color: var(--agro-terracota) !important;
+            border-color: var(--agro-terracota) !important;
+        }
+
+        /* Etiquetas suaves (cero neon) */
+        .bg-success {
+            background-color: var(--agro-verde) !important;
+        }
+        .text-success {
+            color: var(--agro-verde) !important;
+        }
+        .bg-success-subtle {
+            background-color: var(--agro-verde-suave) !important;
+            color: var(--agro-verde) !important;
+        }
+        .bg-info, .bg-info-subtle {
+            background-color: var(--agro-pizarra-suave) !important;
+            color: var(--agro-pizarra) !important;
+        }
+        .text-primary {
+            color: var(--agro-pizarra) !important;
+        }
+        .bg-warning, .bg-warning-subtle {
+            background-color: var(--agro-tierra-suave) !important;
+            color: #7c471e !important;
+        }
+        .bg-danger {
+            background-color: var(--agro-terracota) !important;
+        }
+        .text-danger {
+            color: var(--agro-terracota) !important;
+        }
+
+        /* Barras superiores segun rol con tonos naturales */
+        .navbar-vendedor {
+            background-color: #2b4c37;
+        }
+        .navbar-comprador {
+            background-color: #344e64;
+        }
+        .navbar-general {
+            background-color: #355e43;
+        }
+        .barra-rol-vendedor {
+            background-color: #e6efe8;
+            color: #264330;
+            border-bottom: 1px solid #cfe0d3;
+        }
+        .barra-rol-comprador {
+            background-color: #e6ecf2;
+            color: #2b4257;
+            border-bottom: 1px solid #cfdbe6;
+        }
+        .barra-visitante {
+            background-color: #eae6dd;
+            color: #49463f;
+            border-bottom: 1px solid #dcd6c8;
+        }
+
+        .placeholder-imagen {
+            background-color: #faf8f5;
+            border: 2px dashed #c8c2b4;
+            border-radius: 12px;
             color: #6c757d;
             display: flex;
             align-items: center;
@@ -29,57 +198,50 @@
             font-weight: 500;
             padding: 0.75rem;
         }
+
         .img-referencia {
             width: 100%;
             object-fit: cover;
-            border-radius: 0.5rem;
-            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            border: 1px solid var(--agro-border);
         }
-        .navbar-vendedor {
-            background-color: #14532d;
+
+        .nav-tabs .nav-link {
+            border-radius: 10px 10px 0 0;
+            color: var(--agro-muted);
         }
-        .navbar-comprador {
-            background-color: #0f766e;
-        }
-        .navbar-general {
-            background-color: #198754;
-        }
-        .barra-rol-vendedor {
-            background-color: #dcfce7;
-            color: #14532d;
-            border-bottom: 1px solid #bbf7d0;
-        }
-        .barra-rol-comprador {
-            background-color: #ccfbf1;
-            color: #115e59;
-            border-bottom: 1px solid #99f6e4;
+        .nav-tabs .nav-link.active {
+            color: var(--agro-verde) !important;
+            border-color: var(--agro-border) var(--agro-border) #fff !important;
         }
     </style>
 </head>
 <body>
-    <!-- Barra superior informativa que cambia segun si es Comprador o Vendedor -->
+    <!-- Barra superior suave que cambia segun si es Comprador o Vendedor -->
     {% if user.is_authenticated %}
-        <div class="{% if rol_actual == 'PRODUCTOR' %}barra-rol-vendedor{% else %}barra-rol-comprador{% endif %} py-1 small">
+        <div class="{% if rol_actual == 'PRODUCTOR' %}barra-rol-vendedor{% else %}barra-rol-comprador{% endif %} py-2 small">
             <div class="container d-flex flex-wrap justify-content-between align-items-center">
-                <div>
+                <div class="d-flex align-items-center gap-2">
                     {% if rol_actual == 'PRODUCTOR' %}
-                        <strong>[VISTA VENDEDOR / PRODUCTOR ACTIVA]</strong> — Gestiona tus lotes agrícolas, responde ofertas de compradores y despacha pedidos.
+                        <i class="bi bi-shop"></i>
+                        <span><strong>Modo Vendedor / Productor:</strong> Publica tus cosechas, responde ofertas y gestiona tus ventas.</span>
                     {% else %}
-                        <strong>[VISTA COMPRADOR / MAYORISTA ACTIVA]</strong> — Explora el Marketplace, negocia ofertas por volumen y paga en la pasarela segura.
+                        <i class="bi bi-bag-check"></i>
+                        <span><strong>Modo Comprador:</strong> Explora el Marketplace, propón ofertas por lote y realiza tus compras.</span>
                     {% endif %}
                 </div>
-                <div class="d-flex align-items-center gap-2 my-1">
+                <div>
                     <form action="{% url 'cambiar_modo' %}" method="post" class="d-inline">
                         {% csrf_token %}
                         {% if rol_actual == 'PRODUCTOR' %}
                             <input type="hidden" name="nuevo_rol" value="COMPRADOR">
-                            <button type="submit" class="btn btn-sm btn-outline-dark py-0" style="font-size: 0.78rem;">
-                                Cambiar a Vista Comprador
+                            <button type="submit" class="btn btn-sm btn-outline-dark py-0 px-2" style="font-size: 0.78rem;">
+                                <i class="bi bi-arrow-left-right me-1"></i>Cambiar a Vista Comprador
                             </button>
                         {% else %}
                             <input type="hidden" name="nuevo_rol" value="PRODUCTOR">
-                            <button type="submit" class="btn btn-sm btn-outline-dark py-0" style="font-size: 0.78rem;">
-                                Cambiar a Vista Vendedor
+                            <button type="submit" class="btn btn-sm btn-outline-dark py-0 px-2" style="font-size: 0.78rem;">
+                                <i class="bi bi-arrow-left-right me-1"></i>Cambiar a Vista Vendedor
                             </button>
                         {% endif %}
                     </form>
@@ -87,26 +249,31 @@
             </div>
         </div>
     {% else %}
-        <div class="bg-dark text-light py-1 small">
+        <div class="barra-visitante py-2 small">
             <div class="container d-flex flex-wrap justify-content-between align-items-center">
-                <span>Plataforma de Comercialización Agrícola Directa — Sin Intermediarios</span>
+                <span><i class="bi bi-flower1 me-1"></i><strong>AgroComercial</strong> — Comercio agrícola directo del campo a tu mesa o negocio</span>
                 <div class="d-flex gap-3">
-                    <a href="{% url 'login' %}?modo=comprador" class="text-info text-decoration-none fw-semibold">Acceso Comprador</a>
-                    <a href="{% url 'login' %}?modo=vendedor" class="text-warning text-decoration-none fw-semibold">Acceso Vendedor / Productor</a>
+                    <a href="{% url 'login' %}?modo=comprador" class="text-decoration-none fw-semibold" style="color: var(--agro-pizarra);">
+                        <i class="bi bi-person-check me-1"></i>Acceso Comprador
+                    </a>
+                    <a href="{% url 'login' %}?modo=vendedor" class="text-decoration-none fw-semibold" style="color: var(--agro-verde);">
+                        <i class="bi bi-shop me-1"></i>Acceso Vendedor
+                    </a>
                 </div>
             </div>
         </div>
     {% endif %}
 
-    <!-- Barra de navegacion principal con pestañas dinamicas -->
-    <nav class="navbar navbar-expand-xl navbar-dark {% if rol_actual == 'PRODUCTOR' %}navbar-vendedor{% elif rol_actual == 'COMPRADOR' %}navbar-comprador{% else %}navbar-general{% endif %} shadow-sm">
+    <!-- Barra de navegacion principal -->
+    <nav class="navbar navbar-expand-xl navbar-dark {% if rol_actual == 'PRODUCTOR' %}navbar-vendedor{% elif rol_actual == 'COMPRADOR' %}navbar-comprador{% else %}navbar-general{% endif %} py-3 shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{% url 'inicio' %}">
-                AgroComercial
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{% url 'inicio' %}">
+                <i class="bi bi-basket2-fill"></i>
+                <span>AgroComercial</span>
                 {% if rol_actual == 'PRODUCTOR' %}
-                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">VENDEDOR</span>
+                    <span class="badge rounded-pill bg-light text-dark ms-1" style="font-size: 0.7rem;">Vendedor</span>
                 {% elif rol_actual == 'COMPRADOR' %}
-                    <span class="badge bg-info text-dark ms-1" style="font-size: 0.7rem;">COMPRADOR</span>
+                    <span class="badge rounded-pill bg-light text-dark ms-1" style="font-size: 0.7rem;">Comprador</span>
                 {% endif %}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuNavegacion">
@@ -114,49 +281,59 @@
             </button>
 
             <div class="collapse navbar-collapse" id="menuNavegacion">
-                <ul class="navbar-nav me-auto mb-2 mb-xl-0">
+                <ul class="navbar-nav me-auto mb-2 mb-xl-0 gap-1">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'inicio' %}">Inicio</a>
+                        <a class="nav-link" href="{% url 'inicio' %}"><i class="bi bi-house-door me-1"></i>Inicio</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'catalogo' %}">Marketplace</a>
+                        <a class="nav-link" href="{% url 'catalogo' %}"><i class="bi bi-grid me-1"></i>Marketplace</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'ventas_por_oferta' %}">
-                            Ventas por Oferta
+                            <i class="bi bi-tag me-1"></i>Ventas por Oferta
                             {% if rol_actual == 'PRODUCTOR' and ofertas_pendientes_vendedor > 0 %}
-                                <span class="badge bg-warning text-dark">{{ ofertas_pendientes_vendedor }}</span>
+                                <span class="badge rounded-pill bg-light text-dark ms-1">{{ ofertas_pendientes_vendedor }}</span>
                             {% elif rol_actual == 'COMPRADOR' and ofertas_listas_comprador > 0 %}
-                                <span class="badge bg-warning text-dark">{{ ofertas_listas_comprador }}</span>
+                                <span class="badge rounded-pill bg-light text-dark ms-1">{{ ofertas_listas_comprador }}</span>
                             {% endif %}
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'productores' %}">Productores</a>
+                        <a class="nav-link" href="{% url 'productores' %}"><i class="bi bi-people me-1"></i>Productores</a>
                     </li>
 
                     {% if user.is_authenticated %}
                         {% if rol_actual == 'PRODUCTOR' %}
                             <li class="nav-item">
-                                <a class="nav-link fw-semibold text-warning" href="{% url 'panel_productor' %}">Panel Vendedor</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'crear_producto' %}">+ Publicar Lote</a>
-                            </li>
-                        {% else %}
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold text-info" href="{% url 'panel_comprador' %}">Panel Comprador</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'carrito' %}">
-                                    Carrito ({{ total_items_carrito }})
+                                <a class="nav-link fw-semibold text-white" href="{% url 'panel_productor' %}">
+                                    <i class="bi bi-speedometer2 me-1"></i>Panel Vendedor
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'pasarela_pago' %}">Pasarela de Pago</a>
+                                <a class="nav-link fw-semibold text-white" href="{% url 'crear_producto' %}">
+                                    <i class="bi bi-plus-circle me-1"></i>Publicar Producto
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link fw-semibold text-white" href="{% url 'panel_comprador' %}">
+                                    <i class="bi bi-layout-text-window-reverse me-1"></i>Panel Comprador
+                                </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'mis_pedidos' %}">Mis Compras</a>
+                                <a class="nav-link" href="{% url 'carrito' %}">
+                                    <i class="bi bi-cart3 me-1"></i>Carrito ({{ total_items_carrito }})
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'pasarela_pago' %}">
+                                    <i class="bi bi-credit-card me-1"></i>Pasarela de Pago
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'mis_pedidos' %}">
+                                    <i class="bi bi-box-seam me-1"></i>Mis Compras
+                                </a>
                             </li>
                         {% endif %}
                     {% endif %}
@@ -165,18 +342,18 @@
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     {% if user.is_authenticated %}
                         <a href="{% url 'perfil' %}" class="btn btn-outline-light btn-sm">
-                            Mi Perfil ({{ user.username }})
+                            <i class="bi bi-person-circle me-1"></i>{{ user.first_name|default:user.username }}
                         </a>
                         <form action="{% url 'logout' %}" method="post" class="d-inline">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-light btn-sm fw-semibold">
+                            <button type="submit" class="btn btn-light btn-sm">
                                 Salir
                             </button>
                         </form>
                     {% else %}
-                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-light btn-sm">Login Comprador</a>
-                        <a href="{% url 'login' %}?modo=vendedor" class="btn btn-warning btn-sm text-dark fw-semibold">Login Vendedor</a>
-                        <a href="{% url 'registro' %}" class="btn btn-light btn-sm text-success fw-semibold">Registrarse</a>
+                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-light btn-sm">Soy Comprador</a>
+                        <a href="{% url 'login' %}?modo=vendedor" class="btn btn-light btn-sm text-dark">Soy Vendedor</a>
+                        <a href="{% url 'registro' %}" class="btn btn-warning btn-sm">Crear Cuenta</a>
                     {% endif %}
                 </div>
             </div>
@@ -187,15 +364,16 @@
     <div class="container mt-3">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
-                    {{ message }}
+                <div class="alert alert-light border shadow-sm alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+                    <i class="bi bi-info-circle-fill text-success"></i>
+                    <div>{{ message }}</div>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             {% endfor %}
         {% endif %}
     </div>
 
-    <!-- Contenido principal de cada apartado -->
+    <!-- Contenido principal -->
     <main class="container my-4">
         {% block content %}{% endblock %}
     </main>
@@ -204,14 +382,13 @@
     <footer class="bg-white border-top py-4 mt-auto">
         <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center text-muted small">
             <div>
-                <strong>AgroComercial</strong> — Marketplace, Ventas por Oferta y Pasarela de Pago Agrícola (Proyecto Universitario)
+                <strong>AgroComercial</strong> — Plataforma Web de Comercialización Agrícola (Proyecto Universitario)
             </div>
             <div class="mt-2 mt-md-0 d-flex flex-wrap gap-3">
                 <a href="{% url 'inicio' %}" class="text-decoration-none text-muted">Inicio</a>
                 <a href="{% url 'catalogo' %}" class="text-decoration-none text-muted">Marketplace</a>
                 <a href="{% url 'ventas_por_oferta' %}" class="text-decoration-none text-muted">Ventas por Oferta</a>
                 <a href="{% url 'productores' %}" class="text-decoration-none text-muted">Productores</a>
-                <a href="{% url 'login' %}" class="text-decoration-none text-muted">Acceso Comprador / Vendedor</a>
             </div>
         </div>
     </footer>
