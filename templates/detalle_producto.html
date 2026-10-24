@@ -1,376 +1,220 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ producto.nombre }} | Descripción y Ficha Técnica{% endblock %}
+{% block title %}{{ producto.nombre }} | AgroComercial{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'inicio' %}" class="text-success text-decoration-none">Inicio</a></li>
+<nav aria-label="breadcrumb" class="mb-3 small">
+    <ol class="breadcrumb mb-0">
         <li class="breadcrumb-item"><a href="{% url 'catalogo' %}" class="text-success text-decoration-none">Marketplace</a></li>
         <li class="breadcrumb-item active" aria-current="page">{{ producto.nombre }}</li>
     </ol>
 </nav>
 
 <div class="row g-4 mb-4">
-    <!-- Columna izquierda: Galeria de imagenes en modo plantilla sin imagenes reales -->
-    <div class="col-lg-6">
-        <div class="bg-white border rounded-3 p-3 shadow-sm mb-3 position-relative">
+    <!-- Columna izquierda: Foto limpia y tarjeta breve del productor -->
+    <div class="col-lg-5">
+        <div class="bg-white border p-3 mb-3 position-relative">
             {% if producto.en_oferta and producto.precio_oferta %}
-                <span class="badge bg-danger position-absolute top-0 end-0 m-4 fs-6">
-                    -{{ producto.porcentaje_descuento }}% EN OFERTA
+                <span class="badge bg-danger position-absolute top-0 end-0 m-4">
+                    -{{ producto.porcentaje_descuento }}% Oferta
                 </span>
             {% endif %}
-            <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" class="img-referencia mb-3" style="height: 300px;">
-            <!-- Miniaturas de angulos del lote agricola -->
-            <div class="row g-2">
-                <div class="col-4">
-                    <img src="{{ producto.url_imagen }}" alt="Vista del lote" class="img-referencia" style="height: 80px;">
-                </div>
-                <div class="col-4">
-                    <img src="/static/imagenes/finca_productor.jpg" alt="Cosecha en finca" class="img-referencia" style="height: 80px;">
-                </div>
-                <div class="col-4">
-                    <img src="/static/imagenes/banner_agro.jpg" alt="Campo agrícola" class="img-referencia" style="height: 80px;">
-                </div>
-            </div>
+            <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" class="img-referencia" style="height: 280px;">
         </div>
 
-        <!-- Resumen rapido de la finca productora -->
-        <div class="bg-white border rounded-3 p-3 shadow-sm">
-            <div class="d-flex align-items-center gap-3">
-                <img src="/static/imagenes/finca_productor.jpg" alt="Finca" class="img-referencia flex-shrink-0" style="width: 75px; height: 75px;">
-                <div class="flex-grow-1">
-                    <span class="badge bg-success-subtle text-success border border-success-subtle mb-1">Vendedor Verificado</span>
-                    <h6 class="fw-bold mb-0">
-                        {{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}
-                    </h6>
-                    <p class="text-muted small mb-1">
-                        {{ producto.productor.perfil.nombre_finca|default:"Productor Agrícola Directo" }} — {{ producto.origen }}
-                    </p>
-                    <a href="{% url 'catalogo' %}?productor={{ producto.productor.id }}" class="text-success small fw-semibold text-decoration-none">
-                        Ver todos los lotes de este vendedor &rarr;
-                    </a>
-                </div>
+        <div class="bg-white border p-3 d-flex align-items-center gap-3">
+            <img src="/static/imagenes/finca_productor.jpg" alt="Productor" class="img-referencia flex-shrink-0" style="width: 60px; height: 60px;">
+            <div>
+                <div class="text-muted small">Vendido por:</div>
+                <div class="fw-bold">{{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}</div>
+                <div class="text-muted small">{{ producto.productor.perfil.nombre_finca|default:producto.origen }}</div>
             </div>
         </div>
     </div>
 
-    <!-- Columna derecha: Precio, Compra en Pasarela y Venta por Oferta -->
-    <div class="col-lg-6">
-        <div class="bg-white border rounded-3 p-4 shadow-sm h-100">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                <span class="badge bg-success-subtle text-success border border-success-subtle">
-                    {{ producto.categoria.nombre|default:"Agrícola" }}
-                </span>
-                <span class="badge bg-light text-dark border">
-                    {{ producto.get_tipo_cultivo_display }}
-                </span>
+    <!-- Columna derecha: Informacion clara y acciones separadas por rol -->
+    <div class="col-lg-7">
+        <div class="bg-white border p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-success-subtle">{{ producto.categoria.nombre|default:"Agrícola" }}</span>
                 <span class="text-muted small"><i class="bi bi-calendar3 me-1"></i>Cosecha: {{ producto.fecha_cosecha|date:"d/m/Y" }}</span>
             </div>
 
-            <h1 class="h3 fw-bold mb-1">{{ producto.nombre }}</h1>
+            <h1 class="h3 fw-bold mb-2">{{ producto.nombre }}</h1>
             <p class="text-muted small mb-3">
-                Calidad: <strong>{{ producto.get_calidad_display }}</strong> | Origen: <strong>{{ producto.origen }}</strong>
-                {% if producto.variedad %} | Presentación: <strong>{{ producto.variedad }}</strong>{% endif %}
+                Origen: <strong>{{ producto.origen }}</strong> • Calidad: <strong>{{ producto.get_calidad_display }}</strong>
             </p>
 
-            <!-- Caja de Precio y Descuento -->
-            <div class="bg-light border rounded-3 p-3 mb-3 d-flex justify-content-between align-items-center">
+            <!-- Caja de precio limpia -->
+            <div class="p-3 rounded-3 mb-4 d-flex justify-content-between align-items-center" style="background-color: #faf8f4; border: 1px solid #e6e1d6;">
                 <div>
                     {% if producto.en_oferta and producto.precio_oferta %}
-                        <span class="text-decoration-line-through text-muted small d-block">Precio normal: S/ {{ producto.precio }}</span>
-                        <span class="fs-2 fw-bold text-danger">S/ {{ producto.precio_oferta }}</span>
+                        <span class="text-decoration-line-through text-muted small d-block">Antes: S/ {{ producto.precio }}</span>
+                        <span class="fs-3 fw-bold text-danger">S/ {{ producto.precio_oferta }}</span>
                     {% else %}
-                        <span class="text-muted small d-block">Precio directo de productor</span>
-                        <span class="fs-2 fw-bold text-success">S/ {{ producto.precio }}</span>
+                        <span class="text-muted small d-block">Precio por {{ producto.get_unidad_display }}</span>
+                        <span class="fs-3 fw-bold text-success">S/ {{ producto.precio }}</span>
                     {% endif %}
-                    <span class="text-secondary">/ {{ producto.get_unidad_display }}</span>
                 </div>
                 <div class="text-end">
-                    <span class="text-muted small d-block">Stock disponible</span>
-                    {% if producto.disponible and producto.stock > 0 %}
-                        <span class="badge bg-success fs-6">{{ producto.stock }} {{ producto.get_unidad_display }}</span>
-                        <div class="text-muted small mt-1">Compra mínima: {{ producto.minimo_compra }}</div>
-                    {% else %}
-                        <span class="badge bg-danger">Agotado</span>
-                    {% endif %}
+                    <span class="badge bg-success">{{ producto.stock }} disponibles</span>
+                    <div class="text-muted small mt-1">Mínimo: {{ producto.minimo_compra }} {{ producto.get_unidad_display }}</div>
                 </div>
             </div>
 
-            {% if producto.productor == user %}
-                <div class="alert alert-info d-flex justify-content-between align-items-center">
-                    <span>Eres el vendedor propietario de este lote agrícola.</span>
-                    <a href="{% url 'editar_producto' producto.id %}" class="btn btn-sm btn-primary fw-semibold">Editar Lote</a>
-                </div>
-            {% elif producto.disponible and producto.stock > 0 %}
-                <!-- Bloque 1: Compra Directa o Agregar al Carrito -->
-                <div class="border rounded-3 p-3 mb-3">
-                    <h6 class="fw-bold mb-2">Opción A: Compra Directa (Pasarela de Pago)</h6>
-                    {% if user.is_authenticated %}
-                    <form action="{% url 'agregar_al_carrito' producto.id %}" method="post">
-                        {% csrf_token %}
-                        <div class="row g-2 align-items-end">
-                            <div class="col-sm-4">
-                                <label class="form-label small fw-semibold mb-1">Cantidad ({{ producto.get_unidad_display }})</label>
-                                <input type="number" name="cantidad" class="form-control" value="{{ producto.minimo_compra }}" min="1" max="{{ producto.stock }}" required>
-                            </div>
-                            <div class="col-sm-4">
-                                <button type="submit" class="btn btn-outline-success w-100 fw-semibold">
-                                    + Agregar al Carrito
-                                </button>
-                            </div>
-                            <div class="col-sm-4">
-                                <button type="submit" name="comprar_ahora" value="1" class="btn btn-success w-100 fw-semibold">
-                                    Ir a Pasarela de Pago
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    {% else %}
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="small text-muted">Inicia sesión como comprador para adquirir este lote.</span>
-                            <a href="{% url 'login' %}?modo=comprador" class="btn btn-success btn-sm">Acceso Comprador</a>
-                        </div>
-                    {% endif %}
+            <!-- ACCIONES ESTRICTAMENTE SEPARADAS SEGUN EL ROL -->
+            {% if not user.is_authenticated %}
+                <div class="p-3 rounded-3 border text-center bg-light">
+                    <p class="small text-secondary mb-2">Inicia sesión como <strong>Comprador</strong> para comprar este producto o enviar una oferta.</p>
+                    <a href="{% url 'login' %}?modo=comprador" class="btn btn-primary btn-sm px-4">Ingresar como Comprador</a>
                 </div>
 
-                <!-- Bloque 2: Negociar Precio / Venta por Oferta -->
-                {% if producto.acepta_ofertas %}
-                <div class="border border-warning rounded-3 p-3 bg-warning-subtle">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold mb-0 text-dark">Opción B: Venta por Oferta (Proponer Precio por Volumen)</h6>
-                        <span class="badge bg-warning text-dark">Negociable</span>
-                    </div>
-                    {% if user.is_authenticated %}
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="tipo_accion" value="enviar_oferta">
-                        <div class="row g-2 align-items-end">
-                            <div class="col-sm-4">
-                                <label class="form-label small fw-semibold mb-1">Cantidad a ofertar</label>
-                                {{ oferta_form.cantidad }}
-                            </div>
-                            <div class="col-sm-4">
-                                <label class="form-label small fw-semibold mb-1">Precio unitario ofrecido (S/)</label>
-                                {{ oferta_form.precio_unitario_ofrecido }}
-                            </div>
-                            <div class="col-sm-4">
-                                <button type="submit" class="btn btn-warning w-100 fw-semibold text-dark">
-                                    Enviar Oferta al Vendedor
-                                </button>
-                            </div>
-                            <div class="col-12 mt-2">
-                                {{ oferta_form.mensaje }}
-                            </div>
+            {% elif rol_actual == 'PRODUCTOR' %}
+                <!-- Vista exclusiva de Vendedor (NUNCA muestra botones de compra) -->
+                {% if producto.productor == user %}
+                    <div class="p-3 rounded-3 border bg-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="d-block">Este es tu producto publicado</strong>
+                            <span class="text-muted small">Puedes modificar su precio, stock o estado de oferta.</span>
                         </div>
-                    </form>
-                    {% else %}
-                        <p class="small text-secondary mb-0">
-                            ¿Compras por mayor? <a href="{% url 'login' %}?modo=comprador" class="fw-bold text-dark">Inicia sesión como Comprador</a> para proponer tu oferta de precio al vendedor.
-                        </p>
+                        <a href="{% url 'editar_producto' producto.id %}" class="btn btn-success btn-sm px-3">
+                            <i class="bi bi-pencil-square me-1"></i>Editar mi Producto
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="p-3 rounded-3 border bg-light text-secondary small">
+                        <i class="bi bi-info-circle me-1"></i>Estás en <strong>Modo Vendedor</strong> (vista de consulta). Solo las cuentas de Comprador pueden adquirir productos.
+                    </div>
+                {% endif %}
+
+            {% elif rol_actual == 'COMPRADOR' %}
+                <!-- Vista exclusiva de Comprador (NUNCA puede editar el producto) -->
+                {% if producto.disponible and producto.stock > 0 %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">1. Compra Directa</label>
+                        <form action="{% url 'agregar_al_carrito' producto.id %}" method="post">
+                            {% csrf_token %}
+                            <div class="row g-2">
+                                <div class="col-sm-3">
+                                    <input type="number" name="cantidad" class="form-control" value="{{ producto.minimo_compra }}" min="1" max="{{ producto.stock }}" required>
+                                </div>
+                                <div class="col-sm-4">
+                                    <button type="submit" class="btn btn-outline-success w-100">
+                                        + Al Carrito
+                                    </button>
+                                </div>
+                                <div class="col-sm-5">
+                                    <button type="submit" name="comprar_ahora" value="1" class="btn btn-success w-100">
+                                        Comprar Ahora
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    {% if producto.acepta_ofertas %}
+                    <div class="p-3 rounded-3 border" style="background-color: #faf6f0;">
+                        <label class="form-label small fw-bold mb-2">2. ¿Compras por cantidad? Propón una oferta al vendedor</label>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="tipo_accion" value="enviar_oferta">
+                            <div class="row g-2">
+                                <div class="col-sm-4">
+                                    <input type="number" name="cantidad" class="form-control form-control-sm" value="{{ producto.minimo_compra }}" min="1" max="{{ producto.stock }}" placeholder="Cantidad" required>
+                                </div>
+                                <div class="col-sm-4">
+                                    <input type="number" step="0.10" name="precio_unitario_ofrecido" class="form-control form-control-sm" placeholder="Precio S/ por unid." required>
+                                </div>
+                                <div class="col-sm-4">
+                                    <button type="submit" class="btn btn-warning btn-sm w-100">Enviar Oferta</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                     {% endif %}
-                </div>
+                {% else %}
+                    <div class="alert alert-secondary mb-0">Producto agotado temporalmente.</div>
                 {% endif %}
             {% endif %}
         </div>
     </div>
 </div>
 
-<!-- APARTADOS DE DESCRIPCION DEL PRODUCTO (PESTAÑAS COMPLETAS) -->
-<div class="bg-white border rounded-3 p-4 shadow-sm mb-5">
-    <ul class="nav nav-tabs mb-4" id="tabsDescripcionProducto" role="tablist">
+<!-- Descripcion y ficha en 2 pestañas simples y limpias -->
+<div class="bg-white border p-4">
+    <ul class="nav nav-tabs mb-3" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-bold text-dark" id="desc-tab" data-bs-toggle="tab" data-bs-target="#tab-descripcion" type="button" role="tab">
-                1. Descripción Detallada del Producto
+            <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab">
+                Descripción y Detalles del Producto
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold text-dark" id="ficha-tab" data-bs-toggle="tab" data-bs-target="#tab-ficha" type="button" role="tab">
-                2. Ficha Técnica Agrícola
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold text-dark" id="envio-tab" data-bs-toggle="tab" data-bs-target="#tab-envio" type="button" role="tab">
-                3. Datos del Vendedor y Logística
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold text-dark" id="resenas-tab" data-bs-toggle="tab" data-bs-target="#tab-resenas" type="button" role="tab">
-                4. Reseñas de Compradores ({{ resenas.count }})
+            <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-opiniones" type="button" role="tab">
+                Opiniones ({{ resenas.count }})
             </button>
         </li>
     </ul>
 
-    <div class="tab-content" id="tabsDescripcionProductoContent">
-        <!-- Pestaña 1: Descripcion -->
-        <div class="tab-pane fade show active" id="tab-descripcion" role="tabpanel">
-            <h5 class="fw-bold mb-2">Características del Lote: {{ producto.nombre }}</h5>
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
             <p class="text-secondary mb-3">{{ producto.descripcion }}</p>
-            <div class="row g-3 mt-2">
-                <div class="col-md-4">
-                    <div class="border rounded-2 p-3 bg-light">
-                        <strong class="d-block text-success mb-1">Garantía de Frescura</strong>
-                        <span class="small text-secondary">Producto cosechado en {{ producto.origen }} el día {{ producto.fecha_cosecha|date:"d/m/Y" }}, despachado directo del campo.</span>
+            <div class="row g-3 small">
+                <div class="col-sm-6 col-md-3">
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted d-block">Forma de Cultivo</span>
+                        <strong>{{ producto.get_tipo_cultivo_display }}</strong>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="border rounded-2 p-3 bg-light">
-                        <strong class="d-block text-success mb-1">Calidad Seleccionada</strong>
-                        <span class="small text-secondary">{{ producto.get_calidad_display }}. Empaque resistente apto para carga regional o reparto local.</span>
+                <div class="col-sm-6 col-md-3">
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted d-block">Calidad</span>
+                        <strong>{{ producto.get_calidad_display }}</strong>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="border rounded-2 p-3 bg-light">
-                        <strong class="d-block text-success mb-1">Pago Protegido</strong>
-                        <span class="small text-secondary">Todas las compras pasan por nuestra Pasarela de Pago con emisión de comprobante electrónico inmediato.</span>
+                <div class="col-sm-6 col-md-3">
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted d-block">Presentación</span>
+                        <strong>{{ producto.variedad|default:"Fresco de campo" }}</strong>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Pestaña 2: Ficha Tecnica Agricola -->
-        <div class="tab-pane fade" id="tab-ficha" role="tabpanel">
-            <h5 class="fw-bold mb-3">Detalles del Producto Agrícola</h5>
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle mb-0">
-                    <tbody>
-                        <tr>
-                            <th class="bg-light" style="width: 30%;">Nombre del Producto</th>
-                            <td>{{ producto.nombre }}</td>
-                        </tr>
-                        <tr>
-                            <th class="bg-light">Categoría</th>
-                            <td>{{ producto.categoria.nombre }}</td>
-                        </tr>
-                        <tr>
-                            <th class="bg-light">Presentación o Tipo</th>
-                            <td>{{ producto.variedad|default:"Fresco de campo" }}</td>
-                        </tr>
-                        <tr>
-                            <th class="bg-light">Forma de Cultivo</th>
-                            <td>{{ producto.get_tipo_cultivo_display }}</td>
-                        </tr>
-                        <tr>
-                            <th class="bg-light">Día de Cosecha</th>
-                            <td>{{ producto.fecha_cosecha|date:"d/m/Y" }}</td>
-                        </tr>
-                        <tr>
-                            <th class="bg-light">Calidad / Tamaño</th>
-                            <td>{{ producto.get_calidad_display }}</td>
-                        </tr>
-                        <tr>
-                            <th class="bg-light">Unidad de Comercialización</th>
-                            <td>{{ producto.get_unidad_display }}</td>
-                        </tr>
-                        <tr>
-                            <th class="bg-light">Pedido Mínimo</th>
-                            <td>{{ producto.minimo_compra }} ({{ producto.get_unidad_display }})</td>
-                        </tr>
-                        <tr>
-                            <th class="bg-light">Valle / Región de Origen</th>
-                            <td>{{ producto.origen }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Pestaña 3: Vendedor y Logistica -->
-        <div class="tab-pane fade" id="tab-envio" role="tabpanel">
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <h5 class="fw-bold mb-2">Información del Productor / Vendedor</h5>
-                    <ul class="list-group list-group-flush border rounded-2">
-                        <li class="list-group-item"><strong>Representante:</strong> {{ producto.productor.first_name }} {{ producto.productor.last_name }}</li>
-                        <li class="list-group-item"><strong>Finca / Organización:</strong> {{ producto.productor.perfil.nombre_finca|default:"Productor Independiente" }}</li>
-                        <li class="list-group-item"><strong>RUC / DNI Registrado:</strong> {{ producto.productor.perfil.ruc_dni|default:"10456789012" }}</li>
-                        <li class="list-group-item"><strong>Ubicación de Acopio:</strong> {{ producto.productor.perfil.ubicacion|default:producto.origen }}</li>
-                        <li class="list-group-item"><strong>Teléfono Directo:</strong> {{ producto.productor.perfil.telefono|default:"964112233" }}</li>
-                    </ul>
-                </div>
-                <div class="col-md-6">
-                    <h5 class="fw-bold mb-2">Condiciones de Despacho y Pago</h5>
-                    <div class="border rounded-2 p-3 bg-light">
-                        <p class="small text-secondary mb-2">
-                            <strong>1. Modalidades de Envío:</strong> Despacho directo desde el centro de acopio en {{ producto.origen }} hacia mercados mayoristas o dirección indicada por el comprador.
-                        </p>
-                        <p class="small text-secondary mb-2">
-                            <strong>2. Medios aceptados en Pasarela:</strong> Tarjeta Visa/Mastercard, Billeteras Digitales (Yape / Plin QR), Transferencia Bancaria Agrícola y Pago Contraentrega.
-                        </p>
-                        <div class="placeholder-imagen mt-2" style="height: 85px;">
-                            [Espacio para Imagen - Certificado de Calidad / Sello Finca]
-                        </div>
+                <div class="col-sm-6 col-md-3">
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted d-block">Día de Cosecha</span>
+                        <strong>{{ producto.fecha_cosecha|date:"d/m/Y" }}</strong>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Pestaña 4: Reseñas de Compradores -->
-        <div class="tab-pane fade" id="tab-resenas" role="tabpanel">
+        <div class="tab-pane fade" id="tab-opiniones" role="tabpanel">
             <div class="row g-4">
                 <div class="col-md-7">
-                    <h5 class="fw-bold mb-3">Comentarios verificados sobre este lote</h5>
                     {% for res in resenas %}
-                    <div class="border rounded-2 p-3 mb-2 bg-light">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <strong>{{ res.autor.first_name|default:res.autor.username }} {{ res.autor.last_name }}</strong>
-                            <span class="badge bg-warning text-dark">{{ res.calificacion }} / 5 Estrellas</span>
+                    <div class="border rounded p-3 mb-2 bg-light">
+                        <div class="d-flex justify-content-between mb-1">
+                            <strong class="small">{{ res.autor.first_name|default:res.autor.username }}</strong>
+                            <span class="badge bg-warning">{{ res.calificacion }} / 5</span>
                         </div>
-                        <p class="small text-secondary mb-1">{{ res.comentario }}</p>
-                        <span class="text-muted" style="font-size: 0.75rem;">Publicado el {{ res.fecha|date:"d/m/Y" }}</span>
+                        <p class="small text-secondary mb-0">{{ res.comentario }}</p>
                     </div>
                     {% empty %}
-                    <p class="text-muted">Aún no hay reseñas para este producto. ¡Sé el primero en calificarlo!</p>
+                    <p class="text-muted small mb-0">Aún no hay comentarios sobre este producto.</p>
                     {% endfor %}
                 </div>
+                {% if user.is_authenticated and rol_actual == 'COMPRADOR' %}
                 <div class="col-md-5">
-                    <div class="border rounded-3 p-3">
-                        <h6 class="fw-bold mb-2">Dejar una Calificación del Producto</h6>
-                        {% if user.is_authenticated %}
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="tipo_accion" value="publicar_resena">
-                            <div class="mb-2">
-                                <label class="form-label small fw-semibold">Puntuación</label>
-                                {{ resena_form.calificacion }}
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label small fw-semibold">Tu comentario</label>
-                                {{ resena_form.comentario }}
-                            </div>
-                            <button type="submit" class="btn btn-success btn-sm w-100 fw-semibold">
-                                Publicar Calificación
-                            </button>
-                        </form>
-                        {% else %}
-                        <p class="small text-muted mb-2">Inicia sesión para comentar tu experiencia con este producto.</p>
-                        <a href="{% url 'login' %}" class="btn btn-outline-success btn-sm">Iniciar Sesión</a>
-                        {% endif %}
-                    </div>
+                    <form method="post" class="border rounded p-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="tipo_accion" value="publicar_resena">
+                        <label class="form-label small fw-semibold">Calificar producto</label>
+                        <div class="mb-2">{{ resena_form.calificacion }}</div>
+                        <div class="mb-2">{{ resena_form.comentario }}</div>
+                        <button type="submit" class="btn btn-success btn-sm w-100">Enviar Opinión</button>
+                    </form>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
-
-<!-- Productos relacionados -->
-{% if relacionados %}
-<div class="mt-4">
-    <h4 class="h5 fw-bold mb-3">Otros lotes de la misma categoría</h4>
-    <div class="row g-3">
-        {% for rel in relacionados %}
-        <div class="col-md-4">
-            <div class="card border shadow-sm h-100">
-                <div class="card-body">
-                    <img src="{{ rel.url_imagen }}" alt="{{ rel.nombre }}" class="img-referencia mb-2" style="height: 120px;">
-                    <h6 class="fw-bold mb-1">{{ rel.nombre }}</h6>
-                    <p class="text-muted small mb-2">{{ rel.origen }} — S/ {{ rel.precio_actual }} / {{ rel.get_unidad_display }}</p>
-                    <a href="{% url 'detalle_producto' rel.id %}" class="btn btn-outline-success btn-sm w-100">Ver descripción completa</a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
 {% endblock %}
