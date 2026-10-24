@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ accion }} | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="bg-white border rounded-3 p-4 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h4 fw-bold mb-0">{{ accion }}</h2>
+                <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary btn-sm">
+                    &larr; Volver al Panel
+                </a>
+            </div>
+
+            <div class="placeholder-imagen mb-4" style="height: 150px;">
+                [Espacio para Imagen del Producto — Se mostrará como contenedor limpio en el catálogo]
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Nombre del Producto o Lote Agrícola</label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                            <div class="text-danger small">{{ form.nombre.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Categoría</label>
+                        {{ form.categoria }}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Precio en Soles (S/)</label>
+                        {{ form.precio }}
+                        {% if form.precio.errors %}
+                            <div class="text-danger small">{{ form.precio.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Unidad de Medida</label>
+                        {{ form.unidad }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Cantidad en Stock</label>
+                        {{ form.stock }}
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Región / Valle de Cosecha</label>
+                        {{ form.origen }}
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check mb-2">
+                            {{ form.disponible }}
+                            <label class="form-check-label fw-semibold small">
+                                Lote disponible para venta
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Descripción detallada del producto</label>
+                        {{ form.descripcion }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-success px-4 fw-semibold">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
