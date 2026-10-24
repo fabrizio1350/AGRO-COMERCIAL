@@ -81,7 +81,7 @@
                         <a href="{% url 'detalle_producto' prod.id %}" class="fw-bold text-dark text-decoration-none">
                             {{ prod.nombre }}
                         </a>
-                        <div class="text-muted small">Variedad: {{ prod.variedad }} | Origen: {{ prod.origen }}</div>
+                        <div class="text-muted small">Cosecha: {{ prod.fecha_cosecha|date:"d/m/Y" }} | Origen: {{ prod.origen }}</div>
                     </td>
                     <td>
                         <strong>S/ {{ prod.precio }}</strong>
