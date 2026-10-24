@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import PerfilUsuario, Producto, Pedido
+from .models import PerfilUsuario, Producto, OfertaNegociacion, Pedido, ResenaProducto
 
 
 class RegistroUsuarioForm(UserCreationForm):
@@ -20,27 +20,33 @@ class RegistroUsuarioForm(UserCreationForm):
         widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'})
     )
     rol = forms.ChoiceField(
-        label="Tipo de cuenta",
+        label="Tipo de cuenta en la plataforma",
         choices=PerfilUsuario.ROLES,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    ruc_dni = forms.CharField(
+        label="DNI o RUC",
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 10456789123'})
+    )
     telefono = forms.CharField(
-        label="Teléfono / Celular",
+        label="Teléfono / WhatsApp",
         max_length=20,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 987654321'})
     )
     ubicacion = forms.CharField(
-        label="Ciudad / Región",
+        label="Ciudad / Región / Valle",
         max_length=120,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huancayo, Junín'})
     )
     nombre_finca = forms.CharField(
-        label="Nombre de Finca o Asociación (solo productores)",
+        label="Nombre de Finca, Asociación o Empresa",
         max_length=120,
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Fundo San Isidro'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Fundo San Isidro / Comercial Lima'})
     )
 
     class Meta:
@@ -59,33 +65,93 @@ class RegistroUsuarioForm(UserCreationForm):
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
-        fields = ['categoria', 'nombre', 'descripcion', 'precio', 'unidad', 'stock', 'origen', 'disponible']
+        fields = [
+            'categoria', 'nombre', 'variedad', 'tipo_cultivo', 'fecha_cosecha',
+            'calidad', 'descripcion', 'precio', 'en_oferta', 'precio_oferta',
+            'acepta_ofertas', 'unidad', 'stock', 'minimo_compra', 'origen', 'disponible'
+        ]
         widgets = {
             'categoria': forms.Select(attrs={'class': 'form-select'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Papa Amarilla Tumbay'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe la calidad, cosecha y características del producto...'}),
+            'variedad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Tumbay Nativa'}),
+            'tipo_cultivo': forms.Select(attrs={'class': 'form-select'}),
+            'fecha_cosecha': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Cosecha de esta semana'}),
+            'calidad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Primera - Calibre Extra'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe características, humedad, empaque y condiciones del producto...'}),
             'precio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.50'}),
+            'en_oferta': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'precio_oferta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'placeholder': 'Opcional si está en oferta'}),
+            'acepta_ofertas': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'unidad': forms.Select(attrs={'class': 'form-select'}),
             'stock': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'minimo_compra': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'origen': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huánuco / Valle del Mantaro'}),
             'disponible': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
-    def clean_precio(self):
-        precio = self.cleaned_data.get('precio')
+    def clean(self):
+        cleaned_data = super().clean()
+        precio = cleaned_data.get('precio')
+        en_oferta = cleaned_data.get('en_oferta')
+        precio_oferta = cleaned_data.get('precio_oferta')
+
         if precio is not None and precio <= 0:
-            raise forms.ValidationError("El precio debe ser mayor a cero.")
-        return precio
+            self.add_error('precio', "El precio debe ser mayor a cero.")
+        if en_oferta and (not precio_oferta or (precio and precio_oferta >= precio)):
+            self.add_error('precio_oferta', "El precio de oferta debe ser menor al precio normal.")
+        return cleaned_data
 
 
-class PedidoForm(forms.ModelForm):
+class OfertaNegociacionForm(forms.ModelForm):
     class Meta:
-        model = Pedido
-        fields = ['cantidad', 'direccion_entrega', 'comentario']
+        model = OfertaNegociacion
+        fields = ['cantidad', 'precio_unitario_ofrecido', 'mensaje']
         widgets = {
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'value': '1'}),
-            'direccion_entrega': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección exacta o mercado de recepción'}),
-            'comentario': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Indicaciones adicionales para el productor o transporte (opcional)'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'value': '10'}),
+            'precio_unitario_ofrecido': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'placeholder': 'Precio propuesto S/'}),
+            'mensaje': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Compro 20 sacos con recojo inmediato en camión'}),
+        }
+
+
+class PasarelaPagoForm(forms.Form):
+    direccion_entrega = forms.CharField(
+        label="Dirección exacta de entrega o almacén",
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Av. La Cultura 450 - Mercado Mayorista Puesto 12'})
+    )
+    ciudad_destino = forms.CharField(
+        label="Ciudad / Región de destino",
+        max_length=100,
+        initial="Lima Metropolitana",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    telefono_contacto = forms.CharField(
+        label="Teléfono del receptor",
+        max_length=30,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 999888777'})
+    )
+    metodo_pago = forms.ChoiceField(
+        label="Selecciona el Método de Pago",
+        choices=Pedido.METODOS_PAGO,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
+    )
+    comentario = forms.CharField(
+        label="Instrucciones de transporte o facturación (opcional)",
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Horario de recepción, RUC para guía de remisión, etc.'})
+    )
+
+
+class ResenaForm(forms.ModelForm):
+    class Meta:
+        model = ResenaProducto
+        fields = ['calificacion', 'comentario']
+        widgets = {
+            'calificacion': forms.Select(
+                choices=[(5, '5 Estrellas - Excelente calidad'), (4, '4 Estrellas - Muy bueno'), (3, '3 Estrellas - Regular'), (2, '2 Estrellas - Bajo'), (1, '1 Estrella - Malo')],
+                attrs={'class': 'form-select'}
+            ),
+            'comentario': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Escribe tu opinión sobre la calidad, frescura o atención del productor...'}),
         }
 
 
@@ -107,9 +173,10 @@ class PerfilForm(forms.ModelForm):
 
     class Meta:
         model = PerfilUsuario
-        fields = ['rol', 'telefono', 'ubicacion', 'nombre_finca']
+        fields = ['rol', 'ruc_dni', 'telefono', 'ubicacion', 'nombre_finca']
         widgets = {
             'rol': forms.Select(attrs={'class': 'form-select'}),
+            'ruc_dni': forms.TextInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
             'ubicacion': forms.TextInput(attrs={'class': 'form-control'}),
             'nombre_finca': forms.TextInput(attrs={'class': 'form-control'}),
