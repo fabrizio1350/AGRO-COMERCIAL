@@ -34,9 +34,7 @@
                         {% for item in items %}
                         <tr>
                             <td style="width: 100px;">
-                                <div class="placeholder-imagen" style="height: 65px; font-size: 0.7rem;">
-                                    [Espacio Imagen]
-                                </div>
+                                <img src="{{ item.producto.url_imagen }}" alt="{{ item.producto.nombre }}" class="img-referencia" style="height: 65px;">
                             </td>
                             <td>
                                 <a href="{% url 'detalle_producto' item.producto.id %}" class="fw-bold text-dark text-decoration-none">
