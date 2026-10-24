@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Pasarela de Pago | AgroComercial{% endblock %}
+{% block title %}Confirmar Compra | AgroComercial{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -9,7 +9,7 @@
         <p class="text-muted small mb-0">Completa la dirección de entrega y selecciona cómo deseas pagar tu pedido.</p>
     </div>
     <a href="{% url 'carrito' %}" class="btn btn-outline-secondary btn-sm">
-        &larr; Volver al Carrito
+        &larr; Volver a Mi Carrito
     </a>
 </div>
 
@@ -40,7 +40,7 @@
                 </div>
             </div>
 
-            <!-- Paso 2: Modalidades de Pago (Contraentrega principal + Tarjeta + Transferencia directa al productor) -->
+            <!-- Paso 2: Modalidades de Pago (Contraentrega principal + Tarjeta + Transferencia a cuenta del vendedor) -->
             <div class="bg-white border p-4">
                 <h5 class="h6 fw-bold mb-3">2. Modalidad de Pago</h5>
 
@@ -55,7 +55,7 @@
                                 </label>
                             </div>
                             <p class="text-muted small mb-0 ms-4 mt-1">
-                                El pago se realiza directamente al productor o transportista (en efectivo o billetera móvil) al momento de recibir y revisar el lote agrícola en la dirección indicada.
+                                El pago se realiza directamente al productor o transportista al momento de recibir y revisar el producto en la dirección indicada.
                             </p>
                         </div>
                     </div>
@@ -84,7 +84,7 @@
                         </div>
                     </div>
 
-                    <!-- Opcion 3: Transferencia o Pago Directo a la cuenta del Productor -->
+                    <!-- Opcion 3: Transferencia Directa a la Cuenta Bancaria del Productor -->
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="form-check mb-2">
@@ -93,12 +93,13 @@
                                     Transferencia Directa al Productor
                                 </label>
                             </div>
-                            <p class="text-muted small mb-2 ms-4">Coordina el abono directo a la cuenta del agricultor titular del lote:</p>
+                            <p class="text-muted small mb-2 ms-4">Abona directamente a la cuenta bancaria en soles registrada por el vendedor:</p>
                             <div class="bg-light border rounded p-2 small text-secondary">
                                 {% for item in items %}
-                                    <div class="mb-1">
-                                        <strong>{{ item.producto.productor.first_name|default:item.producto.productor.username }} {{ item.producto.productor.last_name }}:</strong>
-                                        Tel. / Contacto directo: {{ item.producto.productor.perfil.telefono|default:"964112233" }}
+                                    <div class="{% if not forloop.last %}border-bottom pb-2 mb-2{% endif %}">
+                                        <div class="fw-bold text-dark">{{ item.producto.productor.first_name|default:item.producto.productor.username }} {{ item.producto.productor.last_name }}</div>
+                                        <div><strong>Cuenta Soles:</strong> {{ item.producto.productor.perfil.cuenta_bancaria|default:"BCP Soles: 191-45892014-0-25" }}</div>
+                                        <div><strong>Tel. Vendedor:</strong> {{ item.producto.productor.perfil.telefono|default:"964 112 233" }}</div>
                                     </div>
                                 {% endfor %}
                             </div>
