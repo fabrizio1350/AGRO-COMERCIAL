@@ -16,8 +16,8 @@
                 </a>
             </div>
 
-            <div class="placeholder-imagen mb-4" style="height: 140px;">
-                [Espacio para Imagen del Producto — Se mostrará como contenedor limpio en el Marketplace]
+            <div class="mb-4">
+                <img src="{% if producto %}{{ producto.url_imagen }}{% else %}/static/imagenes/banner_agro.jpg{% endif %}" alt="Vista previa del producto" class="img-referencia" style="height: 150px;">
             </div>
 
             <form method="post">
