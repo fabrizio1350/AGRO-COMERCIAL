@@ -1,31 +1,39 @@
 {% extends 'base.html' %}
 
-{% block title %}Catálogo Agrícola | AgroComercial{% endblock %}
+{% block title %}Marketplace Agrícola | AgroComercial{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
-        <h1 class="h3 fw-bold mb-1">Catálogo de Productos Agrícolas</h1>
-        <p class="text-muted mb-0">Filtra por categoría, unidad de venta o región de cosecha.</p>
+        <span class="badge bg-success-subtle text-success border border-success-subtle mb-1">MARKETPLACE OFICIAL</span>
+        <h1 class="h3 fw-bold mb-1">Marketplace de Comercialización Agrícola</h1>
+        <p class="text-muted mb-0">Busca lotes por variedad, valle de origen, tipo de cultivo, rango de precio o descuentos.</p>
     </div>
-    {% if user.is_authenticated %}
-    <div class="mt-3 mt-md-0">
-        <a href="{% url 'crear_producto' %}" class="btn btn-success">
-            + Publicar Producto
+    <div class="mt-3 mt-md-0 d-flex gap-2">
+        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning text-dark fw-semibold">
+            Ir a Ventas por Oferta
         </a>
+        {% if user.is_authenticated and rol_actual == 'PRODUCTOR' %}
+        <a href="{% url 'crear_producto' %}" class="btn btn-success fw-semibold">
+            + Publicar Nuevo Lote
+        </a>
+        {% elif user.is_authenticated %}
+        <a href="{% url 'carrito' %}" class="btn btn-outline-dark fw-semibold">
+            Ver Carrito ({{ total_items_carrito }})
+        </a>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
-<!-- Barra de busqueda y filtros -->
-<form method="get" action="{% url 'catalogo' %}" class="bg-white border rounded-3 p-3 mb-4 shadow-sm">
+<!-- Panel de Buscador y Filtros Avanzados del Marketplace -->
+<form method="get" action="{% url 'catalogo' %}" class="bg-white border rounded-3 p-3 p-md-4 mb-4 shadow-sm">
     <div class="row g-3 align-items-end">
         <div class="col-md-4">
-            <label class="form-label small fw-semibold text-secondary">Buscar producto o región</label>
-            <input type="text" name="q" value="{{ busqueda }}" class="form-control" placeholder="Ej. Papa, Quinua, Huaral, Junín...">
+            <label class="form-label small fw-semibold text-secondary">Buscador por producto, variedad o región</label>
+            <input type="text" name="q" value="{{ busqueda }}" class="form-control" placeholder="Ej. Papa Tumbay, Quinua, Huaral, Junín...">
         </div>
         <div class="col-md-3">
-            <label class="form-label small fw-semibold text-secondary">Categoría</label>
+            <label class="form-label small fw-semibold text-secondary">Categoría Agrícola</label>
             <select name="categoria" class="form-select">
                 <option value="">Todas las categorías</option>
                 {% for cat in categorias %}
@@ -35,10 +43,10 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="form-label small fw-semibold text-secondary">Unidad de Venta</label>
             <select name="unidad" class="form-select">
-                <option value="">Todas las unidades</option>
+                <option value="">Todas</option>
                 {% for codigo, etiqueta in unidades %}
                 <option value="{{ codigo }}" {% if unidad_seleccionada == codigo %}selected{% endif %}>
                     {{ etiqueta }}
@@ -46,58 +54,129 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2 d-flex gap-2">
-            <button type="submit" class="btn btn-success w-100">Filtrar</button>
-            <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary" title="Limpiar filtros">Limpiar</a>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-secondary">Tipo de Cultivo</label>
+            <select name="cultivo" class="form-select">
+                <option value="">Todos los cultivos</option>
+                {% for cod_c, nom_c in tipos_cultivo %}
+                <option value="{{ cod_c }}" {% if cultivo_seleccionado == cod_c %}selected{% endif %}>
+                    {{ nom_c }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-secondary">Precio máximo (S/)</label>
+            <input type="number" step="0.50" name="precio_max" value="{{ precio_max }}" class="form-control" placeholder="Ej. 50.00">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-secondary">Ordenar resultados por</label>
+            <select name="orden" class="form-select">
+                <option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes primero</option>
+                <option value="precio_asc" {% if orden_seleccionado == 'precio_asc' %}selected{% endif %}>Menor precio primero</option>
+                <option value="precio_desc" {% if orden_seleccionado == 'precio_desc' %}selected{% endif %}>Mayor precio primero</option>
+                <option value="stock" {% if orden_seleccionado == 'stock' %}selected{% endif %}>Mayor volumen de stock</option>
+            </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-center pt-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="ofertas" value="1" id="checkOfertas" {% if solo_ofertas == '1' %}checked{% endif %}>
+                <label class="form-check-label fw-semibold small text-danger" for="checkOfertas">
+                    Mostrar solo lotes en Oferta
+                </label>
+            </div>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-success w-100 fw-semibold">Aplicar Filtros</button>
+            <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary">Limpiar</a>
         </div>
     </div>
 </form>
 
-<!-- Listado de productos -->
+<!-- Listado de productos del Marketplace -->
 <div class="row g-4">
     {% for prod in productos %}
     <div class="col-md-6 col-lg-4">
         <div class="card h-100 border shadow-sm">
-            <div class="p-3 pb-0">
+            <div class="p-3 pb-0 position-relative">
+                {% if prod.en_oferta and prod.precio_oferta %}
+                    <span class="badge bg-danger position-absolute top-0 end-0 m-4">
+                        -{{ prod.porcentaje_descuento }}% OFERTA
+                    </span>
+                {% endif %}
                 <div class="placeholder-imagen" style="height: 175px;">
                     [Espacio para Imagen - {{ prod.nombre }}]
                 </div>
             </div>
             <div class="card-body d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2">
                     <span class="badge bg-success-subtle text-success border border-success-subtle">
-                        {{ prod.categoria.nombre|default:"General" }}
+                        {{ prod.categoria.nombre|default:"Agrícola" }}
                     </span>
-                    <span class="badge bg-light text-dark border">
-                        Stock: {{ prod.stock }}
+                    <span class="badge bg-light text-secondary border">
+                        {{ prod.get_tipo_cultivo_display }}
                     </span>
                 </div>
-                <h5 class="card-title fw-bold mb-1">{{ prod.nombre }}</h5>
+
+                <h5 class="card-title fw-bold mb-1">
+                    <a href="{% url 'detalle_producto' prod.id %}" class="text-dark text-decoration-none">
+                        {{ prod.nombre }}
+                    </a>
+                </h5>
                 <p class="text-muted small mb-2">
-                    Origen: <strong>{{ prod.origen }}</strong><br>
-                    Productor: {{ prod.productor.first_name|default:prod.productor.username }} {{ prod.productor.last_name }}
+                    Variedad: <strong>{{ prod.variedad }}</strong> | Origen: <strong>{{ prod.origen }}</strong><br>
+                    Vendedor: {{ prod.productor.first_name|default:prod.productor.username }} {{ prod.productor.last_name }} | Stock: {{ prod.stock }}
                 </p>
-                <p class="card-text text-secondary small flex-grow-1">
-                    {{ prod.descripcion|truncatewords:20 }}
+                <p class="card-text text-secondary small flex-grow-1 mb-3">
+                    {{ prod.descripcion|truncatewords:18 }}
                 </p>
-                <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-2">
+
+                <div class="bg-light rounded-2 p-2 mb-3 d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="fs-5 fw-bold text-success">S/ {{ prod.precio }}</span>
+                        {% if prod.en_oferta and prod.precio_oferta %}
+                            <span class="text-decoration-line-through text-muted small d-block">Normal: S/ {{ prod.precio }}</span>
+                            <span class="fs-5 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
+                        {% else %}
+                            <span class="text-muted small d-block">Precio directo</span>
+                            <span class="fs-5 fw-bold text-success">S/ {{ prod.precio }}</span>
+                        {% endif %}
                         <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
                     </div>
-                    <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-success btn-sm fw-semibold">
-                        Ver y Comprar
+                    {% if prod.acepta_ofertas %}
+                        <span class="badge bg-warning-subtle text-dark border border-warning">
+                            Acepta Contraoferta
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex gap-2 mt-auto">
+                    <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-success btn-sm w-50 fw-semibold">
+                        Ver Descripción
                     </a>
+                    {% if user.is_authenticated and prod.productor != user %}
+                    <form action="{% url 'agregar_al_carrito' prod.id %}" method="post" class="w-50">
+                        {% csrf_token %}
+                        <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
+                        <button type="submit" class="btn btn-success btn-sm w-100 fw-semibold">
+                            + Al Carrito
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-success btn-sm w-50 fw-semibold">
+                        Comprar / Ofertar
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
     {% empty %}
     <div class="col-12">
-        <div class="bg-white border rounded-3 p-5 text-center">
-            <h5 class="fw-bold text-secondary">No se encontraron productos con esos filtros</h5>
-            <p class="text-muted mb-3">Intenta cambiar tu búsqueda o limpiar los filtros seleccionados.</p>
-            <a href="{% url 'catalogo' %}" class="btn btn-outline-success btn-sm">Ver todos los productos</a>
+        <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
+            <h5 class="fw-bold text-secondary">No se encontraron productos con esos filtros en el Marketplace</h5>
+            <p class="text-muted mb-3">Prueba limpiando los criterios de búsqueda o ampliando el precio máximo.</p>
+            <a href="{% url 'catalogo' %}" class="btn btn-outline-success btn-sm">Restablecer Marketplace</a>
         </div>
     </div>
     {% endfor %}
