@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ producto.nombre }} | AgroComercial{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'inicio' %}" class="text-success text-decoration-none">Inicio</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'catalogo' %}" class="text-success text-decoration-none">Catálogo</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ producto.nombre }}</li>
+    </ol>
+</nav>
+
+<div class="row g-4 mb-5">
+    <!-- Columna izquierda: Imagen placeholder y datos del productor -->
+    <div class="col-lg-6">
+        <div class="bg-white border rounded-3 p-3 shadow-sm mb-3">
+            <div class="placeholder-imagen" style="height: 320px;">
+                [Espacio para Imagen Principal del Producto: {{ producto.nombre }}]
+            </div>
+        </div>
+
+        <!-- Tarjeta del productor -->
+        <div class="bg-white border rounded-3 p-3 shadow-sm">
+            <h6 class="fw-bold text-secondary mb-3">Información del Productor Agrícola</h6>
+            <div class="d-flex align-items-center gap-3">
+                <div class="placeholder-imagen flex-shrink-0" style="width: 75px; height: 75px; font-size: 0.75rem;">
+                    [Espacio Foto]
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="fw-bold mb-1">
+                        {{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}
+                    </h6>
+                    <p class="text-muted small mb-1">
+                        {% if producto.productor.perfil.nombre_finca %}
+                            Finca / Asociación: <strong>{{ producto.productor.perfil.nombre_finca }}</strong><br>
+                        {% endif %}
+                        Ubicación: {{ producto.productor.perfil.ubicacion|default:producto.origen }}
+                        {% if producto.productor.perfil.telefono %}
+                            | Tel: {{ producto.productor.perfil.telefono }}
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'catalogo' %}?productor={{ producto.productor.id }}" class="btn btn-outline-secondary btn-sm mt-1">
+                        Ver todos los productos de este productor
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna derecha: Informacion del producto y formulario de pedido -->
+    <div class="col-lg-6">
+        <div class="bg-white border rounded-3 p-4 shadow-sm h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    {{ producto.categoria.nombre|default:"Agrícola" }}
+                </span>
+                <span class="text-muted small">Publicado el {{ producto.fecha_publicacion|date:"d/m/Y" }}</span>
+            </div>
+
+            <h1 class="h3 fw-bold mb-2">{{ producto.nombre }}</h1>
+            <p class="text-muted mb-3">Origen de cosecha: <strong>{{ producto.origen }}</strong></p>
+
+            <div class="bg-light border rounded-3 p-3 mb-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted small d-block">Precio directo de productor</span>
+                    <span class="fs-3 fw-bold text-success">S/ {{ producto.precio }}</span>
+                    <span class="text-secondary">/ {{ producto.get_unidad_display }}</span>
+                </div>
+                <div class="text-end">
+                    <span class="text-muted small d-block">Disponibilidad</span>
+                    {% if producto.disponible and producto.stock > 0 %}
+                        <span class="badge bg-success">{{ producto.stock }} unidades en stock</span>
+                    {% else %}
+                        <span class="badge bg-danger">Agotado</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <h6 class="fw-bold">Descripción del Lote</h6>
+            <p class="text-secondary mb-4">{{ producto.descripcion }}</p>
+
+            <hr>
+
+            <!-- Formulario de compra / solicitud de pedido -->
+            {% if producto.productor == user %}
+                <div class="alert alert-info mb-0 d-flex justify-content-between align-items-center">
+                    <span>Este producto fue publicado por ti.</span>
+                    <a href="{% url 'editar_producto' producto.id %}" class="btn btn-sm btn-primary">Editar Producto</a>
+                </div>
+            {% elif producto.disponible and producto.stock > 0 %}
+                <h5 class="fw-bold mb-3">Realizar Pedido Directo</h5>
+                {% if user.is_authenticated %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-sm-4">
+                                <label class="form-label small fw-semibold">Cantidad ({{ producto.get_unidad_display }})</label>
+                                {{ form.cantidad }}
+                            </div>
+                            <div class="col-sm-8">
+                                <label class="form-label small fw-semibold">Dirección de Entrega</label>
+                                {{ form.direccion_entrega }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Notas o indicaciones para el productor</label>
+                                {{ form.comentario }}
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
+                                    Confirmar Pedido Directo
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="border rounded-3 p-3 bg-light text-center">
+                        <p class="mb-2 text-secondary">Inicia sesión con tu cuenta para solicitar un pedido de este producto.</p>
+                        <a href="{% url 'login' %}" class="btn btn-success btn-sm me-2">Iniciar Sesión</a>
+                        <a href="{% url 'registro' %}" class="btn btn-outline-secondary btn-sm">Crear Cuenta</a>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-secondary mb-0">
+                    Este lote se encuentra agotado temporalmente.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Productos relacionados -->
+{% if relacionados %}
+<div class="mt-4">
+    <h4 class="h5 fw-bold mb-3">Otros productos similares</h4>
+    <div class="row g-3">
+        {% for rel in relacionados %}
+        <div class="col-md-4">
+            <div class="card border shadow-sm h-100">
+                <div class="card-body">
+                    <div class="placeholder-imagen mb-2" style="height: 110px;">
+                        [Espacio para Imagen]
+                    </div>
+                    <h6 class="fw-bold mb-1">{{ rel.nombre }}</h6>
+                    <p class="text-muted small mb-2">{{ rel.origen }} — S/ {{ rel.precio }} / {{ rel.get_unidad_display }}</p>
+                    <a href="{% url 'detalle_producto' rel.id %}" class="btn btn-outline-success btn-sm w-100">Ver producto</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
