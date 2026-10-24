@@ -72,20 +72,20 @@ class ProductoForm(forms.ModelForm):
         ]
         widgets = {
             'categoria': forms.Select(attrs={'class': 'form-select'}),
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Papa Amarilla Tumbay'}),
-            'variedad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Tumbay Nativa'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Camote Morado, Papa Amarilla, Palta...'}),
+            'variedad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Amarilla, Blanca, En saco, Lavada (Opcional)'}),
             'tipo_cultivo': forms.Select(attrs={'class': 'form-select'}),
-            'fecha_cosecha': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Cosecha de esta semana'}),
-            'calidad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Primera - Calibre Extra'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe características, humedad, empaque y condiciones del producto...'}),
-            'precio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.50'}),
+            'fecha_cosecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
+            'calidad': forms.Select(attrs={'class': 'form-select'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Cuenta brevemente cómo está el producto, cómo viene empacado o detalles para el comprador...'}),
+            'precio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.50', 'placeholder': 'Ej. 3.50'}),
             'en_oferta': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'precio_oferta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'placeholder': 'Opcional si está en oferta'}),
+            'precio_oferta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'placeholder': 'Ej. 2.90 (Opcional)'}),
             'acepta_ofertas': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'unidad': forms.Select(attrs={'class': 'form-select'}),
             'stock': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'minimo_compra': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
-            'origen': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huánuco / Valle del Mantaro'}),
+            'origen': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huaral, Huancayo, Arequipa...'}),
             'disponible': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
