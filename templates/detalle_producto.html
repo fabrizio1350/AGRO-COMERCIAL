@@ -11,7 +11,7 @@
 </nav>
 
 <div class="row g-4 mb-4">
-    <!-- Columna izquierda: Foto limpia y tarjeta breve del productor -->
+    <!-- Columna izquierda: Foto limpia y tarjeta de contacto del productor -->
     <div class="col-lg-5">
         <div class="bg-white border p-3 mb-3 position-relative">
             {% if producto.en_oferta and producto.precio_oferta %}
@@ -22,12 +22,18 @@
             <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" class="img-referencia" style="height: 280px;">
         </div>
 
-        <div class="bg-white border p-3 d-flex align-items-center gap-3">
-            <img src="/static/imagenes/finca_productor.jpg" alt="Productor" class="img-referencia flex-shrink-0" style="width: 60px; height: 60px;">
-            <div>
-                <div class="text-muted small">Vendido por:</div>
-                <div class="fw-bold">{{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}</div>
-                <div class="text-muted small">{{ producto.productor.perfil.nombre_finca|default:producto.origen }}</div>
+        <div class="bg-white border p-3">
+            <div class="d-flex align-items-center gap-3 mb-2">
+                <img src="/static/imagenes/finca_productor.jpg" alt="Productor" class="img-referencia flex-shrink-0" style="width: 58px; height: 58px;">
+                <div>
+                    <div class="text-muted small">Vendido por el productor:</div>
+                    <div class="fw-bold">{{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}</div>
+                    <div class="text-muted small">{{ producto.productor.perfil.nombre_finca|default:producto.origen }}</div>
+                </div>
+            </div>
+            <div class="border-top pt-2 mt-2 small d-flex justify-content-between align-items-center">
+                <span class="text-secondary"><i class="bi bi-telephone-fill text-success me-1"></i>Contacto directo:</span>
+                <strong class="text-dark">{{ producto.productor.perfil.telefono|default:"964 112 233" }}</strong>
             </div>
         </div>
     </div>
@@ -42,7 +48,7 @@
 
             <h1 class="h3 fw-bold mb-2">{{ producto.nombre }}</h1>
             <p class="text-muted small mb-3">
-                Origen: <strong>{{ producto.origen }}</strong> • Calidad: <strong>{{ producto.get_calidad_display }}</strong>
+                Lugar de origen: <strong>{{ producto.origen }}</strong> • Unidad de venta: <strong>{{ producto.get_unidad_display }}</strong>
             </p>
 
             <!-- Caja de precio limpia -->
@@ -51,6 +57,7 @@
                     {% if producto.en_oferta and producto.precio_oferta %}
                         <span class="text-decoration-line-through text-muted small d-block">Antes: S/ {{ producto.precio }}</span>
                         <span class="fs-3 fw-bold text-danger">S/ {{ producto.precio_oferta }}</span>
+                        <span class="text-muted small">/ {{ producto.get_unidad_display }}</span>
                     {% else %}
                         <span class="text-muted small d-block">Precio por {{ producto.get_unidad_display }}</span>
                         <span class="fs-3 fw-bold text-success">S/ {{ producto.precio }}</span>
@@ -58,7 +65,7 @@
                 </div>
                 <div class="text-end">
                     <span class="badge bg-success">{{ producto.stock }} disponibles</span>
-                    <div class="text-muted small mt-1">Mínimo: {{ producto.minimo_compra }} {{ producto.get_unidad_display }}</div>
+                    <div class="text-muted small mt-1">Compra mínima: {{ producto.minimo_compra }} {{ producto.get_unidad_display }}</div>
                 </div>
             </div>
 
@@ -66,7 +73,7 @@
             {% if not user.is_authenticated %}
                 <div class="p-3 rounded-3 border text-center bg-light">
                     <p class="small text-secondary mb-2">Inicia sesión como <strong>Comprador</strong> para comprar este producto o enviar una oferta.</p>
-                    <a href="{% url 'login' %}?modo=comprador" class="btn btn-primary btn-sm px-4">Ingresar como Comprador</a>
+                    <a href="{% url 'login' %}?modo=comprador" class="btn btn-success btn-sm px-4">Ingresar como Comprador</a>
                 </div>
 
             {% elif rol_actual == 'PRODUCTOR' %}
@@ -140,12 +147,12 @@
     </div>
 </div>
 
-<!-- Descripcion y ficha en 2 pestañas simples y limpias -->
+<!-- Descripcion, datos simples y telefono directo del vendedor -->
 <div class="bg-white border p-4">
     <ul class="nav nav-tabs mb-3" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab">
-                Descripción y Detalles del Producto
+                Descripción y Contacto con el Vendedor
             </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -158,30 +165,42 @@
     <div class="tab-content">
         <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
             <p class="text-secondary mb-3">{{ producto.descripcion }}</p>
-            <div class="row g-3 small">
-                <div class="col-sm-6 col-md-3">
-                    <div class="p-2 border rounded bg-light">
-                        <span class="text-muted d-block">Forma de Cultivo</span>
-                        <strong>{{ producto.get_tipo_cultivo_display }}</strong>
+
+            <div class="row g-3 small mb-3">
+                <div class="col-sm-6 col-md-4">
+                    <div class="p-3 border rounded bg-light h-100">
+                        <span class="text-muted d-block">Lugar de Origen</span>
+                        <strong>{{ producto.origen }}</strong>
                     </div>
                 </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="p-2 border rounded bg-light">
-                        <span class="text-muted d-block">Calidad</span>
-                        <strong>{{ producto.get_calidad_display }}</strong>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="p-2 border rounded bg-light">
-                        <span class="text-muted d-block">Presentación</span>
-                        <strong>{{ producto.variedad|default:"Fresco de campo" }}</strong>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="p-2 border rounded bg-light">
-                        <span class="text-muted d-block">Día de Cosecha</span>
+                <div class="col-sm-6 col-md-4">
+                    <div class="p-3 border rounded bg-light h-100">
+                        <span class="text-muted d-block">Fecha de Cosecha</span>
                         <strong>{{ producto.fecha_cosecha|date:"d/m/Y" }}</strong>
                     </div>
+                </div>
+                <div class="col-sm-12 col-md-4">
+                    <div class="p-3 border rounded bg-light h-100">
+                        <span class="text-muted d-block">Finca / Productor</span>
+                        <strong>{{ producto.productor.perfil.nombre_finca|default:producto.productor.first_name }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recuadro de contacto directo por llamada/WhatsApp con el vendedor -->
+            <div class="p-3 rounded-3 border d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2" style="background-color: #f4f8f4; border-color: #cde0cd !important;">
+                <div>
+                    <strong class="text-dark d-block">
+                        <i class="bi bi-telephone-outbound-fill text-success me-1"></i>
+                        ¿Deseas informarte más sobre este producto o coordinar directamente con el vendedor?
+                    </strong>
+                    <span class="text-secondary small">
+                        Comunícate con <strong>{{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}</strong> ({{ producto.productor.perfil.nombre_finca|default:producto.origen }}) para consultas sobre el lote o el envío.
+                    </span>
+                </div>
+                <div class="bg-white border rounded px-3 py-2 text-center flex-shrink-0">
+                    <span class="text-muted small d-block">Llamar al vendedor:</span>
+                    <span class="fs-5 fw-bold text-success">{{ producto.productor.perfil.telefono|default:"964 112 233" }}</span>
                 </div>
             </div>
         </div>
