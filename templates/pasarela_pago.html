@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Pasarela de Pago Segura | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <span class="badge bg-success mb-1">PASARELA DE PAGO ENCRIPTADA</span>
+        <h1 class="h3 fw-bold mb-0">Pasarela de Pago y Despacho Agrícola</h1>
+        <p class="text-muted small mb-0">Completa los datos de entrega y elige tu modalidad de pago preferida.</p>
+    </div>
+    <a href="{% url 'carrito' %}" class="btn btn-outline-secondary btn-sm">
+        &larr; Volver al Carrito
+    </a>
+</div>
+
+<form method="post" action="{% url 'pasarela_pago' %}">
+    {% csrf_token %}
+    <div class="row g-4">
+        <!-- Columna izquierda: Datos de envio y pestañas de la pasarela -->
+        <div class="col-lg-8">
+            <!-- Paso 1: Datos de recepcion -->
+            <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
+                <h5 class="fw-bold mb-3">1. Datos de Recepción y Despacho del Lote</h5>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">{{ form.direccion_entrega.label }}</label>
+                        {{ form.direccion_entrega }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">{{ form.ciudad_destino.label }}</label>
+                        {{ form.ciudad_destino }}
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold">{{ form.telefono_contacto.label }}</label>
+                        {{ form.telefono_contacto }}
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label small fw-semibold">{{ form.comentario.label }}</label>
+                        {{ form.comentario }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 2: Seleccion de Metodo en la Pasarela de Pago -->
+            <div class="bg-white border rounded-3 p-4 shadow-sm">
+                <h5 class="fw-bold mb-3">2. Selecciona el Método en la Pasarela de Pago</h5>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="border rounded-3 p-3 h-100 bg-light">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoTarjeta" value="TARJETA" checked>
+                                <label class="form-check-label fw-bold" for="pagoTarjeta">
+                                    Tarjeta de Crédito / Débito
+                                </label>
+                            </div>
+                            <p class="text-muted small mb-2 ms-4">Visa, Mastercard, Débito Bancario inmediato.</p>
+                            <div class="placeholder-imagen mb-2" style="height: 45px; font-size: 0.72rem;">
+                                [Espacio para Imagen - Logos Visa / Mastercard]
+                            </div>
+                            <div class="row g-2 mt-1">
+                                <div class="col-12">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Número de tarjeta: 4557 •••• •••• 8910" value="4557 8812 3400 8910">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control form-control-sm" placeholder="MM/AA" value="08/29">
+                                </div>
+                                <div class="col-6">
+                                    <input type="password" class="form-control form-control-sm" placeholder="CVV" value="123">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="border rounded-3 p-3 h-100 bg-light">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoYape" value="YAPE_PLIN">
+                                <label class="form-check-label fw-bold" for="pagoYape">
+                                    Billetera Digital (Yape / Plin QR)
+                                </label>
+                            </div>
+                            <p class="text-muted small mb-2 ms-4">Escanea el código QR y coloca el código de aprobación.</p>
+                            <div class="placeholder-imagen mb-2" style="height: 95px; font-size: 0.75rem;">
+                                [Espacio para Imagen - Código QR Oficial Yape / Plin]
+                            </div>
+                            <input type="text" class="form-control form-control-sm" placeholder="Código de operación Yape / Plin (6 dígitos)">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="border rounded-3 p-3 h-100 bg-light">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoTransferencia" value="TRANSFERENCIA">
+                                <label class="form-check-label fw-bold" for="pagoTransferencia">
+                                    Transferencia Bancaria Agrícola
+                                </label>
+                            </div>
+                            <p class="text-muted small mb-1 ms-4">Cuentas recaudadoras AgroComercial:</p>
+                            <div class="bg-white border rounded p-2 small text-secondary mb-2">
+                                <div><strong>BCP Soles:</strong> 191-9876543-0-12</div>
+                                <div><strong>Banco Agrario CCI:</strong> 018-000-001234567890-24</div>
+                            </div>
+                            <div class="placeholder-imagen" style="height: 45px; font-size: 0.72rem;">
+                                [Espacio para Imagen - Constancia de Transferencia]
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="border rounded-3 p-3 h-100 bg-light">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoContraentrega" value="CONTRAENTREGA">
+                                <label class="form-check-label fw-bold" for="pagoContraentrega">
+                                    Pago Contraentrega en Almacén
+                                </label>
+                            </div>
+                            <p class="text-muted small mb-2 ms-4">
+                                Cancela el importe al momento de recibir y verificar la calidad del lote agrícola en el punto de entrega acordado.
+                            </p>
+                            <div class="placeholder-imagen" style="height: 65px; font-size: 0.72rem;">
+                                [Espacio para Imagen - Ícono de Camión / Pago en Destino]
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna derecha: Resumen de orden y boton de confirmar pago -->
+        <div class="col-lg-4">
+            <div class="bg-white border rounded-3 p-4 shadow-sm sticky-top" style="top: 1rem;">
+                <h5 class="fw-bold mb-3">Resumen de tu Compra</h5>
+                <ul class="list-group list-group-flush mb-3">
+                    {% for item in items %}
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="fw-semibold small">{{ item.producto.nombre }}</div>
+                            <small class="text-muted">{{ item.cantidad }} x S/ {{ item.precio_aplicado }} ({{ item.producto.get_unidad_display }})</small>
+                        </div>
+                        <span class="fw-bold small">S/ {{ item.subtotal }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <div class="d-flex justify-content-between small text-secondary mb-1">
+                    <span>Subtotal productos:</span>
+                    <span>S/ {{ subtotal }}</span>
+                </div>
+                <div class="d-flex justify-content-between small text-secondary mb-2">
+                    <span>Servicio de acopio y guía:</span>
+                    <span>S/ {{ costo_logistica }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="fw-bold">Importe Total:</span>
+                    <span class="fs-3 fw-bold text-success">S/ {{ total_pagar }}</span>
+                </div>
+
+                <button type="submit" class="btn btn-success btn-lg w-100 fw-bold">
+                    Confirmar y Pagar S/ {{ total_pagar }}
+                </button>
+                <p class="text-center text-muted small mt-2 mb-0">
+                    Protección CSRF activa y emisión inmediata de Comprobante Electrónico.
+                </p>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
