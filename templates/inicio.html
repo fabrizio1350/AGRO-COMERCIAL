@@ -190,7 +190,7 @@
                 </div>
                 <h5 class="card-title fw-bold mb-1">{{ prod.nombre }}</h5>
                 <p class="text-muted small mb-2">
-                    Variedad: {{ prod.variedad }} | Origen: <strong>{{ prod.origen }}</strong>
+                    Cosecha: {{ prod.fecha_cosecha|date:"d/m/Y" }} | Origen: <strong>{{ prod.origen }}</strong>
                 </p>
                 <p class="card-text text-secondary small flex-grow-1">
                     {{ prod.descripcion|truncatewords:16 }}
