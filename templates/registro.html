@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Registro de Usuario | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+        <div class="bg-white border rounded-3 p-4 shadow-sm">
+            <h2 class="h4 fw-bold text-center mb-1">Crear Cuenta en AgroComercial</h2>
+            <p class="text-muted small text-center mb-4">
+                Elige tu rol como <strong>Productor Agrícola</strong> para publicar tus cosechas o como <strong>Comprador</strong> para realizar pedidos directos.
+            </p>
+
+            <form method="post" action="{% url 'registro' %}">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger small">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1">{{ form.username.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.rol.label }}</label>
+                        {{ form.rol }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.first_name.label }}</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.last_name.label }}</label>
+                        {{ form.last_name }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small mt-1">{{ form.email.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.telefono.label }}</label>
+                        {{ form.telefono }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.ubicacion.label }}</label>
+                        {{ form.ubicacion }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.nombre_finca.label }}</label>
+                        {{ form.nombre_finca }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Contraseña</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <div class="text-danger small mt-1">{{ form.password1.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Confirmar contraseña</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="text-danger small mt-1">{{ form.password2.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold mt-4">
+                    Registrar Cuenta
+                </button>
+            </form>
+
+            <div class="text-center mt-3 small">
+                ¿Ya tienes una cuenta? <a href="{% url 'login' %}" class="text-success fw-semibold text-decoration-none">Inicia sesión aquí</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
