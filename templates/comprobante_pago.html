@@ -79,19 +79,15 @@
                 </table>
             </div>
 
-            <div class="placeholder-imagen mb-4" style="height: 75px;">
-                [Espacio para Imagen - Código de Barras / Sello Digital de Comprobante Electrónico]
-            </div>
-
-            <div class="d-flex flex-wrap justify-content-between gap-2">
-                <button type="button" onclick="window.print();" class="btn btn-outline-dark">
-                    Imprimir / Guardar Boleta PDF
+            <div class="d-flex flex-wrap justify-content-between gap-2 pt-2 border-top">
+                <button type="button" onclick="window.print();" class="btn btn-outline-dark btn-sm">
+                    <i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF
                 </button>
                 <div class="d-flex gap-2">
-                    <a href="{% url 'mis_pedidos' %}" class="btn btn-primary fw-semibold">
-                        Ver Seguimiento en Mis Compras
+                    <a href="{% url 'mis_pedidos' %}" class="btn btn-primary btn-sm">
+                        Ver Mis Compras
                     </a>
-                    <a href="{% url 'catalogo' %}" class="btn btn-success fw-semibold">
+                    <a href="{% url 'catalogo' %}" class="btn btn-success btn-sm">
                         Volver al Marketplace
                     </a>
                 </div>
