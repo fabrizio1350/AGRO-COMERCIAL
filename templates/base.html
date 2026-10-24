@@ -106,7 +106,37 @@
         .bg-success { background-color: #2e5a3c !important; }
         .bg-danger { background-color: #b34738 !important; }
         .text-danger { color: #b34738 !important; }
-        .bg-warning { background-color: #c88732 !important; color: #fff !important; }
+        .bg-warning {
+            background-color: #f3ece1 !important;
+            color: #6e4e1f !important;
+            border: 1px solid #dfd2be;
+            font-weight: 500;
+        }
+
+        /* Pestañas sin el color azul electrico de Bootstrap */
+        .nav-tabs .nav-link {
+            color: #555e68 !important;
+            font-weight: 500;
+            border-radius: 6px 6px 0 0;
+        }
+        .nav-tabs .nav-link:hover {
+            color: #212529 !important;
+        }
+        .nav-tabs .nav-link.active {
+            color: #2e5a3c !important;
+            font-weight: 600;
+            border-color: #dce0e5 #dce0e5 #ffffff !important;
+        }
+
+        .nav-pills .nav-link {
+            color: #495057 !important;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #2e5a3c !important;
+            color: #ffffff !important;
+        }
 
         /* Cabecera de navegacion sobria y responsive */
         .navbar-principal {
@@ -237,10 +267,7 @@
                             <a class="nav-link fw-semibold text-white" href="{% url 'panel_comprador' %}">Panel Comprador</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'carrito' %}">Carrito ({{ total_items_carrito }})</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'pasarela_pago' %}">Pasarela de Pago</a>
+                            <a class="nav-link" href="{% url 'carrito' %}">Mi Carrito ({{ total_items_carrito }})</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'mis_pedidos' %}">Mis Compras</a>
