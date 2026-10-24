@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Perfil | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="bg-white border rounded-3 p-4 shadow-sm text-center">
+            <div class="placeholder-imagen mx-auto mb-3" style="width: 140px; height: 140px;">
+                [Espacio para Foto de Perfil]
+            </div>
+            <h4 class="h5 fw-bold mb-1">{{ user.first_name|default:user.username }} {{ user.last_name }}</h4>
+            <p class="text-muted small mb-2">@{{ user.username }}</p>
+            <span class="badge bg-success-subtle text-success border border-success-subtle mb-3">
+                {{ perfil.get_rol_display }}
+            </span>
+
+            <div class="border-top pt-3 text-start small text-secondary">
+                <div class="mb-1"><strong>Correo:</strong> {{ user.email|default:"No especificado" }}</div>
+                <div class="mb-1"><strong>Teléfono:</strong> {{ perfil.telefono|default:"No especificado" }}</div>
+                <div class="mb-1"><strong>Ubicación:</strong> {{ perfil.ubicacion|default:"No especificada" }}</div>
+                {% if perfil.nombre_finca %}
+                <div><strong>Finca / Asociación:</strong> {{ perfil.nombre_finca }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="bg-white border rounded-3 p-4 shadow-sm">
+            <h3 class="h5 fw-bold mb-3">Actualizar Información de Perfil</h3>
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.first_name.label }}</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.last_name.label }}</label>
+                        {{ form.last_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.email.label }}</label>
+                        {{ form.email }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Rol en la plataforma</label>
+                        {{ form.rol }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Teléfono de contacto</label>
+                        {{ form.telefono }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Ubicación / Región</label>
+                        {{ form.ubicacion }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Nombre de Finca o Asociación (opcional)</label>
+                        {{ form.nombre_finca }}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success fw-semibold mt-4 px-4">
+                    Guardar Cambios
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
