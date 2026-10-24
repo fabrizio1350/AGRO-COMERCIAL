@@ -1,312 +1,260 @@
 {% extends 'base.html' %}
 
-{% block title %}Ventas por Oferta y Negociación | AgroComercial{% endblock %}
+{% block title %}Ventas por Oferta | AgroComercial{% endblock %}
 
 {% block content %}
-<div class="bg-white border border-warning rounded-3 p-4 mb-4 shadow-sm">
-    <div class="row align-items-center">
-        <div class="col-lg-8">
-            <span class="badge bg-warning text-dark mb-2">APARTADO DE VENTAS POR OFERTA Y CONTRAOFERTAS</span>
-            <h1 class="h3 fw-bold mb-1">Central de Ofertas, Remates de Cosecha y Negociación</h1>
-            <p class="text-secondary mb-0">
-                Aprovecha descuentos directos de campaña o negocia un precio especial por volumen directamente con el agricultor.
-            </p>
-        </div>
-        <div class="col-lg-4 mt-3 mt-lg-0">
-            <img src="/static/imagenes/banner_agro.jpg" alt="Ofertas Agrícolas" class="img-referencia" style="height: 110px;">
-        </div>
-    </div>
-</div>
-
-<!-- Pestañas del apartado de Ventas por Oferta -->
-<ul class="nav nav-tabs mb-4" id="tabsOfertas" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active fw-bold text-dark" id="remates-tab" data-bs-toggle="tab" data-bs-target="#remates" type="button" role="tab">
-            1. Remates y Descuentos Directos ({{ productos_remate.count }})
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link fw-bold text-dark" id="negociables-tab" data-bs-toggle="tab" data-bs-target="#negociables" type="button" role="tab">
-            2. Proponer Oferta por Volumen ({{ productos_negociables.count }})
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link fw-bold text-dark" id="sala-tab" data-bs-toggle="tab" data-bs-target="#sala" type="button" role="tab">
-            3. Sala de Negociaciones
-            {% if rol_actual == 'PRODUCTOR' %}
-                (Vendedor: {{ ofertas_recibidas_vendedor|length }})
-            {% else %}
-                (Comprador: {{ mis_ofertas_enviadas|length }})
-            {% endif %}
-        </button>
-    </li>
-</ul>
-
-<div class="tab-content" id="tabsOfertasContent">
-    <!-- PESTAÑA 1: REMATES DIRECTOS -->
-    <div class="tab-pane fade show active" id="remates" role="tabpanel">
-        <div class="row g-4">
-            {% for prod in productos_remate %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 border border-danger-subtle shadow-sm">
-                    <div class="p-3 pb-0 position-relative">
-                        <span class="badge bg-danger position-absolute top-0 end-0 m-4 fs-6">
-                            -{{ prod.porcentaje_descuento }}% DESCUENTO
-                        </span>
-                        <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 170px;">
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <span class="badge bg-light text-dark border align-self-start mb-2">{{ prod.categoria.nombre }}</span>
-                        <h5 class="card-title fw-bold mb-1">{{ prod.nombre }}</h5>
-                        <p class="text-muted small mb-2">
-                            Origen: <strong>{{ prod.origen }}</strong> | Vendedor: {{ prod.productor.first_name|default:prod.productor.username }}
-                        </p>
-                        <p class="text-secondary small flex-grow-1">{{ prod.descripcion|truncatewords:18 }}</p>
-
-                        <div class="bg-danger-subtle rounded-2 p-2 mb-3 d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="text-decoration-line-through text-muted small d-block">Precio normal: S/ {{ prod.precio }}</span>
-                                <span class="fs-4 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
-                                <span class="text-dark small">/ {{ prod.get_unidad_display }}</span>
-                            </div>
-                            <span class="badge bg-white text-dark border">Stock: {{ prod.stock }}</span>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-dark btn-sm w-50">
-                                Ver Ficha
-                            </a>
-                            {% if user.is_authenticated and prod.productor != user %}
-                            <form action="{% url 'agregar_al_carrito' prod.id %}" method="post" class="w-50">
-                                {% csrf_token %}
-                                <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
-                                <input type="hidden" name="comprar_ahora" value="1">
-                                <button type="submit" class="btn btn-danger btn-sm w-100 fw-semibold">
-                                    Comprar Oferta
-                                </button>
-                            </form>
-                            {% else %}
-                            <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-danger btn-sm w-50 fw-semibold">
-                                Aprovechar Oferta
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <div class="col-12">
-                <div class="alert alert-secondary text-center">No hay lotes en remate directo en este momento.</div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- PESTAÑA 2: PROPONER CONTRAOFERTA POR VOLUMEN -->
-    <div class="tab-pane fade" id="negociables" role="tabpanel">
-        <div class="alert alert-warning border-warning mb-4">
-            <strong>¿Cómo funciona la Venta por Oferta / Contraoferta?</strong> Elige un lote agrícola, ingresa la cantidad que deseas comprar y el precio unitario que propones pagar. El agricultor recibirá tu oferta en su panel y podrá aceptarla para que pases directo a la Pasarela de Pago.
-        </div>
-        <div class="row g-4">
-            {% for prod in productos_negociables %}
-            <div class="col-md-6">
-                <div class="bg-white border rounded-3 p-4 shadow-sm h-100">
-                    <div class="d-flex gap-3 align-items-center mb-3">
-                        <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia flex-shrink-0" style="width: 110px; height: 95px;">
-                        <div>
-                            <span class="badge bg-warning text-dark mb-1">Abierto a Contraofertas</span>
-                            <h5 class="fw-bold mb-1">{{ prod.nombre }}</h5>
-                            <div class="text-muted small">
-                                Precio base: <strong>S/ {{ prod.precio_actual }} / {{ prod.get_unidad_display }}</strong> | Disponible: {{ prod.stock }}
-                            </div>
-                            <div class="text-muted small">Vendedor: {{ prod.productor.first_name|default:prod.productor.username }} ({{ prod.origen }})</div>
-                        </div>
-                    </div>
-
-                    {% if user.is_authenticated and prod.productor != user %}
-                    <form action="{% url 'detalle_producto' prod.id %}" method="post" class="bg-light border rounded-2 p-3">
-                        {% csrf_token %}
-                        <input type="hidden" name="tipo_accion" value="enviar_oferta">
-                        <div class="row g-2 align-items-end">
-                            <div class="col-sm-4">
-                                <label class="form-label small fw-semibold mb-1">Cantidad ({{ prod.get_unidad_display }})</label>
-                                <input type="number" name="cantidad" class="form-control form-control-sm" value="{{ prod.minimo_compra }}" min="1" max="{{ prod.stock }}" required>
-                            </div>
-                            <div class="col-sm-4">
-                                <label class="form-label small fw-semibold mb-1">Tu Oferta Unitaria (S/)</label>
-                                <input type="number" step="0.10" name="precio_unitario_ofrecido" class="form-control form-control-sm" placeholder="Ej. 3.00" required>
-                            </div>
-                            <div class="col-sm-4">
-                                <button type="submit" class="btn btn-warning btn-sm w-100 fw-semibold">
-                                    Enviar Oferta
-                                </button>
-                            </div>
-                            <div class="col-12 mt-2">
-                                <input type="text" name="mensaje" class="form-control form-control-sm" placeholder="Comentario para el productor (ej. pago inmediato, recojo en almacén)...">
-                            </div>
-                        </div>
-                    </form>
-                    {% elif prod.productor == user %}
-                    <div class="alert alert-secondary small mb-0">
-                        Este es tu propio lote publicado. Revisa la pestaña "Sala de Negociaciones" para responder ofertas de compradores.
-                    </div>
-                    {% else %}
-                    <div class="text-end">
-                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-dark btn-sm">
-                            Inicia sesión como Comprador para enviar una oferta
-                        </a>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- PESTAÑA 3: SALA DE NEGOCIACIONES (DIFERENCIADA PARA VENDEDOR Y COMPRADOR) -->
-    <div class="tab-pane fade" id="sala" role="tabpanel">
-        {% if not user.is_authenticated %}
-            <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
-                <h5 class="fw-bold">Inicia sesión para ver tus negociaciones de ofertas</h5>
-                <p class="text-muted">Los compradores ven aquí sus propuestas enviadas y los vendedores aceptan o rechazan ofertas.</p>
-                <a href="{% url 'login' %}?modo=comprador" class="btn btn-primary me-2">Acceso Comprador</a>
-                <a href="{% url 'login' %}?modo=vendedor" class="btn btn-success">Acceso Vendedor</a>
-            </div>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h1 class="h4 fw-bold mb-1">Ventas por Oferta y Descuentos</h1>
+        {% if rol_actual == 'PRODUCTOR' %}
+            <p class="text-muted small mb-0">Revisa y responde las ofertas de compra enviadas por los compradores sobre tus productos.</p>
         {% else %}
-            <div class="row g-4">
-                <!-- Columna para el Vendedor: Ofertas recibidas -->
-                <div class="col-12">
-                    <div class="bg-white border rounded-3 p-4 shadow-sm mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h4 class="h5 fw-bold mb-0">Ofertas Recibidas de Compradores (Vista Vendedor)</h4>
-                            <span class="badge bg-success">Productor</span>
-                        </div>
-                        {% if ofertas_recibidas_vendedor %}
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Producto</th>
-                                        <th>Comprador</th>
-                                        <th>Cantidad</th>
-                                        <th>Precio Ofrecido</th>
-                                        <th>Total Propuesto</th>
-                                        <th>Estado</th>
-                                        <th>Responder Oferta</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for of in ofertas_recibidas_vendedor %}
-                                    <tr>
-                                        <td class="fw-bold">#{{ of.id }}</td>
-                                        <td>{{ of.producto.nombre }}</td>
-                                        <td>
-                                            <strong>{{ of.comprador.first_name|default:of.comprador.username }}</strong>
-                                            {% if of.mensaje %}
-                                                <div class="text-muted small fst-italic">"{{ of.mensaje }}"</div>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ of.cantidad }}</td>
-                                        <td>
-                                            <span class="fw-bold text-primary">S/ {{ of.precio_unitario_ofrecido }}</span>
-                                            <small class="text-muted d-block">(Base: S/ {{ of.producto.precio_actual }})</small>
-                                        </td>
-                                        <td class="fw-bold text-success">S/ {{ of.total_ofrecido }}</td>
-                                        <td>
-                                            <span class="badge {% if of.estado == 'PENDIENTE' %}bg-warning text-dark{% elif of.estado == 'ACEPTADA' %}bg-success{% elif of.estado == 'PAGADA' %}bg-primary{% else %}bg-danger{% endif %}">
-                                                {{ of.get_estado_display }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {% if of.estado == 'PENDIENTE' %}
-                                            <form action="{% url 'responder_oferta' of.id %}" method="post" class="d-flex gap-1">
-                                                {% csrf_token %}
-                                                <input type="text" name="respuesta_vendedor" class="form-control form-control-sm" placeholder="Respuesta opcional...">
-                                                <button type="submit" name="decision" value="ACEPTAR" class="btn btn-success btn-sm">Aceptar</button>
-                                                <button type="submit" name="decision" value="RECHAZAR" class="btn btn-outline-danger btn-sm">Rechazar</button>
-                                            </form>
-                                            {% else %}
-                                                <span class="text-muted small">{{ of.respuesta_vendedor|default:"Respondida" }}</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <p class="text-muted mb-0">No tienes ofertas recibidas sobre tus productos.</p>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Columna para el Comprador: Mis ofertas enviadas -->
-                <div class="col-12">
-                    <div class="bg-white border rounded-3 p-4 shadow-sm">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h4 class="h5 fw-bold mb-0">Mis Ofertas de Compra Enviadas (Vista Comprador)</h4>
-                            <span class="badge bg-info text-dark">Comprador</span>
-                        </div>
-                        {% if mis_ofertas_enviadas %}
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Lote Agrícola</th>
-                                        <th>Vendedor</th>
-                                        <th>Cantidad</th>
-                                        <th>Mi Precio Unitario</th>
-                                        <th>Total</th>
-                                        <th>Estado y Respuesta</th>
-                                        <th class="text-end">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for of in mis_ofertas_enviadas %}
-                                    <tr>
-                                        <td class="fw-bold">#{{ of.id }}</td>
-                                        <td>{{ of.producto.nombre }}</td>
-                                        <td>{{ of.producto.productor.first_name|default:of.producto.productor.username }}</td>
-                                        <td>{{ of.cantidad }}</td>
-                                        <td class="fw-bold">S/ {{ of.precio_unitario_ofrecido }}</td>
-                                        <td class="fw-bold text-success">S/ {{ of.total_ofrecido }}</td>
-                                        <td>
-                                            <span class="badge {% if of.estado == 'PENDIENTE' %}bg-warning text-dark{% elif of.estado == 'ACEPTADA' %}bg-success{% elif of.estado == 'PAGADA' %}bg-primary{% else %}bg-danger{% endif %}">
-                                                {{ of.get_estado_display }}
-                                            </span>
-                                            {% if of.respuesta_vendedor %}
-                                                <div class="text-muted small mt-1">Vendedor: "{{ of.respuesta_vendedor }}"</div>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-end">
-                                            {% if of.estado == 'ACEPTADA' %}
-                                            <form action="{% url 'responder_oferta' of.id %}" method="post">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="decision" value="PAGAR_OFERTA">
-                                                <button type="submit" class="btn btn-success btn-sm fw-semibold">
-                                                    Pagar Oferta en Pasarela &rarr;
-                                                </button>
-                                            </form>
-                                            {% elif of.estado == 'PAGADA' %}
-                                                <a href="{% url 'mis_pedidos' %}" class="btn btn-outline-primary btn-sm">Ver Compra</a>
-                                            {% else %}
-                                                <span class="text-muted small">En espera</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <p class="text-muted mb-0">Aún no has enviado ninguna propuesta de oferta. Usa la pestaña "2. Proponer Oferta por Volumen".</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+            <p class="text-muted small mb-0">Aprovecha productos con descuento directo o propón un precio por cantidad al vendedor.</p>
         {% endif %}
     </div>
 </div>
+
+{% if rol_actual == 'PRODUCTOR' %}
+    <!-- VISTA EXCLUSIVA PARA EL VENDEDOR -->
+    <div class="bg-white border p-4 mb-4">
+        <h2 class="h5 fw-bold mb-3">Ofertas Recibidas de Compradores</h2>
+        {% if ofertas_recibidas_vendedor %}
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Producto</th>
+                        <th>Comprador</th>
+                        <th>Cantidad</th>
+                        <th>Precio Ofrecido</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acción del Vendedor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for of in ofertas_recibidas_vendedor %}
+                    <tr>
+                        <td class="fw-semibold">{{ of.producto.nombre }}</td>
+                        <td>
+                            <div>{{ of.comprador.first_name|default:of.comprador.username }}</div>
+                            {% if of.mensaje %}
+                                <small class="text-muted">"{{ of.mensaje }}"</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ of.cantidad }}</td>
+                        <td>S/ {{ of.precio_unitario_ofrecido }}</td>
+                        <td class="fw-bold text-success">S/ {{ of.total_ofrecido }}</td>
+                        <td>
+                            <span class="badge {% if of.estado == 'PENDIENTE' %}bg-warning{% elif of.estado == 'ACEPTADA' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ of.get_estado_display }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            {% if of.estado == 'PENDIENTE' %}
+                            <form action="{% url 'responder_oferta' of.id %}" method="post" class="d-inline-flex gap-1">
+                                {% csrf_token %}
+                                <button type="submit" name="decision" value="ACEPTAR" class="btn btn-success btn-sm">Aceptar</button>
+                                <button type="submit" name="decision" value="RECHAZAR" class="btn btn-outline-danger btn-sm">Rechazar</button>
+                            </form>
+                            {% else %}
+                                <span class="text-muted small">Respondida</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted small mb-0">Aún no has recibido propuestas de precio en tus productos.</p>
+        {% endif %}
+    </div>
+
+    <h2 class="h6 fw-bold mb-3 text-secondary">Productos actualmente en Oferta en la plataforma</h2>
+    <div class="row g-4">
+        {% for prod in productos_remate %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border">
+                <div class="p-3 pb-0 position-relative">
+                    <span class="badge bg-danger position-absolute top-0 end-0 m-4">
+                        -{{ prod.porcentaje_descuento }}% Oferta
+                    </span>
+                    <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 160px;">
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <h6 class="fw-bold mb-1">{{ prod.nombre }}</h6>
+                    <p class="text-muted small mb-2">{{ prod.origen }} • Stock: {{ prod.stock }}</p>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-auto">
+                        <div>
+                            <span class="text-decoration-line-through text-muted small me-1">S/ {{ prod.precio }}</span>
+                            <span class="fs-5 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
+                        </div>
+                        <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-secondary btn-sm">Ver</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+{% else %}
+    <!-- VISTA EXCLUSIVA PARA EL COMPRADOR / VISITANTE -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-descuentos" type="button" role="tab">
+                1. Productos con Descuento ({{ productos_remate.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-proponer" type="button" role="tab">
+                2. Proponer Oferta por Cantidad
+            </button>
+        </li>
+        {% if user.is_authenticated %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab-mis-ofertas" type="button" role="tab">
+                3. Mis Ofertas Enviadas ({{ mis_ofertas_enviadas|length }})
+            </button>
+        </li>
+        {% endif %}
+    </ul>
+
+    <div class="tab-content">
+        <!-- Pestaña 1: Descuentos directos -->
+        <div class="tab-pane fade show active" id="tab-descuentos" role="tabpanel">
+            <div class="row g-4">
+                {% for prod in productos_remate %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border">
+                        <div class="p-3 pb-0 position-relative">
+                            <span class="badge bg-danger position-absolute top-0 end-0 m-4">
+                                -{{ prod.porcentaje_descuento }}% Oferta
+                            </span>
+                            <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 170px;">
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <span class="text-muted small mb-1">{{ prod.categoria.nombre }} • {{ prod.origen }}</span>
+                            <h5 class="h6 fw-bold mb-2">{{ prod.nombre }}</h5>
+                            <p class="text-secondary small flex-grow-1 mb-3">{{ prod.descripcion|truncatewords:14 }}</p>
+
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
+                                <div>
+                                    <span class="text-decoration-line-through text-muted small me-1">S/ {{ prod.precio }}</span>
+                                    <span class="fs-5 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
+                                    <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
+                                </div>
+                                {% if user.is_authenticated %}
+                                <form action="{% url 'agregar_al_carrito' prod.id %}" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
+                                    <input type="hidden" name="comprar_ahora" value="1">
+                                    <button type="submit" class="btn btn-success btn-sm">Comprar</button>
+                                </form>
+                                {% else %}
+                                <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-success btn-sm">Ver Oferta</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Pestaña 2: Proponer oferta -->
+        <div class="tab-pane fade" id="tab-proponer" role="tabpanel">
+            <div class="row g-3">
+                {% for prod in productos_negociables %}
+                <div class="col-md-6">
+                    <div class="bg-white border p-3 h-100">
+                        <div class="d-flex gap-3 align-items-center mb-3">
+                            <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia flex-shrink-0" style="width: 90px; height: 80px;">
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ prod.nombre }}</h6>
+                                <div class="text-muted small">Precio actual: <strong>S/ {{ prod.precio_actual }} / {{ prod.get_unidad_display }}</strong></div>
+                                <div class="text-muted small">Origen: {{ prod.origen }} ({{ prod.stock }} disponibles)</div>
+                            </div>
+                        </div>
+
+                        {% if user.is_authenticated %}
+                        <form action="{% url 'detalle_producto' prod.id %}" method="post" class="p-2 rounded border bg-light">
+                            {% csrf_token %}
+                            <input type="hidden" name="tipo_accion" value="enviar_oferta">
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <input type="number" name="cantidad" class="form-control form-control-sm" value="{{ prod.minimo_compra }}" min="1" max="{{ prod.stock }}" placeholder="Cant." required>
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" step="0.10" name="precio_unitario_ofrecido" class="form-control form-control-sm" placeholder="S/ por unid." required>
+                                </div>
+                                <div class="col-4">
+                                    <button type="submit" class="btn btn-warning btn-sm w-100">Enviar Oferta</button>
+                                </div>
+                            </div>
+                        </form>
+                        {% else %}
+                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-primary btn-sm w-100">
+                            Inicia sesión como Comprador para ofertar
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Pestaña 3: Mis ofertas enviadas (Comprador) -->
+        {% if user.is_authenticated %}
+        <div class="tab-pane fade" id="tab-mis-ofertas" role="tabpanel">
+            <div class="bg-white border p-4">
+                {% if mis_ofertas_enviadas %}
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Mi Oferta Unitaria</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for of in mis_ofertas_enviadas %}
+                            <tr>
+                                <td class="fw-semibold">{{ of.producto.nombre }}</td>
+                                <td>{{ of.cantidad }}</td>
+                                <td>S/ {{ of.precio_unitario_ofrecido }}</td>
+                                <td class="fw-bold text-success">S/ {{ of.total_ofrecido }}</td>
+                                <td>
+                                    <span class="badge {% if of.estado == 'PENDIENTE' %}bg-warning{% elif of.estado == 'ACEPTADA' %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {{ of.get_estado_display }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    {% if of.estado == 'ACEPTADA' %}
+                                    <form action="{% url 'responder_oferta' of.id %}" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="decision" value="PAGAR_OFERTA">
+                                        <button type="submit" class="btn btn-success btn-sm">Ir a Pagar Oferta</button>
+                                    </form>
+                                    {% else %}
+                                        <span class="text-muted small">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted small mb-0">Aún no has enviado ninguna oferta a los vendedores.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+{% endif %}
 {% endblock %}
