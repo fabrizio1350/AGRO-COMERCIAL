@@ -315,16 +315,28 @@ def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
 def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, total_pagar, metodo_pago):
     """
     Envía por correo Gmail el comprobante electrónico de la compra procesada en Culqi.
-    Usa las credenciales encriptadas/protegidas en .env (EMAIL_HOST_USER y EMAIL_HOST_PASSWORD).
+    Usa smtplib directo con las credenciales de .env para que funcione al instante.
     """
+    import os
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
     if not correo_destino:
         return False
 
     lineas_productos = "\n".join(
         [f"  - {p.producto.nombre} ({p.cantidad} {p.producto.get_unidad_display()}): S/ {p.total}" for p in lista_pedidos]
     )
-    asunto = f"Comprobante de Pago {codigo_tx} - AgroComercial"
-    cuerpo = (
+    filas_html = "".join(
+        [f"<tr><td style='padding:6px;border:1px solid #ddd;'>{p.producto.nombre}</td>"
+         f"<td style='padding:6px;border:1px solid #ddd;'>{p.cantidad} {p.producto.get_unidad_display()}</td>"
+         f"<td style='padding:6px;border:1px solid #ddd;text-align:right;'>S/ {p.total}</td></tr>"
+         for p in lista_pedidos]
+    )
+
+    asunto = f"Boleta de Compra {codigo_tx} - AgroComercial"
+    cuerpo_texto = (
         f"Hola {usuario.first_name or usuario.username},\n\n"
         f"Tu pago ha sido procesado correctamente en AgroComercial.\n\n"
         f"=============================================\n"
@@ -341,17 +353,61 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
         f"=============================================\n\n"
         f"Gracias por comprar directo a los productores agrícolas en AgroComercial."
     )
-    try:
-        send_mail(
-            subject=asunto,
-            message=cuerpo,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[correo_destino],
-            fail_silently=True,
-        )
-        return True
-    except Exception:
-        return False
+
+    cuerpo_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e3ded3; border-radius: 8px; padding: 20px; background-color: #ffffff;">
+        <h2 style="color: #285436; margin-top: 0;">AgroComercial — Boleta Electrónica de Compra</h2>
+        <p>Hola <strong>{usuario.first_name or usuario.username}</strong>, tu pago fue procesado con éxito.</p>
+        <div style="background-color: #f7f5f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+            <div><strong>Código de Operación:</strong> {codigo_tx}</div>
+            <div><strong>Cuenta Gmail:</strong> {correo_destino}</div>
+            <div><strong>Modalidad de Pago:</strong> {metodo_pago}</div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+            <thead>
+                <tr style="background-color: #e6f2ea; color: #1e4029;">
+                    <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Producto</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Cantidad</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {filas_html}
+                <tr>
+                    <td colspan="2" style="padding: 6px; border: 1px solid #ddd; text-align: right;">Costo de envío / guía:</td>
+                    <td style="padding: 6px; border: 1px solid #ddd; text-align: right;">S/ 15.00</td>
+                </tr>
+                <tr style="font-weight: bold; background-color: #f7f5f0;">
+                    <td colspan="2" style="padding: 8px; border: 1px solid #ddd; text-align: right;">TOTAL COBRADO:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: #285436;">S/ {total_pagar}</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="font-size: 12px; color: #666;">Comprobante generado automáticamente por AgroComercial.</p>
+    </div>
+    """
+
+    remitente_gmail = (os.environ.get('EMAIL_HOST_USER') or getattr(settings, 'EMAIL_HOST_USER', '') or correo_destino).strip()
+    clave_app_gmail = (os.environ.get('EMAIL_HOST_PASSWORD') or getattr(settings, 'EMAIL_HOST_PASSWORD', '')).strip().replace(' ', '')
+
+    if remitente_gmail and clave_app_gmail:
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = asunto
+            msg['From'] = f"AgroComercial <{remitente_gmail}>"
+            msg['To'] = correo_destino
+            msg.attach(MIMEText(cuerpo_texto, 'plain', 'utf-8'))
+            msg.attach(MIMEText(cuerpo_html, 'html', 'utf-8'))
+
+            with smtplib.SMTP('smtp.gmail.com', 587, timeout=12) as server:
+                server.starttls()
+                server.login(remitente_gmail, clave_app_gmail)
+                server.sendmail(remitente_gmail, [correo_destino], msg.as_string())
+            return True
+        except Exception as e:
+            print(f"Error SMTP Gmail: {e}")
+            return False
+    return False
 
 
 def inicio(request):
@@ -662,9 +718,28 @@ def pasarela_pago(request):
     if request.method == 'POST':
         form = PasarelaPagoForm(request.POST)
         if form.is_valid():
+            import os
             metodo = form.cleaned_data['metodo_pago']
             correo_culqi = request.POST.get('correo_culqi', '').strip() or correo_gmail_usuario
             culqi_token = request.POST.get('culqi_token', '').strip()
+            clave_app_ingresada = request.POST.get('clave_app_gmail', '').strip().replace(' ', '')
+
+            # Si el usuario ingreso su Contrasena de Aplicacion de Gmail (16 letras), la guardamos segura en .env
+            if clave_app_ingresada:
+                os.environ['EMAIL_HOST_USER'] = correo_culqi
+                os.environ['EMAIL_HOST_PASSWORD'] = clave_app_ingresada
+                settings.EMAIL_HOST_USER = correo_culqi
+                settings.EMAIL_HOST_PASSWORD = clave_app_ingresada
+                env_path = settings.BASE_DIR / '.env'
+                lineas_actuales = {}
+                if env_path.exists():
+                    for lin in env_path.read_text(encoding='utf-8').splitlines():
+                        if '=' in lin and not lin.strip().startswith('#'):
+                            k, v = lin.split('=', 1)
+                            lineas_actuales[k.strip()] = v.strip()
+                lineas_actuales['EMAIL_HOST_USER'] = correo_culqi
+                lineas_actuales['EMAIL_HOST_PASSWORD'] = clave_app_ingresada
+                env_path.write_text("\n".join([f"{k}={v}" for k, v in lineas_actuales.items()]) + "\n", encoding='utf-8')
 
             # Actualizar el Gmail en el usuario si estaba vacio
             if correo_culqi and request.user.email != correo_culqi:
@@ -713,7 +788,7 @@ def pasarela_pago(request):
             items.delete()
 
             # Enviar comprobante al correo Gmail del comprador
-            enviar_comprobante_gmail(
+            enviado_ok = enviar_comprobante_gmail(
                 request.user,
                 correo_culqi,
                 codigo_tx,
@@ -722,10 +797,16 @@ def pasarela_pago(request):
                 dict(Pedido.METODOS_PAGO).get(metodo, metodo)
             )
 
-            messages.success(
-                request,
-                f"¡Pago procesado con Culqi ({codigo_tx})! Se envió el comprobante a tu correo Gmail ({correo_culqi})."
-            )
+            if enviado_ok:
+                messages.success(
+                    request,
+                    f"¡Pago procesado con Culqi ({codigo_tx})! La boleta fue enviada a tu bandeja de Gmail ({correo_culqi})."
+                )
+            else:
+                messages.success(
+                    request,
+                    f"¡Pago procesado con Culqi ({codigo_tx})! Para que llegue el correo a tu bandeja de Gmail, agrega tu Contraseña de Aplicación de 16 letras."
+                )
             return redirect('comprobante_pago', codigo=codigo_tx)
     else:
         form = PasarelaPagoForm(initial={
@@ -734,6 +815,8 @@ def pasarela_pago(request):
             'metodo_pago': 'TARJETA',
         })
 
+    import os
+    tiene_smtp_gmail = bool((os.environ.get('EMAIL_HOST_PASSWORD') or getattr(settings, 'EMAIL_HOST_PASSWORD', '')).strip())
     contexto = {
         'items': items,
         'subtotal': subtotal,
@@ -741,6 +824,7 @@ def pasarela_pago(request):
         'total_pagar': total_pagar,
         'total_centimos': int(total_pagar * 100),
         'correo_gmail_usuario': correo_gmail_usuario,
+        'tiene_smtp_gmail': tiene_smtp_gmail,
         'culqi_public_key': getattr(settings, 'CULQI_PUBLIC_KEY', 'pk_test_0000000000000000'),
         'form': form,
     }
@@ -1019,21 +1103,32 @@ def login_google_callback(request):
 
 @login_required
 def cambiar_modo_vista(request):
-    """Cambia entre la cuenta real de Vendedor (productor_mantaro) y la cuenta real de Comprador (comprador_lima)."""
+    """
+    Si el usuario entro con su propia cuenta de Google, cambia su propio perfil entre
+    Vendedor (PRODUCTOR) y Comprador (COMPRADOR) conservando su mismo Gmail.
+    """
     asegurar_datos_iniciales()
     if request.method == 'POST':
         nuevo_rol = request.POST.get('nuevo_rol')
-        if nuevo_rol == 'PRODUCTOR':
-            usuario_vendedor = User.objects.filter(username='productor_mantaro').first()
-            if usuario_vendedor:
-                login(request, usuario_vendedor)
-                messages.info(request, "Cambiaste a la cuenta de Vendedor: Mateo Huamán (mateo.agromantaro@gmail.com).")
-                return redirect('panel_productor')
-        elif nuevo_rol == 'COMPRADOR':
-            usuario_comprador = User.objects.filter(username='comprador_lima').first()
-            if usuario_comprador:
-                login(request, usuario_comprador)
-                messages.info(request, "Cambiaste a la cuenta de Comprador: Carlos Mendoza (carlos.comprador@gmail.com).")
+        if nuevo_rol in ['PRODUCTOR', 'COMPRADOR']:
+            # Si usa las cuentas de demostracion clasicas, alterna entre ellas
+            if request.user.username in ['productor_mantaro', 'comprador_lima']:
+                target_user = 'productor_mantaro' if nuevo_rol == 'PRODUCTOR' else 'comprador_lima'
+                u_demo = User.objects.filter(username=target_user).first()
+                if u_demo:
+                    login(request, u_demo)
+                    if nuevo_rol == 'PRODUCTOR':
+                        return redirect('panel_productor')
+                    return redirect('panel_comprador')
+            else:
+                # Si entro con su cuenta de Google autentica, mantiene su mismo correo y cambia su vista/rol
+                perfil = obtener_o_crear_perfil(request.user)
+                perfil.rol = nuevo_rol
+                perfil.save()
+                nombre_modo = "Vendedor / Productor" if nuevo_rol == 'PRODUCTOR' else "Comprador"
+                messages.info(request, f"Cambiaste tu vista a {nombre_modo} con tu cuenta ({request.user.email}).")
+                if nuevo_rol == 'PRODUCTOR':
+                    return redirect('panel_productor')
                 return redirect('panel_comprador')
     return redirect('inicio')
 
