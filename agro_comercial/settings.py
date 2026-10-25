@@ -72,8 +72,9 @@ DATABASES = {
     }
 }
 
-# Algoritmo de encriptacion / hashing seguro de contrasenas (PBKDF2 con SHA256)
+# Algoritmo de encriptacion / hashing seguro en 3 capas (SHA-256 + SHA-512 + PBKDF2-SHA256)
 PASSWORD_HASHERS = [
+    'mercado.hashers.TriplePBKDF2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
 ]
