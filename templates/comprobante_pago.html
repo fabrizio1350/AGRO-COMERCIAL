@@ -1,98 +1,247 @@
 {% extends 'base.html' %}
 
-{% block title %}Comprobante de Pago {{ codigo }} | AgroComercial{% endblock %}
+{% block title %}Boleta de Venta Electrónica {{ serie_boleta }} | AgroComercial{% endblock %}
 
 {% block content %}
+<style>
+    .boleta-formal {
+        background-color: #ffffff;
+        border: 1px solid #cbd3cb;
+        color: #1f2421;
+    }
+    .recuadro-ruc {
+        border: 2px solid #264a32;
+        border-radius: 4px;
+        text-align: center;
+        overflow: hidden;
+        background-color: #fbfdfb;
+    }
+    .recuadro-ruc-franja {
+        background-color: #264a32;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.4px;
+        padding: 6px 10px;
+    }
+    .tabla-datos-cliente td {
+        padding: 6px 12px;
+        font-size: 0.84rem;
+        border-bottom: 1px solid #ecefec;
+    }
+    .tabla-items-boleta thead th {
+        background-color: #264a32;
+        color: #ffffff;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        padding: 9px 12px;
+        border: none;
+    }
+    .tabla-items-boleta tbody td {
+        font-size: 0.85rem;
+        padding: 9px 12px;
+        border-color: #e4e8e4;
+    }
+    @media print {
+        nav, footer, .acciones-no-imprimibles, .alert {
+            display: none !important;
+        }
+        body {
+            background-color: #ffffff !important;
+        }
+        .boleta-formal {
+            border: 1px solid #000000 !important;
+            box-shadow: none !important;
+        }
+    }
+</style>
+
 <div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="bg-white border rounded-3 p-4 p-md-5 shadow-sm">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center border-bottom pb-3 mb-4">
-                <div>
-                    <span class="badge bg-success mb-1">PAGO PROCESADO EN PASARELA CULQI</span>
-                    <h2 class="h4 fw-bold mb-0">Comprobante Electrónico de Compra Agrícola</h2>
-                    <span class="text-muted small">Fecha de emisión: {{ primer_pedido.fecha_pedido|date:"d/m/Y H:i" }}</span>
-                </div>
-                <div class="text-md-end mt-3 mt-md-0 border rounded p-2 bg-light">
-                    <div class="small text-muted">Código de Operación</div>
-                    <div class="fw-bold text-dark fs-5">{{ codigo }}</div>
-                </div>
+    <div class="col-lg-9">
+        <!-- Barra superior de confirmacion (No sale al imprimir) -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center p-3 rounded border mb-3 acciones-no-imprimibles" style="background-color: #f4f8f4; border-color: #cde0cd !important;">
+            <div class="small">
+                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                <strong>Operación confirmada ({{ codigo }}):</strong> Se envió una copia de esta Boleta Electrónica al correo <strong>{{ user.email }}</strong>.
             </div>
+            <div class="mt-2 mt-md-0 d-flex gap-2">
+                <button type="button" onclick="window.print();" class="btn btn-dark btn-sm">
+                    <i class="bi bi-printer me-1"></i>Imprimir / Descargar PDF
+                </button>
+            </div>
+        </div>
 
-            <div class="row g-3 mb-4 small">
-                <div class="col-md-6">
-                    <div class="bg-light rounded p-3 h-100">
-                        <strong class="d-block text-dark mb-1">Datos del Comprador:</strong>
-                        <div>Nombre: {{ user.first_name|default:user.username }} {{ user.last_name }}</div>
-                        <div>Correo Gmail vinculado: <strong>{{ user.email }}</strong></div>
-                        <div>Teléfono: {{ primer_pedido.telefono_contacto }}</div>
+        <!-- Documento Formal: BOLETA DE VENTA ELECTRONICA -->
+        <div class="boleta-formal rounded-2 p-4 p-md-5 shadow-sm">
+            <!-- 1. Encabezado del Emisor y Recuadro RUC / Serie -->
+            <div class="row align-items-center pb-4 mb-4" style="border-bottom: 2px solid #264a32;">
+                <div class="col-md-7 mb-3 mb-md-0">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="fs-4 fw-bold" style="color: #264a32; letter-spacing: 0.4px;">
+                            <i class="bi bi-flower1 me-1"></i>AGROCOMERCIAL PERÚ S.A.C.
+                        </span>
+                    </div>
+                    <div class="small fw-semibold text-secondary">
+                        Sistema de Comercialización Agrícola Directa del Productor
+                    </div>
+                    <div class="small text-muted mt-1">
+                        Domicilio Fiscal: Av. La Molina N° 1450 - La Molina, Lima - Perú<br>
+                        Central Telefónica: (01) 640-8890 • Correo: facturacion@agrocomercial.pe
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="bg-light rounded p-3 h-100">
-                        <strong class="d-block text-dark mb-1">Datos de Pago y Despacho:</strong>
-                        <div>Modalidad: <strong>{{ primer_pedido.get_metodo_pago_display }}</strong></div>
-                        <div>Estado: <span class="badge bg-success">{{ primer_pedido.get_estado_pago_display }}</span></div>
-                        <div>Entrega: {{ primer_pedido.direccion_entrega }} ({{ primer_pedido.ciudad_destino }})</div>
+
+                <div class="col-md-5">
+                    <div class="recuadro-ruc">
+                        <div class="py-2 fw-bold text-dark" style="font-size: 0.92rem;">
+                            R.U.C. N° 20608945123
+                        </div>
+                        <div class="recuadro-ruc-franja">
+                            BOLETA DE VENTA ELECTRÓNICA
+                        </div>
+                        <div class="py-2 fw-bold fs-5" style="color: #264a32;">
+                            N° {{ serie_boleta }}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="p-3 rounded border mb-4 small" style="background-color: #f4f8f4; border-color: #cde0cd !important;">
-                <i class="bi bi-envelope-check-fill text-success me-1"></i>
-                Copia del comprobante enviada al correo Gmail registrado: <strong>{{ user.email }}</strong>
-            </div>
-
-            <h6 class="fw-bold mb-2">Detalle de Productos Adquiridos</h6>
-            <div class="table-responsive mb-4">
-                <table class="table table-bordered align-middle mb-0">
-                    <thead class="table-light">
+            <!-- 2. Datos del Adquiriente y de la Operacion -->
+            <div class="border rounded-1 mb-4" style="background-color: #fafbfa;">
+                <table class="w-100 tabla-datos-cliente">
+                    <tbody>
                         <tr>
-                            <th># Pedido</th>
-                            <th>Producto Agrícola</th>
-                            <th>Vendedor / Origen</th>
-                            <th>Cant.</th>
-                            <th>P. Unitario</th>
-                            <th class="text-end">Subtotal</th>
+                            <td class="text-secondary fw-bold" style="width: 18%;">SEÑOR(ES):</td>
+                            <td class="fw-semibold" style="width: 36%;">
+                                {{ user.first_name|default:user.username }} {{ user.last_name }}
+                            </td>
+                            <td class="text-secondary fw-bold" style="width: 20%;">FECHA DE EMISIÓN:</td>
+                            <td style="width: 26%;">{{ primer_pedido.fecha_pedido|date:"d/m/Y H:i" }} hrs</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary fw-bold">CORREO CLIENTE:</td>
+                            <td>{{ user.email }}</td>
+                            <td class="text-secondary fw-bold">CÓD. TRANSACCIÓN:</td>
+                            <td class="fw-bold text-dark">{{ codigo }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary fw-bold">DIRECCIÓN DESTINO:</td>
+                            <td>{{ primer_pedido.direccion_entrega }} - {{ primer_pedido.ciudad_destino }}</td>
+                            <td class="text-secondary fw-bold">TIPO DE MONEDA:</td>
+                            <td>SOLES (PEN)</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary fw-bold border-bottom-0">MEDIO DE PAGO:</td>
+                            <td class="border-bottom-0">{{ primer_pedido.get_metodo_pago_display }}</td>
+                            <td class="text-secondary fw-bold border-bottom-0">ESTADO DE PAGO:</td>
+                            <td class="border-bottom-0">
+                                <span class="badge bg-success">{{ primer_pedido.get_estado_pago_display }}</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 3. Tabla Formal de Items Facturados -->
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered align-middle mb-0 tabla-items-boleta">
+                    <thead>
+                        <tr>
+                            <th style="width: 11%;">Código</th>
+                            <th class="text-center" style="width: 9%;">Cant.</th>
+                            <th class="text-center" style="width: 12%;">Unidad</th>
+                            <th style="width: 40%;">Descripción del Producto / Proveedor Agrícola</th>
+                            <th class="text-end" style="width: 14%;">P. Unitario</th>
+                            <th class="text-end" style="width: 14%;">Importe Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in pedidos_tx %}
                         <tr>
-                            <td>#{{ p.id }}</td>
-                            <td class="fw-semibold">{{ p.producto.nombre }}</td>
-                            <td class="small text-muted">{{ p.producto.productor.first_name|default:p.producto.productor.username }} ({{ p.producto.origen }})</td>
-                            <td>{{ p.cantidad }} ({{ p.producto.get_unidad_display }})</td>
-                            <td>S/ {{ p.precio_unitario }}</td>
+                            <td class="text-muted fw-semibold">AGR-{{ p.producto.id|stringformat:"03d" }}</td>
+                            <td class="text-center fw-bold">{{ p.cantidad }}</td>
+                            <td class="text-center text-uppercase small">{{ p.producto.nombre_unidad_stock }}</td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ p.producto.nombre }}</div>
+                                <div class="text-muted" style="font-size: 0.78rem;">
+                                    Productor: {{ p.producto.productor.first_name|default:p.producto.productor.username }} {{ p.producto.productor.last_name }}
+                                    {% if p.producto.productor.perfil.nombre_finca %}
+                                        ({{ p.producto.productor.perfil.nombre_finca }})
+                                    {% endif %}
+                                    • Origen: {{ p.producto.origen }}
+                                </div>
+                            </td>
+                            <td class="text-end">S/ {{ p.precio_unitario }}</td>
                             <td class="text-end fw-bold">S/ {{ p.total }}</td>
                         </tr>
                         {% endfor %}
+                        <tr>
+                            <td class="text-muted fw-semibold">SERV-LOG</td>
+                            <td class="text-center fw-bold">1</td>
+                            <td class="text-center small">SERVICIO</td>
+                            <td>
+                                <div class="fw-semibold text-dark">Servicio de Acopio, Guía de Remisión y Despacho Logístico</div>
+                                <div class="text-muted" style="font-size: 0.78rem;">
+                                    Destino: {{ primer_pedido.direccion_entrega }} ({{ primer_pedido.ciudad_destino }})
+                                </div>
+                            </td>
+                            <td class="text-end">S/ {{ costo_logistica }}</td>
+                            <td class="text-end fw-bold">S/ {{ costo_logistica }}</td>
+                        </tr>
                     </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="5" class="text-end text-muted small">Subtotal Productos:</td>
-                            <td class="text-end fw-semibold">S/ {{ subtotal_tx }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="5" class="text-end text-muted small">Costo de Envío y Guía:</td>
-                            <td class="text-end fw-semibold">S/ {{ costo_logistica }}</td>
-                        </tr>
-                        <tr class="table-success">
-                            <td colspan="5" class="text-end fw-bold">TOTAL COBRADO:</td>
-                            <td class="text-end fw-bold fs-5 text-success">S/ {{ total_tx }}</td>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
 
-            <div class="d-flex flex-wrap justify-content-between gap-2 pt-2 border-top">
-                <button type="button" onclick="window.print();" class="btn btn-outline-dark btn-sm">
+            <!-- 4. Resumen Tributario y Legal -->
+            <div class="row g-4 align-items-stretch">
+                <div class="col-md-7">
+                    <div class="border rounded-1 p-3 h-100 d-flex flex-column justify-content-between" style="background-color: #fbfcfb; border-style: dashed !important;">
+                        <div class="small text-secondary">
+                            <strong class="text-dark d-block mb-1">OBSERVACIONES Y SUSTENTO TRIBUTARIO:</strong>
+                            <div>• Productos agrícolas primarios exonerados del Impuesto General a las Ventas según Apéndice I de la Ley del IGV y Régimen Agrario.</div>
+                            <div>• Teléfono de contacto registrado para recepción: <strong>{{ primer_pedido.telefono_contacto }}</strong>.</div>
+                        </div>
+                        <div class="pt-2 mt-2 border-top d-flex justify-content-between align-items-center small text-muted">
+                            <span>Representación impresa de la <strong>Boleta de Venta Electrónica {{ serie_boleta }}</strong></span>
+                            <span class="fw-semibold text-dark">Ref: {{ codigo }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+                    <table class="table table-bordered table-sm mb-0 small">
+                        <tbody>
+                            <tr>
+                                <td class="text-end text-secondary px-3 py-2">OP. EXONERADA (S/):</td>
+                                <td class="text-end fw-semibold px-3 py-2" style="width: 42%;">S/ {{ subtotal_tx }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-end text-secondary px-3 py-2">SERVICIO DE DESPACHO (S/):</td>
+                                <td class="text-end fw-semibold px-3 py-2">S/ {{ costo_logistica }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-end text-secondary px-3 py-2">I.G.V. (0.00% - EXONERADO):</td>
+                                <td class="text-end fw-semibold px-3 py-2">S/ 0.00</td>
+                            </tr>
+                            <tr style="background-color: #264a32; color: #ffffff;">
+                                <td class="text-end fw-bold px-3 py-2 fs-6">IMPORTE TOTAL:</td>
+                                <td class="text-end fw-bold px-3 py-2 fs-5">S/ {{ total_tx }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 5. Botones inferiores de navegacion (No salen al imprimir) -->
+            <div class="d-flex flex-wrap justify-content-between gap-2 pt-4 mt-4 border-top acciones-no-imprimibles">
+                <button type="button" onclick="window.print();" class="btn btn-outline-dark btn-sm px-3">
                     <i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF
                 </button>
                 <div class="d-flex gap-2">
-                    <a href="{% url 'mis_pedidos' %}" class="btn btn-outline-success btn-sm">
-                        Ver Mis Compras
+                    <a href="{% url 'mis_pedidos' %}" class="btn btn-outline-success btn-sm px-3">
+                        Ver Historial de Compras
                     </a>
-                    <a href="{% url 'catalogo' %}" class="btn btn-success btn-sm">
+                    <a href="{% url 'catalogo' %}" class="btn btn-success btn-sm px-3">
                         Volver al Marketplace
                     </a>
                 </div>
