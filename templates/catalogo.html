@@ -72,11 +72,17 @@
                     {% endif %}
                 </div>
 
-                <h5 class="h6 fw-bold mb-2">
+                <h5 class="h6 fw-bold mb-1">
                     <a href="{% url 'detalle_producto' prod.id %}" class="text-dark text-decoration-none">
                         {{ prod.nombre }}
                     </a>
                 </h5>
+
+                <div class="mb-2">
+                    <span class="badge bg-light text-success border border-success-subtle fw-semibold">
+                        <i class="bi bi-box-seam me-1"></i>{{ prod.stock }} {{ prod.nombre_unidad_stock }} disponibles
+                    </span>
+                </div>
 
                 <p class="text-secondary small mb-3 flex-grow-1">
                     {{ prod.descripcion|truncatewords:14 }}
