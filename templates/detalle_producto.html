@@ -13,13 +13,8 @@
 <div class="row g-4 mb-4">
     <!-- Columna izquierda: Foto limpia y tarjeta de contacto del productor -->
     <div class="col-lg-5">
-        <div class="bg-white border p-3 mb-3 position-relative">
-            {% if producto.en_oferta and producto.precio_oferta %}
-                <span class="badge bg-danger position-absolute top-0 end-0 m-4">
-                    -{{ producto.porcentaje_descuento }}% Oferta
-                </span>
-            {% endif %}
-            <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" class="img-referencia" style="height: 280px;">
+        <div class="bg-white border p-3 mb-3">
+            <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" class="img-referencia" style="height: 280px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
         </div>
 
         <div class="bg-white border p-3">
@@ -41,8 +36,15 @@
     <!-- Columna derecha: Informacion clara y acciones separadas por rol -->
     <div class="col-lg-7">
         <div class="bg-white border p-4 h-100">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="badge bg-success-subtle">{{ producto.categoria.nombre|default:"Agrícola" }}</span>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success-subtle">{{ producto.categoria.nombre|default:"Agrícola" }}</span>
+                    {% if producto.en_oferta and producto.precio_oferta %}
+                        <span class="etiqueta-oferta small">
+                            <i class="bi bi-tag-fill me-1"></i>Oferta -{{ producto.porcentaje_descuento }}%
+                        </span>
+                    {% endif %}
+                </div>
                 <span class="text-muted small"><i class="bi bi-calendar3 me-1"></i>Cosecha: {{ producto.fecha_cosecha|date:"d/m/Y" }}</span>
             </div>
 
@@ -52,7 +54,7 @@
             </p>
 
             <!-- Caja de precio limpia -->
-            <div class="p-3 rounded-3 mb-4 d-flex justify-content-between align-items-center" style="background-color: #faf8f4; border: 1px solid #e6e1d6;">
+            <div class="p-3 rounded-3 mb-4 d-flex justify-content-between align-items-center" style="background-color: #faf7f0; border: 1px solid #e5dec9;">
                 <div>
                     {% if producto.en_oferta and producto.precio_oferta %}
                         <span class="text-decoration-line-through text-muted small d-block">Antes: S/ {{ producto.precio }}</span>
@@ -120,7 +122,7 @@
                     </div>
 
                     {% if producto.acepta_ofertas %}
-                    <div class="p-3 rounded-3 border" style="background-color: #faf6f0;">
+                    <div class="p-3 rounded-3 border" style="background-color: #faf6ed;">
                         <label class="form-label small fw-bold mb-2">2. ¿Compras por cantidad? Propón una oferta al vendedor</label>
                         <form method="post">
                             {% csrf_token %}
