@@ -8,7 +8,7 @@
         <div class="bg-white border rounded-3 p-4 p-md-5 shadow-sm">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center border-bottom pb-3 mb-4">
                 <div>
-                    <span class="badge bg-success mb-1">TRANSACCIÓN APROBADA EN PASARELA</span>
+                    <span class="badge bg-success mb-1">PAGO PROCESADO EN PASARELA CULQI</span>
                     <h2 class="h4 fw-bold mb-0">Comprobante Electrónico de Compra Agrícola</h2>
                     <span class="text-muted small">Fecha de emisión: {{ primer_pedido.fecha_pedido|date:"d/m/Y H:i" }}</span>
                 </div>
@@ -23,21 +23,26 @@
                     <div class="bg-light rounded p-3 h-100">
                         <strong class="d-block text-dark mb-1">Datos del Comprador:</strong>
                         <div>Nombre: {{ user.first_name|default:user.username }} {{ user.last_name }}</div>
-                        <div>DNI / RUC: {{ user.perfil.ruc_dni|default:"10456789012" }}</div>
+                        <div>Correo Gmail vinculado: <strong>{{ user.email }}</strong></div>
                         <div>Teléfono: {{ primer_pedido.telefono_contacto }}</div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="bg-light rounded p-3 h-100">
                         <strong class="d-block text-dark mb-1">Datos de Pago y Despacho:</strong>
-                        <div>Método de Pago: <strong>{{ primer_pedido.get_metodo_pago_display }}</strong></div>
-                        <div>Estado en Pasarela: <span class="badge bg-success">{{ primer_pedido.get_estado_pago_display }}</span></div>
+                        <div>Modalidad: <strong>{{ primer_pedido.get_metodo_pago_display }}</strong></div>
+                        <div>Estado: <span class="badge bg-success">{{ primer_pedido.get_estado_pago_display }}</span></div>
                         <div>Entrega: {{ primer_pedido.direccion_entrega }} ({{ primer_pedido.ciudad_destino }})</div>
                     </div>
                 </div>
             </div>
 
-            <h6 class="fw-bold mb-2">Detalle de Lotes Adquiridos</h6>
+            <div class="p-3 rounded border mb-4 small" style="background-color: #f4f8f4; border-color: #cde0cd !important;">
+                <i class="bi bi-envelope-check-fill text-success me-1"></i>
+                Copia del comprobante enviada al correo Gmail registrado: <strong>{{ user.email }}</strong>
+            </div>
+
+            <h6 class="fw-bold mb-2">Detalle de Productos Adquiridos</h6>
             <div class="table-responsive mb-4">
                 <table class="table table-bordered align-middle mb-0">
                     <thead class="table-light">
@@ -64,15 +69,15 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5" class="text-end text-muted small">Subtotal Lotes:</td>
+                            <td colspan="5" class="text-end text-muted small">Subtotal Productos:</td>
                             <td class="text-end fw-semibold">S/ {{ subtotal_tx }}</td>
                         </tr>
                         <tr>
-                            <td colspan="5" class="text-end text-muted small">Servicio Logístico y Guía de Remisión:</td>
+                            <td colspan="5" class="text-end text-muted small">Costo de Envío y Guía:</td>
                             <td class="text-end fw-semibold">S/ {{ costo_logistica }}</td>
                         </tr>
                         <tr class="table-success">
-                            <td colspan="5" class="text-end fw-bold">TOTAL PAGADO:</td>
+                            <td colspan="5" class="text-end fw-bold">TOTAL COBRADO:</td>
                             <td class="text-end fw-bold fs-5 text-success">S/ {{ total_tx }}</td>
                         </tr>
                     </tfoot>
@@ -84,7 +89,7 @@
                     <i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF
                 </button>
                 <div class="d-flex gap-2">
-                    <a href="{% url 'mis_pedidos' %}" class="btn btn-primary btn-sm">
+                    <a href="{% url 'mis_pedidos' %}" class="btn btn-outline-success btn-sm">
                         Ver Mis Compras
                     </a>
                     <a href="{% url 'catalogo' %}" class="btn btn-success btn-sm">
