@@ -1,26 +1,34 @@
 {% extends 'base.html' %}
 
-{% block title %}Confirmar Compra | AgroComercial{% endblock %}
+{% block title %}Confirmar Compra con Culqi | AgroComercial{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h4 fw-bold mb-1">Confirmación de Compra y Pago</h1>
-        <p class="text-muted small mb-0">Completa la dirección de entrega y selecciona cómo deseas pagar tu pedido.</p>
+        <h1 class="h4 fw-bold mb-1">Confirmación de Compra y Pasarela Culqi</h1>
+        <p class="text-muted small mb-0">El cobro y el comprobante electrónico se enviarán a tu correo Gmail vinculado.</p>
     </div>
     <a href="{% url 'carrito' %}" class="btn btn-outline-secondary btn-sm">
         &larr; Volver a Mi Carrito
     </a>
 </div>
 
-<form method="post" action="{% url 'pasarela_pago' %}">
+<form method="post" action="{% url 'pasarela_pago' %}" id="formPasarelaCulqi">
     {% csrf_token %}
+    <input type="hidden" name="culqi_token" id="inputCulqiToken" value="">
+
     <div class="row g-4">
         <div class="col-lg-8">
-            <!-- Paso 1: Datos de entrega -->
+            <!-- Paso 1: Datos de entrega y Correo Gmail vinculado -->
             <div class="bg-white border p-4 mb-4">
-                <h5 class="h6 fw-bold mb-3">1. Datos de Entrega</h5>
+                <h5 class="h6 fw-bold mb-3">1. Datos de Entrega y Correo Gmail</h5>
                 <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label small fw-semibold">
+                            <i class="bi bi-envelope-check-fill text-success me-1"></i>Correo Gmail vinculado (para el cargo en Culqi y envío de boleta)
+                        </label>
+                        <input type="email" name="correo_culqi" id="inputCorreoCulqi" class="form-control" value="{{ correo_gmail_usuario }}" required>
+                    </div>
                     <div class="col-md-8">
                         <label class="form-label small fw-semibold">{{ form.direccion_entrega.label }}</label>
                         {{ form.direccion_entrega }}
@@ -40,47 +48,69 @@
                 </div>
             </div>
 
-            <!-- Paso 2: Modalidades de Pago (Contraentrega principal + Tarjeta + Transferencia a cuenta del vendedor) -->
+            <!-- Paso 2: Modalidades de Pago (Culqi Tarjeta + Contraentrega + Transferencia) -->
             <div class="bg-white border p-4">
                 <h5 class="h6 fw-bold mb-3">2. Modalidad de Pago</h5>
 
                 <div class="row g-3">
-                    <!-- Opcion 1: Pago Contraentrega (Preseleccionado por defecto) -->
+                    <!-- Opcion 1: Pasarela Culqi con Tarjeta Ficticia de Prueba -->
                     <div class="col-12">
-                        <div class="border rounded p-3 bg-light">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoContraentrega" value="CONTRAENTREGA" checked>
-                                <label class="form-check-label fw-bold" for="pagoContraentrega">
-                                    Pago Contraentrega (Recomendado — Pagas al recibir el producto)
-                                </label>
+                        <div class="border rounded p-3" style="background-color: #faf8f3;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="metodo_pago" id="pagoTarjeta" value="TARJETA" checked>
+                                    <label class="form-check-label fw-bold" for="pagoTarjeta">
+                                        Pago con Tarjeta de Crédito / Débito — Pasarela Culqi
+                                    </label>
+                                </div>
+                                <span class="badge bg-success-subtle">Culqi Sandbox Activo</span>
                             </div>
-                            <p class="text-muted small mb-0 ms-4 mt-1">
-                                El pago se realiza directamente al productor o transportista al momento de recibir y revisar el producto en la dirección indicada.
+
+                            <p class="text-muted small mb-3 ms-4">
+                                Procesa tu compra en Soles (PEN) con las tarjetas de prueba oficiales de <strong>Culqi</strong> vinculadas a tu Gmail (<strong>{{ correo_gmail_usuario }}</strong>).
                             </p>
+
+                            <div class="ms-md-4">
+                                <!-- Selector rapido de tarjetas ficticias oficiales de Culqi -->
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="cargarTarjetaCulqi('4111 1111 1111 1111', '09/28', '123')">
+                                        Usar Tarjeta Prueba Culqi Visa (4111...1111)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cargarTarjetaCulqi('5111 1111 1111 1118', '11/28', '456')">
+                                        Usar Tarjeta Prueba Mastercard (5111...1118)
+                                    </button>
+                                </div>
+
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted mb-1">Número de Tarjeta (Culqi Test)</label>
+                                        <input type="text" id="numTarjetaCulqi" class="form-control form-control-sm" value="4111 1111 1111 1111" required>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label class="form-label small text-muted mb-1">Vencimiento</label>
+                                        <input type="text" id="expTarjetaCulqi" class="form-control form-control-sm" value="09/28" required>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label class="form-label small text-muted mb-1">CVV</label>
+                                        <input type="password" id="cvvTarjetaCulqi" class="form-control form-control-sm" value="123" required>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Opcion 2: Tarjeta de Credito / Debito (Simulacion de Pasarela) -->
+                    <!-- Opcion 2: Pago Contraentrega -->
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoTarjeta" value="TARJETA">
-                                <label class="form-check-label fw-bold" for="pagoTarjeta">
-                                    Tarjeta de Débito / Crédito
+                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoContraentrega" value="CONTRAENTREGA">
+                                <label class="form-check-label fw-bold" for="pagoContraentrega">
+                                    Pago Contraentrega
                                 </label>
                             </div>
-                            <p class="text-muted small mb-2 ms-4">Simulación de pasarela de pago con tarjeta Visa o Mastercard.</p>
-                            <div class="row g-2 mt-1">
-                                <div class="col-12">
-                                    <input type="text" class="form-control form-control-sm" placeholder="Número de tarjeta" value="4557 8812 3400 8910">
-                                </div>
-                                <div class="col-6">
-                                    <input type="text" class="form-control form-control-sm" placeholder="MM/AA" value="08/29">
-                                </div>
-                                <div class="col-6">
-                                    <input type="password" class="form-control form-control-sm" placeholder="CVV" value="123">
-                                </div>
-                            </div>
+                            <p class="text-muted small mb-0 ms-4">
+                                Pagas directamente al productor o transportista al momento de recibir y revisar el producto en tu dirección.
+                            </p>
                         </div>
                     </div>
 
@@ -93,7 +123,7 @@
                                     Transferencia Directa al Productor
                                 </label>
                             </div>
-                            <p class="text-muted small mb-2 ms-4">Abona directamente a la cuenta bancaria en soles registrada por el vendedor:</p>
+                            <p class="text-muted small mb-2 ms-4">Abona a la cuenta bancaria en soles del vendedor:</p>
                             <div class="bg-light border rounded p-2 small text-secondary">
                                 {% for item in items %}
                                     <div class="{% if not forloop.last %}border-bottom pb-2 mb-2{% endif %}">
@@ -134,16 +164,53 @@
                     <span>S/ {{ costo_logistica }}</span>
                 </div>
                 <hr>
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <span class="fw-bold">Total del Pedido:</span>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold">Total a Cobrar:</span>
                     <span class="fs-4 fw-bold text-success">S/ {{ total_pagar }}</span>
                 </div>
 
-                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
-                    Confirmar Pedido y Generar Comprobante
+                <div class="p-2 rounded bg-light border small text-secondary mb-3">
+                    <div><strong>Gmail de confirmación:</strong></div>
+                    <div class="text-truncate">{{ correo_gmail_usuario }}</div>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold" id="btnPagarCulqi">
+                    Pagar con Culqi y Enviar Boleta a Gmail
                 </button>
             </div>
         </div>
     </div>
 </form>
+
+<!-- Script oficial de Culqi Checkout v4 -->
+<script src="https://checkout.culqi.com/js/v4"></script>
+<script>
+    function cargarTarjetaCulqi(numero, exp, cvv) {
+        document.getElementById('pagoTarjeta').checked = true;
+        document.getElementById('numTarjetaCulqi').value = numero;
+        document.getElementById('expTarjetaCulqi').value = exp;
+        document.getElementById('cvvTarjetaCulqi').value = cvv;
+    }
+
+    // Si el usuario configuro una llave publica real de Culqi (pk_test_...), habilita el tokenizador de Culqi
+    const culqiPublicKey = "{{ culqi_public_key }}";
+    const formPago = document.getElementById('formPasarelaCulqi');
+
+    if (typeof Culqi !== 'undefined' && culqiPublicKey && culqiPublicKey !== 'pk_test_0000000000000000') {
+        Culqi.publicKey = culqiPublicKey;
+        Culqi.settings({
+            title: 'AgroComercial',
+            currency: 'PEN',
+            amount: {{ total_centimos }}
+        });
+        window.culqi = function() {
+            if (Culqi.token) {
+                document.getElementById('inputCulqiToken').value = Culqi.token.id;
+                formPago.submit();
+            } else if (Culqi.error) {
+                alert(Culqi.error.user_message);
+            }
+        };
+    }
+</script>
 {% endblock %}
