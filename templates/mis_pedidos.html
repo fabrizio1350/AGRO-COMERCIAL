@@ -5,17 +5,16 @@
 {% block content %}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
-        <span class="badge bg-info text-dark mb-1">HISTORIAL DEL COMPRADOR</span>
-        <h1 class="h3 fw-bold mb-1">Mis Compras y Comprobantes de Pago</h1>
-        <p class="text-muted mb-0">Revisa el estado de tus pedidos, método de pago en pasarela y boletas electrónicas.</p>
+        <h1 class="h4 fw-bold mb-1">Mis Compras y Comprobantes</h1>
+        <p class="text-muted small mb-0">Revisa el estado de tus pedidos realizados y descarga tus boletas de compra.</p>
     </div>
     <div class="mt-3 mt-md-0 d-flex align-items-center gap-3">
         <div class="bg-white border rounded-3 px-3 py-2 shadow-sm">
-            <span class="text-muted small">Total acumulado:</span>
+            <span class="text-muted small">Total en compras:</span>
             <strong class="text-success ms-1">S/ {{ total_gastado|default:"0.00" }}</strong>
         </div>
-        <a href="{% url 'catalogo' %}" class="btn btn-success fw-semibold">
-            + Ir al Marketplace
+        <a href="{% url 'catalogo' %}" class="btn btn-success btn-sm fw-semibold">
+            Ir al Marketplace
         </a>
     </div>
 </div>
@@ -27,17 +26,17 @@
         <div class="bg-white border rounded-3 p-3 p-md-4 shadow-sm">
             <div class="row align-items-center g-3">
                 <div class="col-md-2">
-                    <img src="{{ ped.producto.url_imagen }}" alt="{{ ped.producto.nombre }}" class="img-referencia" style="height: 95px;">
+                    <img src="{{ ped.producto.url_imagen }}" alt="{{ ped.producto.nombre }}" class="img-referencia" style="height: 95px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
                 </div>
                 <div class="col-md-4">
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                         <span class="badge bg-light text-dark border">Pedido #{{ ped.id }}</span>
                         {% if ped.codigo_transaccion %}
-                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ ped.codigo_transaccion }}</span>
+                            <span class="badge bg-success-subtle">{{ ped.codigo_transaccion }}</span>
                         {% endif %}
                         <span class="text-muted small">{{ ped.fecha_pedido|date:"d/m/Y H:i" }}</span>
                     </div>
-                    <h5 class="fw-bold mb-1">
+                    <h5 class="h6 fw-bold mb-1">
                         <a href="{% url 'detalle_producto' ped.producto.id %}" class="text-dark text-decoration-none">
                             {{ ped.producto.nombre }}
                         </a>
@@ -53,19 +52,19 @@
                     <div class="small text-muted">Cantidad: <strong>{{ ped.cantidad }}</strong> ({{ ped.producto.get_unidad_display }})</div>
                     <div class="fs-5 fw-bold text-success">Total: S/ {{ ped.total }}</div>
                     <div class="small text-secondary mt-1">
-                        Pasarela: <strong>{{ ped.get_metodo_pago_display }}</strong>
+                        Modalidad: <strong>{{ ped.get_metodo_pago_display }}</strong>
                     </div>
                 </div>
                 <div class="col-md-3 text-md-end">
                     <div class="mb-2">
-                        <span class="badge {% if ped.estado == 'CANCELADO' %}bg-danger{% elif ped.estado == 'ENTREGADO' %}bg-success{% else %}bg-info text-dark{% endif %}">
+                        <span class="badge {% if ped.estado == 'CANCELADO' %}bg-secondary{% elif ped.estado == 'ENTREGADO' %}bg-success{% else %}bg-light text-dark border{% endif %}">
                             {{ ped.get_estado_display }}
                         </span>
                     </div>
 
                     <div class="d-flex flex-wrap justify-content-md-end gap-1">
                         {% if ped.codigo_transaccion %}
-                        <a href="{% url 'comprobante_pago' ped.codigo_transaccion %}" class="btn btn-outline-primary btn-sm">
+                        <a href="{% url 'comprobante_pago' ped.codigo_transaccion %}" class="btn btn-outline-success btn-sm">
                             Ver Comprobante
                         </a>
                         {% endif %}
@@ -87,7 +86,7 @@
 {% else %}
 <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
     <h5 class="fw-bold text-secondary">Todavía no has realizado ninguna compra</h5>
-    <p class="text-muted mb-3">Explora el Marketplace o las Ventas por Oferta para agregar productos al carrito y pagar en la pasarela.</p>
+    <p class="text-muted mb-3">Explora el Marketplace o las Ventas por Oferta para agregar productos al carrito.</p>
     <a href="{% url 'catalogo' %}" class="btn btn-success">Ir al Marketplace Agrícola</a>
 </div>
 {% endif %}
