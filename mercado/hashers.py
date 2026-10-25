@@ -17,8 +17,3 @@ class TriplePBKDF2PasswordHasher(PBKDF2PasswordHasher):
     def encode(self, password, salt, iterations=None):
         password_blindada = self._pre_hash_tres_capas(password, salt)
         return super().encode(password_blindada, salt, iterations)
-
-    def verify(self, password, encoded):
-        algorithm, iterations, salt, hash_val = encoded.split("$", 3)
-        password_blindada = self._pre_hash_tres_capas(password, salt)
-        return super().verify(password_blindada, encoded)
