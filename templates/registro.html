@@ -6,9 +6,9 @@
 <div class="row justify-content-center py-2">
     <div class="col-md-8 col-lg-7">
         <div class="bg-white border rounded-3 p-4 shadow-sm">
-            <h2 class="h4 fw-bold text-center mb-1">Crear Cuenta en AgroComercial</h2>
+            <h2 class="h4 fw-bold text-center mb-1">Crear una Cuenta</h2>
             <p class="text-muted small text-center mb-4">
-                Completa tus datos según seas <strong>Comprador</strong> o <strong>Vendedor Agrícola</strong>
+                Completa tus datos básicos o usa el inicio rápido con Google en la pantalla anterior
             </p>
 
             <form method="post" action="{% url 'registro' %}">
@@ -50,32 +50,32 @@
                         {% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small fw-semibold">{{ form.ruc_dni.label }}</label>
-                        {{ form.ruc_dni }}
-                    </div>
-
-                    <div class="col-md-6">
                         <label class="form-label small fw-semibold">{{ form.telefono.label }}</label>
                         {{ form.telefono }}
                     </div>
-                    <div class="col-md-6">
+
+                    <div class="col-md-12">
                         <label class="form-label small fw-semibold">{{ form.ubicacion.label }}</label>
                         {{ form.ubicacion }}
                     </div>
 
-                    <!-- Campos adicionales exclusivos para el Vendedor / Productor -->
+                    <!-- Campos adicionales exclusivos para el Vendedor (Ocultos para el Comprador) -->
                     <div class="col-12" id="bloqueDatosVendedor">
                         <div class="p-3 rounded-3 border bg-light">
-                            <div class="fw-bold small text-success mb-2">Datos exclusivos para Vendedor / Productor</div>
+                            <div class="fw-bold small text-success mb-2">Datos para Vendedor / Productor</div>
                             <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">{{ form.ruc_dni.label }}</label>
+                                    {{ form.ruc_dni }}
+                                </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-semibold">{{ form.nombre_finca.label }}</label>
                                     {{ form.nombre_finca }}
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-12">
                                     <label class="form-label small fw-semibold">{{ form.cuenta_bancaria.label }}</label>
                                     {{ form.cuenta_bancaria }}
-                                    <div class="form-text small">Aquí recibirás los pagos por transferencia de tus compradores.</div>
+                                    <div class="form-text small">Si agregas tu cuenta en soles, a tus compradores les aparecerá la opción de pagarte por depósito directo.</div>
                                 </div>
                             </div>
                         </div>
@@ -104,14 +104,14 @@
 
             <div class="text-center mt-3 small">
                 ¿Ya tienes una cuenta?
-                <a href="{% url 'login' %}?modo=comprador" class="text-success fw-semibold text-decoration-none ms-1">Iniciar sesión</a>
+                <a href="{% url 'login' %}" class="text-success fw-semibold text-decoration-none ms-1">Iniciar sesión</a>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Muestra los campos de Finca y Cuenta Bancaria solo cuando el usuario elige registrarse como Vendedor
+    // Muestra RUC, Chacra (opcional) y Cuenta en Soles (opcional) solo cuando el usuario elige ser Vendedor
     (function() {
         const selectRol = document.getElementById('id_rol');
         const bloqueVendedor = document.getElementById('bloqueDatosVendedor');
