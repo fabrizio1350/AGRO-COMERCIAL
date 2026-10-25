@@ -99,6 +99,30 @@ class Producto(models.Model):
             return int(round(descuento))
         return 0
 
+    def nombre_unidad_stock(self):
+        """Devuelve la unidad en formato corto y claro según la cantidad en stock (ej. 'kg', 'cajas', 'sacos', 'toneladas')."""
+        unidades_cortas = {
+            'KG': ('kg', 'kg'),
+            'SACO': ('saco', 'sacos'),
+            'CAJA': ('caja', 'cajas'),
+            'ARROBA': ('arroba', 'arrobas'),
+            'TONELADA': ('tonelada', 'toneladas'),
+        }
+        singular, plural = unidades_cortas.get(self.unidad, ('unidad', 'unidades'))
+        return singular if self.stock == 1 else plural
+
+    def nombre_unidad_minimo(self):
+        """Devuelve la unidad según la cantidad mínima de compra."""
+        unidades_cortas = {
+            'KG': ('kg', 'kg'),
+            'SACO': ('saco', 'sacos'),
+            'CAJA': ('caja', 'cajas'),
+            'ARROBA': ('arroba', 'arrobas'),
+            'TONELADA': ('tonelada', 'toneladas'),
+        }
+        singular, plural = unidades_cortas.get(self.unidad, ('unidad', 'unidades'))
+        return singular if self.minimo_compra == 1 else plural
+
     def url_imagen(self):
         if self.imagen_url and self.imagen_url.strip():
             return self.imagen_url.strip()
