@@ -3,78 +3,146 @@
 {% block title %}Carrito de Compras | AgroComercial{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
-        <h1 class="h4 fw-bold mb-0">Mi Carrito de Compras</h1>
+        <h1 class="h4 fw-bold mb-1">Mi Carrito de Compras</h1>
+        <p class="text-muted small mb-0">
+            Revisa el resumen de cada producto, verifica el stock disponible y elige la cantidad exacta antes de ir a la pasarela de pago.
+        </p>
     </div>
-    <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary btn-sm">
-        &larr; Seguir viendo el Marketplace
-    </a>
+    <div class="mt-2 mt-md-0 d-flex gap-2">
+        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-outline-success btn-sm">
+            Ver Ofertas del Día
+        </a>
+        <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary btn-sm">
+            &larr; Seguir viendo el Marketplace
+        </a>
+    </div>
 </div>
 
 {% if items %}
 <div class="row g-4">
     <div class="col-lg-8">
         <div class="bg-white border rounded-3 p-4 shadow-sm">
-            <h5 class="fw-bold mb-3">Lotes seleccionados ({{ items.count }})</h5>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Imagen</th>
-                            <th>Producto y Vendedor</th>
-                            <th>Precio Unitario</th>
-                            <th>Cantidad</th>
-                            <th>Subtotal</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in items %}
-                        <tr>
-                            <td style="width: 100px;">
-                                <img src="{{ item.producto.url_imagen }}" alt="{{ item.producto.nombre }}" class="img-referencia" style="height: 65px;">
-                            </td>
-                            <td>
-                                <a href="{% url 'detalle_producto' item.producto.id %}" class="fw-bold text-dark text-decoration-none">
-                                    {{ item.producto.nombre }}
-                                </a>
-                                <div class="text-muted small">
-                                    Vendedor: {{ item.producto.productor.first_name|default:item.producto.productor.username }} | Origen: {{ item.producto.origen }}
+            <h5 class="h6 fw-bold mb-3">Productos seleccionados en tu carrito ({{ items.count }})</h5>
+
+            <div class="d-flex flex-column gap-3">
+                {% for item in items %}
+                <div class="border rounded-3 p-3 bg-white">
+                    <div class="row g-3 align-items-center">
+                        <!-- Imagen y resumen rápido del producto -->
+                        <div class="col-md-6">
+                            <div class="d-flex gap-3 align-items-start">
+                                <img src="{{ item.producto.url_imagen }}" alt="{{ item.producto.nombre }}" class="img-referencia flex-shrink-0" style="width: 95px; height: 85px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                                <div>
+                                    <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
+                                        <span class="badge bg-success-subtle text-success">{{ item.producto.categoria.nombre|default:"Agrícola" }}</span>
+                                        {% if item.precio_unitario_acordado %}
+                                            <span class="badge bg-warning text-dark">Oferta Aceptada</span>
+                                        {% elif item.producto.en_oferta and item.producto.precio_oferta %}
+                                            <span class="etiqueta-oferta small">-{{ item.producto.porcentaje_descuento }}% Oferta</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <h6 class="fw-bold mb-1">
+                                        <a href="{% url 'detalle_producto' item.producto.id %}" class="text-dark text-decoration-none">
+                                            {{ item.producto.nombre }}
+                                        </a>
+                                    </h6>
+
+                                    <div class="text-muted small mb-1">
+                                        Origen: <strong>{{ item.producto.origen }}</strong> • Vendedor: <strong>{{ item.producto.productor.first_name|default:item.producto.productor.username }}</strong>
+                                    </div>
+
+                                    <p class="text-secondary small mb-2">
+                                        {{ item.producto.descripcion|truncatewords:14 }}
+                                    </p>
+
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <span class="badge bg-light text-success border border-success-subtle">
+                                            <i class="bi bi-box-seam me-1"></i>Stock disponible: {{ item.producto.stock }} {{ item.producto.nombre_unidad_stock }} disponibles
+                                        </span>
+                                        <span class="text-muted small">
+                                            (Mínimo sugerido: {{ item.producto.minimo_compra }} {{ item.producto.nombre_unidad_minimo }})
+                                        </span>
+                                    </div>
                                 </div>
-                                {% if item.precio_unitario_acordado %}
-                                    <span class="badge bg-warning text-dark">Precio por Oferta Aceptada</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <strong>S/ {{ item.precio_aplicado }}</strong>
-                                <span class="text-muted small">/ {{ item.producto.get_unidad_display }}</span>
-                            </td>
-                            <td class="fw-semibold">{{ item.cantidad }}</td>
-                            <td class="fw-bold text-success">S/ {{ item.subtotal }}</td>
-                            <td class="text-end">
+                            </div>
+                        </div>
+
+                        <!-- Selector de cantidad interactivo -->
+                        <div class="col-sm-6 col-md-3">
+                            <label class="form-label small fw-semibold mb-1 d-block">
+                                Seleccionar cantidad ({{ item.producto.nombre_unidad_stock }}):
+                            </label>
+                            <form action="{% url 'actualizar_cantidad_carrito' item.id %}" method="post" class="form-cantidad-carrito">
+                                {% csrf_token %}
+                                <div class="input-group input-group-sm mb-1">
+                                    <button type="button" class="btn btn-outline-secondary btn-restar-cant" title="Disminuir">-</button>
+                                    <input
+                                        type="number"
+                                        name="cantidad"
+                                        value="{{ item.cantidad }}"
+                                        min="1"
+                                        max="{{ item.producto.stock }}"
+                                        class="form-control text-center fw-bold input-cant-carrito"
+                                        required
+                                    >
+                                    <button type="button" class="btn btn-outline-secondary btn-sumar-cant" title="Aumentar">+</button>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small">
+                                        S/ {{ item.precio_aplicado }} / {{ item.producto.get_unidad_display }}
+                                    </span>
+                                    <button type="submit" class="btn btn-link btn-sm text-success text-decoration-none p-0 fw-semibold">
+                                        Actualizar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Subtotal del lote y botón quitar -->
+                        <div class="col-sm-6 col-md-3 text-sm-end">
+                            <span class="text-muted small d-block">Subtotal ({{ item.cantidad }} {{ item.producto.nombre_unidad_stock }}):</span>
+                            <span class="fs-5 fw-bold text-success d-block mb-2">S/ {{ item.subtotal }}</span>
+
+                            <div class="d-flex justify-content-sm-end gap-2">
+                                <a href="{% url 'detalle_producto' item.producto.id %}" class="btn btn-outline-secondary btn-sm">
+                                    Ver detalle
+                                </a>
                                 <form action="{% url 'eliminar_del_carrito' item.id %}" method="post">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-outline-danger btn-sm">Quitar</button>
                                 </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 
     <div class="col-lg-4">
         <div class="bg-white border rounded-3 p-4 shadow-sm">
-            <h5 class="fw-bold mb-3">Resumen de Liquidación</h5>
-            <div class="d-flex justify-content-between mb-2 text-secondary">
+            <h5 class="fw-bold mb-3">Resumen de Compra</h5>
+
+            <div class="small text-secondary mb-3">
+                {% for item in items %}
+                <div class="d-flex justify-content-between mb-1">
+                    <span>{{ item.producto.nombre }} ({{ item.cantidad }} {{ item.producto.nombre_unidad_stock }})</span>
+                    <strong>S/ {{ item.subtotal }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+
+            <hr>
+            <div class="d-flex justify-content-between mb-2 text-secondary small">
                 <span>Subtotal de productos:</span>
                 <strong>S/ {{ subtotal }}</strong>
             </div>
-            <div class="d-flex justify-content-between mb-2 text-secondary">
-                <span>Gestión logística y acopio:</span>
+            <div class="d-flex justify-content-between mb-2 text-secondary small">
+                <span>Gestión logística y envío:</span>
                 <strong>S/ {{ costo_logistica }}</strong>
             </div>
             <hr>
@@ -84,11 +152,50 @@
             </div>
 
             <a href="{% url 'pasarela_pago' %}" class="btn btn-success w-100 py-2 fw-semibold">
-                Continuar al Pago &rarr;
+                Ir a la Pasarela de Pago &rarr;
             </a>
         </div>
     </div>
 </div>
+
+<script>
+    (function() {
+        document.querySelectorAll('.form-cantidad-carrito').forEach(function(form) {
+            const input = form.querySelector('.input-cant-carrito');
+            const btnRestar = form.querySelector('.btn-restar-cant');
+            const btnSumar = form.querySelector('.btn-sumar-cant');
+            if (!input) return;
+
+            const minVal = parseInt(input.getAttribute('min') || '1', 10);
+            const maxVal = parseInt(input.getAttribute('max') || '9999', 10);
+
+            if (btnRestar) {
+                btnRestar.addEventListener('click', function() {
+                    let actual = parseInt(input.value || '1', 10);
+                    if (actual > minVal) {
+                        input.value = actual - 1;
+                        form.submit();
+                    }
+                });
+            }
+            if (btnSumar) {
+                btnSumar.addEventListener('click', function() {
+                    let actual = parseInt(input.value || '1', 10);
+                    if (actual < maxVal) {
+                        input.value = actual + 1;
+                        form.submit();
+                    }
+                });
+            }
+            input.addEventListener('change', function() {
+                let actual = parseInt(input.value || '1', 10);
+                if (actual < minVal) input.value = minVal;
+                if (actual > maxVal) input.value = maxVal;
+                form.submit();
+            });
+        });
+    })();
+</script>
 {% else %}
 <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
     <h5 class="fw-bold text-secondary">Tu carrito de compras está vacío</h5>
