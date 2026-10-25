@@ -111,6 +111,7 @@ LOGOUT_REDIRECT_URL = 'inicio'
 # CREDENCIALES DE GOOGLE OAUTH, PASARELA CULQI Y CORREO GMAIL (DESDE .env)
 # ==============================================================================
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 
 # Llaves de prueba (Sandbox) de Culqi
 CULQI_PUBLIC_KEY = os.environ.get('CULQI_PUBLIC_KEY', 'pk_test_0000000000000000')
