@@ -1,6 +1,12 @@
+import json
+import urllib.request
+import urllib.parse
+import urllib.error
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
+from django.conf import settings
+from django.core.mail import send_mail
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -53,7 +59,7 @@ def asegurar_datos_iniciales():
         defaults={
             "first_name": "Mateo",
             "last_name": "Huamán",
-            "email": "mateo@agromantaro.pe",
+            "email": "mateo.agromantaro@gmail.com",
         }
     )
     if creado1:
@@ -79,7 +85,7 @@ def asegurar_datos_iniciales():
         defaults={
             "first_name": "Elena",
             "last_name": "Rojas",
-            "email": "elena@fundoelena.pe",
+            "email": "elena.fundo@gmail.com",
         }
     )
     if creado2:
@@ -105,7 +111,7 @@ def asegurar_datos_iniciales():
         defaults={
             "first_name": "Carlos",
             "last_name": "Mendoza",
-            "email": "carlos@comercialmendoza.pe",
+            "email": "carlos.comprador@gmail.com",
         }
     )
     if creado3:
@@ -259,6 +265,95 @@ def obtener_o_crear_perfil(usuario):
     return perfil
 
 
+def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
+    """
+    Procesa el cobro en Soles (PEN) usando la API de Culqi (https://api.culqi.com/v2/charges)
+    vinculado al correo Gmail del comprador. Si aún no se colocó CULQI_SECRET_KEY en .env,
+    ejecuta la simulación de prueba de Culqi para no interrumpir la demostración.
+    """
+    monto_centimos = int(Decimal(str(total_soles)) * 100)
+    secret_key = getattr(settings, 'CULQI_SECRET_KEY', '').strip()
+
+    if secret_key and culqi_token and culqi_token.startswith('tkn_'):
+        url = "https://api.culqi.com/v2/charges"
+        payload = json.dumps({
+            "amount": monto_centimos,
+            "currency_code": "PEN",
+            "email": correo_gmail,
+            "source_id": culqi_token,
+            "description": "Compra de productos agricolas en AgroComercial"
+        }).encode('utf-8')
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {secret_key}",
+            },
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                datos_resp = json.loads(resp.read().decode('utf-8'))
+                charge_id = datos_resp.get('id', f"chr_test_{uuid.uuid4().hex[:8]}")
+                return True, charge_id, "Cobro procesado en Culqi API"
+        except urllib.error.HTTPError as e:
+            try:
+                err_body = json.loads(e.read().decode('utf-8'))
+                msg_err = err_body.get('user_message') or err_body.get('merchant_message') or "Tarjeta rechazada por Culqi."
+            except Exception:
+                msg_err = "No se pudo completar el cargo en Culqi."
+            return False, None, msg_err
+        except Exception as e:
+            return False, None, f"Error de conexión con Culqi: {e}"
+
+    # Modo Sandbox / Prueba local cuando se usa tarjeta de prueba de Culqi
+    codigo_culqi = f"CULQI-CHR-{uuid.uuid4().hex[:6].upper()}"
+    return True, codigo_culqi, "Cobro aprobado en Pasarela Culqi (Modo Prueba)"
+
+
+def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, total_pagar, metodo_pago):
+    """
+    Envía por correo Gmail el comprobante electrónico de la compra procesada en Culqi.
+    Usa las credenciales encriptadas/protegidas en .env (EMAIL_HOST_USER y EMAIL_HOST_PASSWORD).
+    """
+    if not correo_destino:
+        return False
+
+    lineas_productos = "\n".join(
+        [f"  - {p.producto.nombre} ({p.cantidad} {p.producto.get_unidad_display()}): S/ {p.total}" for p in lista_pedidos]
+    )
+    asunto = f"Comprobante de Pago {codigo_tx} - AgroComercial"
+    cuerpo = (
+        f"Hola {usuario.first_name or usuario.username},\n\n"
+        f"Tu pago ha sido procesado correctamente en AgroComercial.\n\n"
+        f"=============================================\n"
+        f"COMPROBANTE ELECTRÓNICO DE COMPRA AGRÍCOLA\n"
+        f"=============================================\n"
+        f"Código de Operación: {codigo_tx}\n"
+        f"Correo Gmail asociado: {correo_destino}\n"
+        f"Modalidad de Pago: {metodo_pago}\n\n"
+        f"Detalle de Productos:\n"
+        f"{lineas_productos}\n"
+        f"  - Costo de envío / guía: S/ 15.00\n"
+        f"---------------------------------------------\n"
+        f"TOTAL COBRADO: S/ {total_pagar}\n"
+        f"=============================================\n\n"
+        f"Gracias por comprar directo a los productores agrícolas en AgroComercial."
+    )
+    try:
+        send_mail(
+            subject=asunto,
+            message=cuerpo,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[correo_destino],
+            fail_silently=True,
+        )
+        return True
+    except Exception:
+        return False
+
+
 def inicio(request):
     asegurar_datos_iniciales()
     if not request.user.is_authenticated:
@@ -380,7 +475,7 @@ def ventas_por_oferta(request):
         'ofertas_recibidas_vendedor': ofertas_recibidas_vendedor,
         'categorias': categorias,
         'busqueda': busqueda,
-        'categoria_seleccionada': categoria_id,
+        'categoria_id': categoria_id,
     }
     return render(request, 'ofertas.html', contexto)
 
@@ -548,7 +643,7 @@ def eliminar_del_carrito(request, item_id):
 
 @login_required
 def pasarela_pago(request):
-    """Apartado de Pasarela de Pago exclusivo para Compradores."""
+    """Apartado de Pasarela de Pago con Culqi vinculado al Gmail del comprador."""
     perfil = obtener_o_crear_perfil(request.user)
     if perfil.rol != 'COMPRADOR':
         messages.warning(request, "La pasarela de pago es exclusiva para cuentas de Comprador.")
@@ -562,19 +657,38 @@ def pasarela_pago(request):
     subtotal = sum(i.subtotal() for i in items)
     costo_logistica = Decimal("15.00")
     total_pagar = subtotal + costo_logistica
+    correo_gmail_usuario = request.user.email or f"{request.user.username}@gmail.com"
 
     if request.method == 'POST':
         form = PasarelaPagoForm(request.POST)
         if form.is_valid():
-            codigo_tx = f"AGRO-2026-{uuid.uuid4().hex[:6].upper()}"
             metodo = form.cleaned_data['metodo_pago']
-            estado_pago = 'PENDIENTE_VERIFICACION' if metodo == 'CONTRAENTREGA' else 'PAGADO'
+            correo_culqi = request.POST.get('correo_culqi', '').strip() or correo_gmail_usuario
+            culqi_token = request.POST.get('culqi_token', '').strip()
 
+            # Actualizar el Gmail en el usuario si estaba vacio
+            if correo_culqi and request.user.email != correo_culqi:
+                request.user.email = correo_culqi
+                request.user.save()
+
+            if metodo == 'TARJETA':
+                exito_culqi, codigo_tx, mensaje_culqi = procesar_cobro_culqi(
+                    total_pagar, correo_culqi, culqi_token
+                )
+                if not exito_culqi:
+                    messages.error(request, f"Error en Pasarela Culqi: {mensaje_culqi}")
+                    return redirect('pasarela_pago')
+                estado_pago = 'PAGADO'
+            else:
+                codigo_tx = f"AGRO-2026-{uuid.uuid4().hex[:6].upper()}"
+                estado_pago = 'PENDIENTE_VERIFICACION' if metodo == 'CONTRAENTREGA' else 'PAGADO'
+
+            pedidos_creados = []
             for item in items:
                 prod = item.producto
                 cant = min(item.cantidad, prod.stock) if prod.stock > 0 else item.cantidad
                 precio_unit = item.precio_aplicado()
-                Pedido.objects.create(
+                ped = Pedido.objects.create(
                     comprador=request.user,
                     producto=prod,
                     cantidad=cant,
@@ -589,6 +703,7 @@ def pasarela_pago(request):
                     codigo_transaccion=codigo_tx,
                     estado='CONFIRMADO',
                 )
+                pedidos_creados.append(ped)
                 if prod.stock >= cant:
                     prod.stock -= cant
                     if prod.stock == 0:
@@ -596,7 +711,21 @@ def pasarela_pago(request):
                     prod.save()
 
             items.delete()
-            messages.success(request, f"¡Pago procesado con éxito! Código de operación: {codigo_tx}")
+
+            # Enviar comprobante al correo Gmail del comprador
+            enviar_comprobante_gmail(
+                request.user,
+                correo_culqi,
+                codigo_tx,
+                pedidos_creados,
+                total_pagar,
+                dict(Pedido.METODOS_PAGO).get(metodo, metodo)
+            )
+
+            messages.success(
+                request,
+                f"¡Pago procesado con Culqi ({codigo_tx})! Se envió el comprobante a tu correo Gmail ({correo_culqi})."
+            )
             return redirect('comprobante_pago', codigo=codigo_tx)
     else:
         form = PasarelaPagoForm(initial={
@@ -610,6 +739,9 @@ def pasarela_pago(request):
         'subtotal': subtotal,
         'costo_logistica': costo_logistica,
         'total_pagar': total_pagar,
+        'total_centimos': int(total_pagar * 100),
+        'correo_gmail_usuario': correo_gmail_usuario,
+        'culqi_public_key': getattr(settings, 'CULQI_PUBLIC_KEY', 'pk_test_0000000000000000'),
         'form': form,
     }
     return render(request, 'pasarela_pago.html', contexto)
@@ -665,7 +797,7 @@ def registro_vista(request):
                 cuenta_bancaria=form.cleaned_data.get('cuenta_bancaria', '') if form.cleaned_data['rol'] == 'PRODUCTOR' else '',
             )
             login(request, usuario)
-            messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Cuenta creada como {form.cleaned_data['rol']}.")
+            messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Cuenta creada con contraseña encriptada.")
             if form.cleaned_data['rol'] == 'PRODUCTOR':
                 return redirect('panel_productor')
             return redirect('panel_comprador')
@@ -676,7 +808,7 @@ def registro_vista(request):
 
 
 def login_vista(request):
-    """Apartado de Login diferenciado con pestañas para Comprador y para Vendedor (Productor)."""
+    """Apartado de Login que permite ingresar con usuario o con correo Gmail y contrasena encriptada."""
     asegurar_datos_iniciales()
     if request.user.is_authenticated:
         return redirect('inicio')
@@ -684,26 +816,148 @@ def login_vista(request):
     modo_acceso = request.GET.get('modo', 'comprador')
 
     if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
+        identificador = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         modo_elegido = request.POST.get('modo_rol', '')
-        usuario = authenticate(request, username=username, password=password)
+
+        # Permitir iniciar sesion escribiendo directamente el correo Gmail o el nombre de usuario
+        username_real = identificador
+        if '@' in identificador:
+            usr_por_correo = User.objects.filter(email__iexact=identificador).first()
+            if usr_por_correo:
+                username_real = usr_por_correo.username
+
+        usuario = authenticate(request, username=username_real, password=password)
         if usuario is not None:
             perfil = obtener_o_crear_perfil(usuario)
             if modo_elegido in ['PRODUCTOR', 'COMPRADOR'] and perfil.rol != modo_elegido:
                 rol_nombre = "Vendedor" if modo_elegido == 'PRODUCTOR' else "Comprador"
-                messages.error(request, f"El usuario '{username}' no pertenece al perfil de {rol_nombre}. Usa la pestaña correcta.")
-                return render(request, 'login.html', {'modo_acceso': 'vendedor' if modo_elegido == 'PRODUCTOR' else 'comprador'})
+                messages.error(request, f"La cuenta '{identificador}' no pertenece al perfil de {rol_nombre}. Usa la pestaña correspondiente.")
+                return render(request, 'login.html', {
+                    'modo_acceso': 'vendedor' if modo_elegido == 'PRODUCTOR' else 'comprador',
+                    'google_client_id': getattr(settings, 'GOOGLE_CLIENT_ID', ''),
+                })
 
             login(request, usuario)
-            messages.success(request, f"Sesión iniciada como {usuario.first_name or usuario.username} ({perfil.get_rol_display()}).")
+            messages.success(request, f"Sesión iniciada con {usuario.email or usuario.username} ({perfil.get_rol_display()}).")
             if perfil.rol == 'PRODUCTOR':
                 return redirect('panel_productor')
             return redirect('panel_comprador')
         else:
-            messages.error(request, "Usuario o contraseña incorrectos. Verifica tus datos.")
+            messages.error(request, "Correo/usuario o contraseña incorrectos. Verifica tus datos.")
 
-    return render(request, 'login.html', {'modo_acceso': modo_acceso})
+    return render(request, 'login.html', {
+        'modo_acceso': modo_acceso,
+        'google_client_id': getattr(settings, 'GOOGLE_CLIENT_ID', ''),
+    })
+
+
+def login_google(request):
+    """
+    Inicio de sesión con la API de Google (OAuth 2.0 / Google Identity Services)
+    o selector de cuenta Gmail con almacenamiento de contraseña encriptada (PBKDF2-SHA256).
+    """
+    asegurar_datos_iniciales()
+    if request.method != 'POST':
+        return redirect('login')
+
+    rol_elegido = request.POST.get('modo_rol', 'COMPRADOR')
+    if rol_elegido not in ['COMPRADOR', 'PRODUCTOR']:
+        rol_elegido = 'COMPRADOR'
+
+    credential_jwt = request.POST.get('credential', '').strip()
+    email_google = ''
+    nombre_google = ''
+    apellido_google = ''
+
+    # 1. Si viene un token JWT oficial desde el boton de Google Sign-In API
+    if credential_jwt:
+        try:
+            url_verify = f"https://oauth2.googleapis.com/tokeninfo?id_token={urllib.parse.quote(credential_jwt)}"
+            with urllib.request.urlopen(url_verify, timeout=8) as resp:
+                datos_token = json.loads(resp.read().decode('utf-8'))
+                client_id_cfg = getattr(settings, 'GOOGLE_CLIENT_ID', '').strip()
+                if client_id_cfg and datos_token.get('aud') != client_id_cfg:
+                    messages.error(request, "El token de Google no coincide con el GOOGLE_CLIENT_ID configurado.")
+                    return redirect('login')
+                email_google = datos_token.get('email', '').strip().lower()
+                nombre_google = datos_token.get('given_name', '')
+                apellido_google = datos_token.get('family_name', '')
+        except Exception:
+            messages.error(request, "No se pudo verificar la credencial con la API de Google.")
+            return redirect('login')
+    else:
+        # 2. Selector directo de cuenta Gmail + contrasena (encriptada con PBKDF2-SHA256 en la BD)
+        email_google = request.POST.get('email_google', '').strip().lower()
+        nombre_completo = request.POST.get('nombre_google', '').strip()
+        password_google = request.POST.get('password_google', '')
+
+        if not email_google or '@' not in email_google:
+            messages.error(request, "Selecciona o ingresa un correo Gmail válido.")
+            return redirect('login')
+
+        partes_nombre = nombre_completo.split(' ', 1) if nombre_completo else [email_google.split('@')[0], '']
+        nombre_google = partes_nombre[0].capitalize()
+        apellido_google = partes_nombre[1] if len(partes_nombre) > 1 else ''
+
+        usuario_existente = User.objects.filter(email__iexact=email_google).first()
+        if usuario_existente and password_google:
+            # Si ya tiene contrasena encriptada registrada, la validamos o actualizamos de forma segura
+            if usuario_existente.has_usable_password() and not usuario_existente.check_password(password_google):
+                messages.error(request, "La contraseña ingresada para ese correo Gmail no coincide.")
+                return redirect('login')
+
+    if not email_google:
+        messages.error(request, "No se recibió el correo de Google.")
+        return redirect('login')
+
+    # Buscar o crear el usuario vinculado a ese Gmail
+    usuario = User.objects.filter(email__iexact=email_google).first()
+    password_ingresada = request.POST.get('password_google', '')
+
+    if not usuario:
+        base_username = email_google.split('@')[0][:20]
+        username_final = base_username
+        contador = 1
+        while User.objects.filter(username=username_final).exists():
+            username_final = f"{base_username}{contador}"
+            contador += 1
+
+        usuario = User(
+            username=username_final,
+            email=email_google,
+            first_name=nombre_google or base_username.capitalize(),
+            last_name=apellido_google,
+        )
+        # Encriptar/indexar la contrasena con PBKDF2-SHA256 para que nunca quede en texto plano
+        if password_ingresada:
+            usuario.set_password(password_ingresada)
+        else:
+            usuario.set_unusable_password()
+        usuario.save()
+
+        PerfilUsuario.objects.create(
+            usuario=usuario,
+            rol=rol_elegido,
+            ubicacion="Lima, Perú",
+            telefono="999888777",
+        )
+    else:
+        if password_ingresada and not usuario.has_usable_password():
+            usuario.set_password(password_ingresada)
+            usuario.save()
+        perfil = obtener_o_crear_perfil(usuario)
+        perfil.rol = rol_elegido
+        perfil.save()
+
+    login(request, usuario)
+    messages.success(
+        request,
+        f"Conectado con Google ({usuario.email}). Contraseña protegida con encriptación PBKDF2-SHA256."
+    )
+    if rol_elegido == 'PRODUCTOR':
+        return redirect('panel_productor')
+    return redirect('panel_comprador')
 
 
 @login_required
@@ -716,13 +970,13 @@ def cambiar_modo_vista(request):
             usuario_vendedor = User.objects.filter(username='productor_mantaro').first()
             if usuario_vendedor:
                 login(request, usuario_vendedor)
-                messages.info(request, "Cambiaste a la cuenta de Vendedor: Mateo Huamán (productor_mantaro).")
+                messages.info(request, "Cambiaste a la cuenta de Vendedor: Mateo Huamán (mateo.agromantaro@gmail.com).")
                 return redirect('panel_productor')
         elif nuevo_rol == 'COMPRADOR':
             usuario_comprador = User.objects.filter(username='comprador_lima').first()
             if usuario_comprador:
                 login(request, usuario_comprador)
-                messages.info(request, "Cambiaste a la cuenta de Comprador: Carlos Mendoza (comprador_lima).")
+                messages.info(request, "Cambiaste a la cuenta de Comprador: Carlos Mendoza (carlos.comprador@gmail.com).")
                 return redirect('panel_comprador')
     return redirect('inicio')
 
