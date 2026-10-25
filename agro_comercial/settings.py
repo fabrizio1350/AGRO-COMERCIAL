@@ -1,13 +1,27 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Clave secreta de desarrollo para el proyecto universitario
-SECRET_KEY = 'django-insecure-agro-comercial-universidad-2026-clave-segura'
+# Carga segura de variables desde el archivo .env (ignorado en Git para no filtrar claves ni contrasenas)
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    with open(env_path, encoding='utf-8') as f:
+        for linea in f:
+            linea = linea.strip()
+            if linea and not linea.startswith('#') and '=' in linea:
+                clave, valor = linea.split('=', 1)
+                os.environ.setdefault(clave.strip(), valor.strip().strip('"').strip("'"))
 
-DEBUG = True
+# Clave secreta protegida por variable de entorno
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-agro-comercial-universidad-2026-clave-segura')
+
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
+
+# Permite que la ventana emergente de Google Sign-In se comunique con la pagina
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
 # Aplicaciones instaladas (arquitectura monolitica MVT)
 INSTALLED_APPS = [
@@ -58,6 +72,12 @@ DATABASES = {
     }
 }
 
+# Algoritmo de encriptacion / hashing seguro de contrasenas (PBKDF2 con SHA256)
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+]
+
 # Validacion de contrasenas nativa de Django
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -78,6 +98,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -85,3 +106,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'inicio'
 LOGOUT_REDIRECT_URL = 'inicio'
+
+# ==============================================================================
+# CREDENCIALES DE GOOGLE OAUTH, PASARELA CULQI Y CORREO GMAIL (DESDE .env)
+# ==============================================================================
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+
+# Llaves de prueba (Sandbox) de Culqi
+CULQI_PUBLIC_KEY = os.environ.get('CULQI_PUBLIC_KEY', 'pk_test_0000000000000000')
+CULQI_SECRET_KEY = os.environ.get('CULQI_SECRET_KEY', '')
+
+# Configuracion de envio de comprobantes por Gmail SMTP
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'AgroComercial <notificaciones@agrocomercial.pe>'
+
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
