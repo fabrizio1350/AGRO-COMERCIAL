@@ -184,7 +184,6 @@
                                     <form action="{% url 'agregar_al_carrito' prod.id %}" method="post">
                                         {% csrf_token %}
                                         <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
-                                        <input type="hidden" name="comprar_ahora" value="1">
                                         <button type="submit" class="btn btn-success btn-sm">Comprar</button>
                                     </form>
                                     {% endif %}
