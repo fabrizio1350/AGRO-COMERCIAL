@@ -698,6 +698,35 @@ def carrito_vista(request):
 
 
 @login_required
+def actualizar_cantidad_carrito(request, item_id):
+    """Permite al comprador cambiar la cantidad a comprar directamente desde el carrito."""
+    item = get_object_or_404(ItemCarrito, id=item_id, comprador=request.user)
+    if request.method == 'POST':
+        try:
+            nueva_cantidad = int(request.POST.get('cantidad', item.cantidad))
+        except (TypeError, ValueError):
+            nueva_cantidad = item.cantidad
+
+        if nueva_cantidad < 1:
+            nueva_cantidad = 1
+        if nueva_cantidad > item.producto.stock:
+            nueva_cantidad = item.producto.stock
+            messages.warning(
+                request,
+                f"Se ajustó la cantidad al stock máximo disponible ({item.producto.stock} {item.producto.nombre_unidad_stock()})."
+            )
+        else:
+            messages.success(
+                request,
+                f"Cantidad actualizada: {nueva_cantidad} {item.producto.nombre_unidad_stock()} de '{item.producto.nombre}'."
+            )
+
+        item.cantidad = nueva_cantidad
+        item.save()
+    return redirect('carrito')
+
+
+@login_required
 def eliminar_del_carrito(request, item_id):
     item = get_object_or_404(ItemCarrito, id=item_id, comprador=request.user)
     if request.method == 'POST':
