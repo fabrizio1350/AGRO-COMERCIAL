@@ -854,67 +854,130 @@ def login_vista(request):
 
 def login_google(request):
     """
-    Inicio de sesión con la API de Google (OAuth 2.0 / Google Identity Services)
-    o selector de cuenta Gmail con almacenamiento de contraseña encriptada (PBKDF2-SHA256).
+    Redirige directamente a la ventana oficial de Google OAuth 2.0
+    (https://accounts.google.com/o/oauth2/v2/auth) con prompt=select_account
+    para que el usuario seleccione su correo Gmail autentico.
     """
+    import os
     asegurar_datos_iniciales()
-    if request.method != 'POST':
+
+    rol_elegido = request.GET.get('rol') or request.POST.get('modo_rol', 'COMPRADOR')
+    if rol_elegido not in ['COMPRADOR', 'PRODUCTOR']:
+        rol_elegido = 'COMPRADOR'
+    request.session['rol_google_pendiente'] = rol_elegido
+
+    # Si el usuario pega su Client ID y Client Secret desde la pantalla de configuracion rapida, se guarda en .env
+    if request.method == 'POST' and request.POST.get('guardar_credenciales_google') == '1':
+        nuevo_id = request.POST.get('google_client_id', '').strip()
+        nuevo_secret = request.POST.get('google_client_secret', '').strip()
+        if nuevo_id and nuevo_secret:
+            os.environ['GOOGLE_CLIENT_ID'] = nuevo_id
+            os.environ['GOOGLE_CLIENT_SECRET'] = nuevo_secret
+            settings.GOOGLE_CLIENT_ID = nuevo_id
+            settings.GOOGLE_CLIENT_SECRET = nuevo_secret
+
+            env_path = settings.BASE_DIR / '.env'
+            lineas_actuales = {}
+            if env_path.exists():
+                for lin in env_path.read_text(encoding='utf-8').splitlines():
+                    if '=' in lin and not lin.strip().startswith('#'):
+                        k, v = lin.split('=', 1)
+                        lineas_actuales[k.strip()] = v.strip()
+            lineas_actuales['GOOGLE_CLIENT_ID'] = nuevo_id
+            lineas_actuales['GOOGLE_CLIENT_SECRET'] = nuevo_secret
+            contenido_env = "\n".join([f"{k}={v}" for k, v in lineas_actuales.items()]) + "\n"
+            env_path.write_text(contenido_env, encoding='utf-8')
+
+    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or getattr(settings, 'GOOGLE_CLIENT_ID', '')).strip()
+    redirect_uri = request.build_absolute_uri('/login/google/callback/')
+
+    if not client_id:
+        messages.warning(
+            request,
+            f"Para abrir el selector oficial de Google, pega tu GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET de Google Cloud (URI de redirección: {redirect_uri})."
+        )
+        return render(request, 'login.html', {
+            'modo_acceso': 'vendedor' if rol_elegido == 'PRODUCTOR' else 'comprador',
+            'mostrar_config_google': True,
+            'redirect_uri_google': redirect_uri,
+        })
+
+    parametros = urllib.parse.urlencode({
+        'client_id': client_id,
+        'redirect_uri': redirect_uri,
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'access_type': 'online',
+        'prompt': 'select_account',
+        'state': rol_elegido,
+    })
+    return redirect(f"https://accounts.google.com/o/oauth2/v2/auth?{parametros}")
+
+
+def login_google_callback(request):
+    """
+    Recibe la respuesta oficial de Google OAuth 2.0 tras seleccionar el Gmail autentico,
+    obtiene los datos reales del usuario desde googleapis.com y lo autentica en Django.
+    """
+    import os
+    asegurar_datos_iniciales()
+
+    error_google = request.GET.get('error')
+    if error_google:
+        messages.error(request, f"Inicio con Google cancelado: {error_google}")
         return redirect('login')
 
-    rol_elegido = request.POST.get('modo_rol', 'COMPRADOR')
+    code = request.GET.get('code', '').strip()
+    rol_elegido = request.GET.get('state') or request.session.get('rol_google_pendiente', 'COMPRADOR')
     if rol_elegido not in ['COMPRADOR', 'PRODUCTOR']:
         rol_elegido = 'COMPRADOR'
 
-    credential_jwt = request.POST.get('credential', '').strip()
-    email_google = ''
-    nombre_google = ''
-    apellido_google = ''
-
-    # 1. Si viene un token JWT oficial desde el boton de Google Sign-In API
-    if credential_jwt:
-        try:
-            url_verify = f"https://oauth2.googleapis.com/tokeninfo?id_token={urllib.parse.quote(credential_jwt)}"
-            with urllib.request.urlopen(url_verify, timeout=8) as resp:
-                datos_token = json.loads(resp.read().decode('utf-8'))
-                client_id_cfg = getattr(settings, 'GOOGLE_CLIENT_ID', '').strip()
-                if client_id_cfg and datos_token.get('aud') != client_id_cfg:
-                    messages.error(request, "El token de Google no coincide con el GOOGLE_CLIENT_ID configurado.")
-                    return redirect('login')
-                email_google = datos_token.get('email', '').strip().lower()
-                nombre_google = datos_token.get('given_name', '')
-                apellido_google = datos_token.get('family_name', '')
-        except Exception:
-            messages.error(request, "No se pudo verificar la credencial con la API de Google.")
-            return redirect('login')
-    else:
-        # 2. Selector directo de cuenta Gmail + contrasena (encriptada con PBKDF2-SHA256 en la BD)
-        email_google = request.POST.get('email_google', '').strip().lower()
-        nombre_completo = request.POST.get('nombre_google', '').strip()
-        password_google = request.POST.get('password_google', '')
-
-        if not email_google or '@' not in email_google:
-            messages.error(request, "Selecciona o ingresa un correo Gmail válido.")
-            return redirect('login')
-
-        partes_nombre = nombre_completo.split(' ', 1) if nombre_completo else [email_google.split('@')[0], '']
-        nombre_google = partes_nombre[0].capitalize()
-        apellido_google = partes_nombre[1] if len(partes_nombre) > 1 else ''
-
-        usuario_existente = User.objects.filter(email__iexact=email_google).first()
-        if usuario_existente and password_google:
-            # Si ya tiene contrasena encriptada registrada, la validamos o actualizamos de forma segura
-            if usuario_existente.has_usable_password() and not usuario_existente.check_password(password_google):
-                messages.error(request, "La contraseña ingresada para ese correo Gmail no coincide.")
-                return redirect('login')
-
-    if not email_google:
-        messages.error(request, "No se recibió el correo de Google.")
+    if not code:
         return redirect('login')
 
-    # Buscar o crear el usuario vinculado a ese Gmail
-    usuario = User.objects.filter(email__iexact=email_google).first()
-    password_ingresada = request.POST.get('password_google', '')
+    client_id = (os.environ.get('GOOGLE_CLIENT_ID') or getattr(settings, 'GOOGLE_CLIENT_ID', '')).strip()
+    client_secret = (os.environ.get('GOOGLE_CLIENT_SECRET') or getattr(settings, 'GOOGLE_CLIENT_SECRET', '')).strip()
+    redirect_uri = request.build_absolute_uri('/login/google/callback/')
 
+    try:
+        datos_post = urllib.parse.urlencode({
+            'code': code,
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'redirect_uri': redirect_uri,
+            'grant_type': 'authorization_code',
+        }).encode('utf-8')
+
+        req_token = urllib.request.Request(
+            'https://oauth2.googleapis.com/token',
+            data=datos_post,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req_token, timeout=10) as resp_token:
+            token_json = json.loads(resp_token.read().decode('utf-8'))
+
+        access_token = token_json.get('access_token')
+        req_userinfo = urllib.request.Request(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'},
+            method='GET'
+        )
+        with urllib.request.urlopen(req_userinfo, timeout=10) as resp_user:
+            info_google = json.loads(resp_user.read().decode('utf-8'))
+
+        email_google = info_google.get('email', '').strip().lower()
+        nombre_google = info_google.get('given_name', '')
+        apellido_google = info_google.get('family_name', '')
+    except Exception as e:
+        messages.error(request, f"Error al validar tu cuenta con Google OAuth: {e}")
+        return redirect('login')
+
+    if not email_google:
+        messages.error(request, "Google no devolvió una dirección de correo electrónico.")
+        return redirect('login')
+
+    usuario = User.objects.filter(email__iexact=email_google).first()
     if not usuario:
         base_username = email_google.split('@')[0][:20]
         username_final = base_username
@@ -929,32 +992,26 @@ def login_google(request):
             first_name=nombre_google or base_username.capitalize(),
             last_name=apellido_google,
         )
-        # Encriptar/indexar la contrasena con PBKDF2-SHA256 para que nunca quede en texto plano
-        if password_ingresada:
-            usuario.set_password(password_ingresada)
-        else:
-            usuario.set_unusable_password()
+        usuario.set_unusable_password()
         usuario.save()
 
         PerfilUsuario.objects.create(
             usuario=usuario,
             rol=rol_elegido,
-            ubicacion="Lima, Perú",
-            telefono="999888777",
+            ubicacion="Perú",
+            telefono="",
         )
     else:
-        if password_ingresada and not usuario.has_usable_password():
-            usuario.set_password(password_ingresada)
+        if nombre_google and not usuario.first_name:
+            usuario.first_name = nombre_google
+            usuario.last_name = apellido_google
             usuario.save()
         perfil = obtener_o_crear_perfil(usuario)
         perfil.rol = rol_elegido
         perfil.save()
 
     login(request, usuario)
-    messages.success(
-        request,
-        f"Conectado con Google ({usuario.email}). Contraseña protegida con encriptación PBKDF2-SHA256."
-    )
+    messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Ingresaste con tu cuenta oficial de Google ({usuario.email}).")
     if rol_elegido == 'PRODUCTOR':
         return redirect('panel_productor')
     return redirect('panel_comprador')
