@@ -16,6 +16,7 @@ urlpatterns = [
     path('registro/', views.registro_vista, name='registro'),
     path('login/', views.login_vista, name='login'),
     path('login/google/', views.login_google, name='login_google'),
+    path('login/google/callback/', views.login_google_callback, name='login_google_callback'),
     path('logout/', views.logout_vista, name='logout'),
     path('cambiar-modo/', views.cambiar_modo_vista, name='cambiar_modo'),
     path('panel-comprador/', views.panel_comprador, name='panel_comprador'),
