@@ -15,6 +15,7 @@ urlpatterns = [
     path('comprobante/<str:codigo>/', views.comprobante_pago, name='comprobante_pago'),
     path('registro/', views.registro_vista, name='registro'),
     path('login/', views.login_vista, name='login'),
+    path('login/google/', views.login_google, name='login_google'),
     path('logout/', views.logout_vista, name='logout'),
     path('cambiar-modo/', views.cambiar_modo_vista, name='cambiar_modo'),
     path('panel-comprador/', views.panel_comprador, name='panel_comprador'),
