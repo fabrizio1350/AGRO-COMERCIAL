@@ -14,7 +14,7 @@
                 <i class="bi bi-plus-circle me-1"></i>Publicar Producto
             </a>
         {% elif user.is_authenticated and rol_actual == 'COMPRADOR' %}
-            <a href="{% url 'carrito' %}" class="btn btn-outline-dark btn-sm">
+            <a href="{% url 'carrito' %}" class="btn btn-outline-success btn-sm">
                 <i class="bi bi-cart3 me-1"></i>Mi Carrito ({{ total_items_carrito }})
             </a>
         {% endif %}
@@ -59,18 +59,17 @@
     {% for prod in productos %}
     <div class="col-md-6 col-lg-4">
         <div class="card h-100 border">
-            <div class="p-3 pb-0 position-relative">
-                {% if prod.en_oferta and prod.precio_oferta %}
-                    <span class="badge bg-danger position-absolute top-0 end-0 m-4">
-                        -{{ prod.porcentaje_descuento }}% Oferta
-                    </span>
-                {% endif %}
-                <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 175px;">
+            <div class="p-3 pb-0">
+                <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 175px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
             </div>
             <div class="card-body d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="text-muted small">{{ prod.categoria.nombre|default:"Agrícola" }}</span>
-                    <span class="text-muted small"><i class="bi bi-geo-alt"></i> {{ prod.origen }}</span>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small">{{ prod.categoria.nombre|default:"Agrícola" }} • {{ prod.origen }}</span>
+                    {% if prod.en_oferta and prod.precio_oferta %}
+                        <span class="etiqueta-oferta small">
+                            <i class="bi bi-tag-fill me-1"></i>-{{ prod.porcentaje_descuento }}%
+                        </span>
+                    {% endif %}
                 </div>
 
                 <h5 class="h6 fw-bold mb-2">
