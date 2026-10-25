@@ -8,7 +8,7 @@
         <div class="bg-white border rounded-3 p-4 shadow-sm">
             <h2 class="h4 fw-bold text-center mb-1">Iniciar Sesión</h2>
             <p class="text-muted small text-center mb-4">
-                Elige si deseas entrar como <strong>Comprador</strong> o como <strong>Vendedor</strong> con tu cuenta de Google
+                Selecciona tu tipo de cuenta para ingresar
             </p>
 
             <!-- Pestañas separadas para Comprador y Vendedor -->
@@ -20,15 +20,14 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link {% if modo_acceso == 'vendedor' %}active{% endif %}" id="tab-vendedor-btn" data-bs-toggle="pill" data-bs-target="#pane-vendedor" type="button" role="tab">
-                        Soy Vendedor / Productor
+                        Soy Vendedor
                     </button>
                 </li>
             </ul>
 
             <div class="tab-content" id="tabsLoginRolContent">
-                <!-- PESTAÑA 1: LOGIN COMPRADOR -->
+                <!-- PESTAÑA 1: COMPRADOR -->
                 <div class="tab-pane fade {% if modo_acceso != 'vendedor' %}show active{% endif %}" id="pane-comprador" role="tabpanel">
-                    <!-- Boton oficial de Google exclusivo para entrar como COMPRADOR -->
                     <a href="{% url 'login_google' %}?rol=COMPRADOR" class="btn btn-light border w-100 py-2 mb-3 d-flex align-items-center justify-content-center gap-2 shadow-sm text-decoration-none">
                         <svg width="18" height="18" viewBox="0 0 48 48">
                             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -36,12 +35,12 @@
                             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                         </svg>
-                        <span class="fw-semibold text-dark">Continuar con Google como Comprador</span>
+                        <span class="fw-semibold text-dark">Continuar con Google</span>
                     </a>
 
                     <div class="d-flex align-items-center my-3">
                         <hr class="flex-grow-1 m-0">
-                        <span class="px-2 text-muted small">o con usuario y contraseña</span>
+                        <span class="px-2 text-muted small">o con tu cuenta</span>
                         <hr class="flex-grow-1 m-0">
                     </div>
 
@@ -50,20 +49,20 @@
                         <input type="hidden" name="modo_rol" value="COMPRADOR">
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">Correo o Usuario</label>
-                            <input type="text" name="username" class="form-control" placeholder="Tu correo o nombre de usuario" required>
+                            <input type="text" name="username" class="form-control" placeholder="Tu correo o usuario" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">Contraseña</label>
                             <input type="password" name="password" class="form-control" placeholder="Tu contraseña" required>
                         </div>
                         <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
-                            Entrar como Comprador
+                            Iniciar Sesión
                         </button>
                     </form>
 
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top small">
                         <span class="text-muted">¿No tienes cuenta?</span>
-                        <a href="{% url 'registro' %}?rol=COMPRADOR" class="text-success fw-semibold text-decoration-none">Registrarme como Comprador</a>
+                        <a href="{% url 'registro' %}?rol=COMPRADOR" class="text-success fw-semibold text-decoration-none">Crear una cuenta</a>
                     </div>
 
                     <form method="post" action="{% url 'login' %}" class="mt-2 text-center">
@@ -72,14 +71,13 @@
                         <input type="hidden" name="username" value="comprador_lima">
                         <input type="hidden" name="password" value="agro12345">
                         <button type="submit" class="btn btn-link btn-sm text-secondary text-decoration-none p-0">
-                            <small>Usar cuenta de prueba: <u>comprador_lima</u></small>
+                            <small>Cuenta de prueba: <u>comprador_lima</u></small>
                         </button>
                     </form>
                 </div>
 
-                <!-- PESTAÑA 2: LOGIN VENDEDOR / PRODUCTOR -->
+                <!-- PESTAÑA 2: VENDEDOR -->
                 <div class="tab-pane fade {% if modo_acceso == 'vendedor' %}show active{% endif %}" id="pane-vendedor" role="tabpanel">
-                    <!-- Boton oficial de Google exclusivo para entrar como VENDEDOR / PRODUCTOR -->
                     <a href="{% url 'login_google' %}?rol=PRODUCTOR" class="btn btn-light border w-100 py-2 mb-3 d-flex align-items-center justify-content-center gap-2 shadow-sm text-decoration-none">
                         <svg width="18" height="18" viewBox="0 0 48 48">
                             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -87,12 +85,12 @@
                             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                         </svg>
-                        <span class="fw-semibold text-dark">Continuar con Google como Vendedor</span>
+                        <span class="fw-semibold text-dark">Continuar con Google</span>
                     </a>
 
                     <div class="d-flex align-items-center my-3">
                         <hr class="flex-grow-1 m-0">
-                        <span class="px-2 text-muted small">o con usuario y contraseña</span>
+                        <span class="px-2 text-muted small">o con tu cuenta</span>
                         <hr class="flex-grow-1 m-0">
                     </div>
 
@@ -100,21 +98,21 @@
                         {% csrf_token %}
                         <input type="hidden" name="modo_rol" value="PRODUCTOR">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small">Correo o Usuario del Productor</label>
-                            <input type="text" name="username" class="form-control" placeholder="Tu correo o nombre de usuario" required>
+                            <label class="form-label fw-semibold small">Correo o Usuario</label>
+                            <input type="text" name="username" class="form-control" placeholder="Tu correo o usuario" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">Contraseña</label>
                             <input type="password" name="password" class="form-control" placeholder="Tu contraseña" required>
                         </div>
                         <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
-                            Entrar como Vendedor
+                            Iniciar Sesión
                         </button>
                     </form>
 
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top small">
-                        <span class="text-muted">¿Eres agricultor nuevo?</span>
-                        <a href="{% url 'registro' %}?rol=PRODUCTOR" class="text-success fw-semibold text-decoration-none">Registrarme como Vendedor</a>
+                        <span class="text-muted">¿No tienes cuenta?</span>
+                        <a href="{% url 'registro' %}?rol=PRODUCTOR" class="text-success fw-semibold text-decoration-none">Crear una cuenta</a>
                     </div>
 
                     <form method="post" action="{% url 'login' %}" class="mt-2 text-center">
@@ -123,7 +121,7 @@
                         <input type="hidden" name="username" value="productor_mantaro">
                         <input type="hidden" name="password" value="agro12345">
                         <button type="submit" class="btn btn-link btn-sm text-secondary text-decoration-none p-0">
-                            <small>Usar cuenta de prueba: <u>productor_mantaro</u></small>
+                            <small>Cuenta de prueba: <u>productor_mantaro</u></small>
                         </button>
                     </form>
                 </div>
