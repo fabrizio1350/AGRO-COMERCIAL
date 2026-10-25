@@ -82,11 +82,17 @@
                         </div>
                         <div class="col-6 col-md-3">
                             <label class="form-label small fw-semibold mb-1">Stock Disponible</label>
-                            {{ form.stock }}
+                            <div class="input-group">
+                                {{ form.stock }}
+                                <span class="input-group-text small bg-white text-secondary" id="sufijoStockUnidad">kg</span>
+                            </div>
                         </div>
                         <div class="col-6 col-md-2">
                             <label class="form-label small fw-semibold mb-1">Mínimo</label>
-                            {{ form.minimo_compra }}
+                            <div class="input-group">
+                                {{ form.minimo_compra }}
+                                <span class="input-group-text small bg-white text-secondary" id="sufijoMinimoUnidad">kg</span>
+                            </div>
                         </div>
 
                         <div class="col-12"><hr class="my-1 text-muted"></div>
@@ -134,4 +140,29 @@
         </div>
     </div>
 </div>
+
+<script>
+    (function() {
+        const selectUnidad = document.getElementById('id_unidad');
+        const sufijoStock = document.getElementById('sufijoStockUnidad');
+        const sufijoMinimo = document.getElementById('sufijoMinimoUnidad');
+        const mapaUnidades = {
+            'KG': 'kg',
+            'SACO': 'sacos',
+            'CAJA': 'cajas',
+            'ARROBA': 'arrobas',
+            'TONELADA': 'ton.'
+        };
+        function actualizarEtiquetaUnidad() {
+            if (!selectUnidad) return;
+            const texto = mapaUnidades[selectUnidad.value] || 'unid.';
+            if (sufijoStock) sufijoStock.textContent = texto;
+            if (sufijoMinimo) sufijoMinimo.textContent = texto;
+        }
+        if (selectUnidad) {
+            selectUnidad.addEventListener('change', actualizarEtiquetaUnidad);
+            actualizarEtiquetaUnidad();
+        }
+    })();
+</script>
 {% endblock %}
