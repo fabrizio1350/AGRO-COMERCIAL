@@ -7,9 +7,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
+        /* Paleta tierra, hoja y cosecha (cero tonos azules frios) */
         body {
-            background-color: #f4f5f7;
-            color: #212529;
+            background-color: #f7f5f0;
+            color: #262925;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -20,33 +21,35 @@
             flex: 1;
         }
 
-        /* Tarjetas limpias y clasicas */
-        .card, .caja-blanca {
-            background-color: #ffffff;
-            border: 1px solid #dce0e5 !important;
+        /* Tarjetas y contenedores con borde calido suave */
+        .card, .caja-blanca, .bg-white.border {
+            background-color: #ffffff !important;
+            border: 1px solid #e3ded3 !important;
             border-radius: 8px !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 1px 3px rgba(40, 36, 28, 0.04);
         }
 
         /* Inputs y selects sin sobreponer la flecha */
         .form-control {
             border-radius: 6px;
-            border: 1px solid #ced4da;
+            border: 1px solid #cfc9bc;
             padding: 0.5rem 0.75rem;
+            background-color: #ffffff;
         }
 
         .form-select {
             border-radius: 6px;
-            border: 1px solid #ced4da;
+            border: 1px solid #cfc9bc;
             padding-top: 0.5rem;
             padding-bottom: 0.5rem;
             padding-left: 0.75rem;
             padding-right: 2.25rem;
+            background-color: #ffffff;
         }
 
         .form-control:focus, .form-select:focus {
-            border-color: #2e5a3c;
-            box-shadow: 0 0 0 0.2rem rgba(46, 90, 60, 0.15);
+            border-color: #285436;
+            box-shadow: 0 0 0 0.2rem rgba(40, 84, 54, 0.14);
         }
 
         .btn {
@@ -54,98 +57,125 @@
             font-weight: 500;
         }
 
-        /* Colores sobrios (sin tonos neon) */
-        .btn-success {
-            background-color: #2e5a3c !important;
-            border-color: #2e5a3c !important;
-            color: #fff !important;
+        /* Botones principales en verde campo y tonos tierra (sin azul) */
+        .btn-success, .btn-primary {
+            background-color: #285436 !important;
+            border-color: #285436 !important;
+            color: #ffffff !important;
         }
-        .btn-success:hover {
-            background-color: #23472e !important;
-            border-color: #23472e !important;
+        .btn-success:hover, .btn-primary:hover {
+            background-color: #1e4029 !important;
+            border-color: #1e4029 !important;
+            color: #ffffff !important;
         }
-        .btn-outline-success {
-            color: #2e5a3c !important;
-            border-color: #2e5a3c !important;
+        .btn-outline-success, .btn-outline-primary {
+            color: #285436 !important;
+            border-color: #285436 !important;
         }
-        .btn-outline-success:hover {
-            background-color: #2e5a3c !important;
-            color: #fff !important;
-        }
-
-        .btn-primary {
-            background-color: #344e68 !important;
-            border-color: #344e68 !important;
-            color: #fff !important;
-        }
-        .btn-primary:hover {
-            background-color: #273c50 !important;
-            border-color: #273c50 !important;
-        }
-        .btn-outline-primary {
-            color: #344e68 !important;
-            border-color: #344e68 !important;
-        }
-        .btn-outline-primary:hover {
-            background-color: #344e68 !important;
-            color: #fff !important;
+        .btn-outline-success:hover, .btn-outline-primary:hover {
+            background-color: #285436 !important;
+            color: #ffffff !important;
         }
 
         .btn-warning {
-            background-color: #c88732 !important;
-            border-color: #c88732 !important;
-            color: #fff !important;
+            background-color: #c67d28 !important;
+            border-color: #c67d28 !important;
+            color: #ffffff !important;
         }
         .btn-warning:hover {
-            background-color: #ad7225 !important;
-            border-color: #ad7225 !important;
-            color: #fff !important;
+            background-color: #a8681e !important;
+            border-color: #a8681e !important;
+            color: #ffffff !important;
         }
 
-        .text-success { color: #2e5a3c !important; }
-        .bg-success { background-color: #2e5a3c !important; }
-        .bg-danger { background-color: #b34738 !important; }
-        .text-danger { color: #b34738 !important; }
+        .text-success, .text-primary { color: #285436 !important; }
+        .bg-success { background-color: #285436 !important; color: #ffffff !important; }
+        .bg-success-subtle {
+            background-color: #e6f2ea !important;
+            color: #1e4029 !important;
+            border: 1px solid #c5dfce;
+        }
+
+        /* Etiqueta de oferta renovada: estilo cosecha dorado/ambar limpio (reemplaza el ladrillo opaco) */
+        .badge.bg-danger, .etiqueta-oferta {
+            background-color: #fef3c7 !important;
+            color: #92400e !important;
+            border: 1px solid #f59e0b !important;
+            font-weight: 600 !important;
+            padding: 0.35em 0.65em !important;
+            border-radius: 6px !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Precio en oferta en tono terracota calido legible */
+        .text-danger {
+            color: #b45309 !important;
+        }
+
         .bg-warning {
-            background-color: #f3ece1 !important;
+            background-color: #f6efe2 !important;
             color: #6e4e1f !important;
             border: 1px solid #dfd2be;
             font-weight: 500;
         }
 
-        /* Pestañas sin el color azul electrico de Bootstrap */
+        /* Pestañas en tonos verdes y tierra */
+        .nav-tabs {
+            border-bottom: 1px solid #ded8cc;
+        }
         .nav-tabs .nav-link {
-            color: #555e68 !important;
+            color: #5c5852 !important;
             font-weight: 500;
             border-radius: 6px 6px 0 0;
         }
         .nav-tabs .nav-link:hover {
-            color: #212529 !important;
+            color: #262925 !important;
         }
         .nav-tabs .nav-link.active {
-            color: #2e5a3c !important;
+            color: #285436 !important;
             font-weight: 600;
-            border-color: #dce0e5 #dce0e5 #ffffff !important;
+            background-color: #ffffff !important;
+            border-color: #ded8cc #ded8cc #ffffff !important;
         }
 
         .nav-pills .nav-link {
-            color: #495057 !important;
+            color: #4a4742 !important;
             border-radius: 6px;
             font-weight: 500;
         }
         .nav-pills .nav-link.active {
-            background-color: #2e5a3c !important;
+            background-color: #285436 !important;
             color: #ffffff !important;
         }
 
-        /* Cabecera de navegacion sobria y responsive */
+        /* Cabecera de navegacion unificada en verde bosque agricola (sin el azul de comprador) */
         .navbar-principal {
-            background-color: #264632;
-            border-bottom: 1px solid #1d3626;
+            background-color: #1f3f29;
+            border-bottom: 2px solid #162e1e;
         }
         .navbar-comprador {
-            background-color: #2c4257;
-            border-bottom: 1px solid #203140;
+            background-color: #264a32;
+            border-bottom: 2px solid #c68b38;
+        }
+
+        .insignia-rol-comprador {
+            background-color: #fef3c7;
+            color: #78350f;
+            border: 1px solid #f59e0b;
+            font-size: 0.72rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+
+        .insignia-rol-vendedor {
+            background-color: #dcfce7;
+            color: #14532d;
+            border: 1px solid #86efac;
+            font-size: 0.72rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 5px;
+            font-weight: 600;
         }
 
         .navbar-nav .nav-link {
@@ -155,7 +185,7 @@
             gap: 0.35rem;
             padding: 0.45rem 0.7rem !important;
             font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.9) !important;
+            color: rgba(255, 255, 255, 0.92) !important;
             border-radius: 6px;
         }
         .navbar-nav .nav-link:hover {
@@ -164,22 +194,22 @@
         }
 
         .barra-cambio-rol {
-            background-color: #e9ecef;
-            border-bottom: 1px solid #dee2e6;
+            background-color: #ece7dc;
+            border-bottom: 1px solid #dcd4c4;
             font-size: 0.82rem;
-            color: #495057;
+            color: #4a463f;
         }
 
         .img-referencia {
             width: 100%;
             object-fit: cover;
             border-radius: 6px;
-            border: 1px solid #dee2e6;
+            border: 1px solid #e3ded3;
         }
     </style>
 </head>
 <body>
-    <!-- Barra superior discreta para alternar entre cuenta de Comprador y Vendedor -->
+    <!-- Barra superior discreta en tono arena para alternar entre cuenta de Comprador y Vendedor -->
     <div class="barra-cambio-rol py-1">
         <div class="container-fluid px-3 px-lg-5 d-flex flex-wrap justify-content-between align-items-center">
             <div>
@@ -190,7 +220,7 @@
                         <span>Cuenta activa: <strong>Comprador ({{ user.first_name|default:user.username }})</strong></span>
                     {% endif %}
                 {% else %}
-                    <span>Plataforma de comercialización agrícola directa</span>
+                    <span>Plataforma de comercialización agrícola directa del campo</span>
                 {% endif %}
             </div>
             <div>
@@ -199,12 +229,12 @@
                         {% csrf_token %}
                         {% if rol_actual == 'PRODUCTOR' %}
                             <input type="hidden" name="nuevo_rol" value="COMPRADOR">
-                            <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold text-dark">
+                            <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold text-success">
                                 <i class="bi bi-arrow-left-right me-1"></i>Cambiar a cuenta Comprador
                             </button>
                         {% else %}
                             <input type="hidden" name="nuevo_rol" value="PRODUCTOR">
-                            <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold text-dark">
+                            <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold text-success">
                                 <i class="bi bi-arrow-left-right me-1"></i>Cambiar a cuenta Vendedor
                             </button>
                         {% endif %}
@@ -217,15 +247,15 @@
         </div>
     </div>
 
-    <!-- Barra de navegacion responsive con todos los apartados bien alineados -->
+    <!-- Barra de navegacion responsive en tonos verdes agricolas -->
     <nav class="navbar navbar-expand-lg navbar-dark {% if rol_actual == 'COMPRADOR' %}navbar-comprador{% else %}navbar-principal{% endif %} py-2">
         <div class="container-fluid px-3 px-lg-5">
             <a class="navbar-brand fw-bold d-inline-flex align-items-center gap-2 me-3" href="{% url 'inicio' %}">
                 <span>AgroComercial</span>
                 {% if rol_actual == 'PRODUCTOR' %}
-                    <span class="badge bg-light text-dark fw-normal" style="font-size: 0.7rem;">Vendedor</span>
+                    <span class="insignia-rol-vendedor">Vendedor</span>
                 {% elif rol_actual == 'COMPRADOR' %}
-                    <span class="badge bg-light text-dark fw-normal" style="font-size: 0.7rem;">Comprador</span>
+                    <span class="insignia-rol-comprador">Comprador</span>
                 {% endif %}
             </a>
 
@@ -285,9 +315,8 @@
                             <button type="submit" class="btn btn-light btn-sm text-nowrap">Salir</button>
                         </form>
                     {% else %}
-                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-light btn-sm text-nowrap">Login Comprador</a>
-                        <a href="{% url 'login' %}?modo=vendedor" class="btn btn-light btn-sm text-dark text-nowrap">Login Vendedor</a>
-                        <a href="{% url 'registro' %}" class="btn btn-warning btn-sm text-nowrap">Registrarse</a>
+                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-light btn-sm text-nowrap">Ingresar</a>
+                        <a href="{% url 'registro' %}" class="btn btn-warning btn-sm text-nowrap">Crear Cuenta</a>
                     {% endif %}
                 </div>
             </div>
@@ -315,7 +344,7 @@
     <footer class="bg-white border-top py-3 mt-auto">
         <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center text-muted small">
             <div>
-                <strong>AgroComercial</strong> — Sistema Web de Comercialización Agrícola
+                <strong>AgroComercial</strong> — Plataforma Web de Comercialización Agrícola
             </div>
             <div class="mt-2 mt-md-0 d-flex flex-wrap gap-3">
                 <a href="{% url 'inicio' %}" class="text-decoration-none text-muted">Inicio</a>
