@@ -110,7 +110,7 @@
                             <div class="small text-success mt-1">Acepta ofertas</div>
                         {% endif %}
                     </td>
-                    <td class="fw-semibold">{{ prod.stock }}</td>
+                    <td class="fw-semibold">{{ prod.stock }} {{ prod.nombre_unidad_stock }}</td>
                     <td>
                         {% if prod.disponible and prod.stock > 0 %}
                             <span class="badge bg-success">Activo</span>
