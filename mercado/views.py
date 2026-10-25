@@ -826,6 +826,10 @@ def pasarela_pago(request):
 
     import os
     tiene_smtp_gmail = bool((os.environ.get('EMAIL_HOST_PASSWORD') or getattr(settings, 'EMAIL_HOST_PASSWORD', '')).strip())
+    algun_vendedor_tiene_cuenta = any(
+        bool(getattr(i.producto.productor, 'perfil', None) and i.producto.productor.perfil.cuenta_bancaria.strip())
+        for i in items
+    )
     contexto = {
         'items': items,
         'subtotal': subtotal,
@@ -834,6 +838,7 @@ def pasarela_pago(request):
         'total_centimos': int(total_pagar * 100),
         'correo_gmail_usuario': correo_gmail_usuario,
         'tiene_smtp_gmail': tiene_smtp_gmail,
+        'algun_vendedor_tiene_cuenta': algun_vendedor_tiene_cuenta,
         'culqi_public_key': getattr(settings, 'CULQI_PUBLIC_KEY', 'pk_test_0000000000000000'),
         'form': form,
     }
