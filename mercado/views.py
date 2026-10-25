@@ -387,6 +387,15 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
     </div>
     """
 
+    # Recargar .env en caliente por si se acaba de actualizar sin reiniciar el servidor
+    env_file = settings.BASE_DIR / '.env'
+    if env_file.exists():
+        for lin in env_file.read_text(encoding='utf-8').splitlines():
+            if '=' in lin and not lin.strip().startswith('#'):
+                k, v = lin.split('=', 1)
+                if v.strip():
+                    os.environ[k.strip()] = v.strip().strip('"').strip("'")
+
     remitente_gmail = (os.environ.get('EMAIL_HOST_USER') or getattr(settings, 'EMAIL_HOST_USER', '') or correo_destino).strip()
     clave_app_gmail = (os.environ.get('EMAIL_HOST_PASSWORD') or getattr(settings, 'EMAIL_HOST_PASSWORD', '')).strip().replace(' ', '')
 
