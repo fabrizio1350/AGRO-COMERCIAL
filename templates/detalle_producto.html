@@ -53,8 +53,8 @@
                 Lugar de origen: <strong>{{ producto.origen }}</strong> • Unidad de venta: <strong>{{ producto.get_unidad_display }}</strong>
             </p>
 
-            <!-- Caja de precio limpia -->
-            <div class="p-3 rounded-3 mb-4 d-flex justify-content-between align-items-center" style="background-color: #faf7f0; border: 1px solid #e5dec9;">
+            <!-- Caja de precio limpia y stock con su unidad clara -->
+            <div class="p-3 rounded-3 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3" style="background-color: #faf7f0; border: 1px solid #e5dec9;">
                 <div>
                     {% if producto.en_oferta and producto.precio_oferta %}
                         <span class="text-decoration-line-through text-muted small d-block">Antes: S/ {{ producto.precio }}</span>
@@ -66,8 +66,13 @@
                     {% endif %}
                 </div>
                 <div class="text-end">
-                    <span class="badge bg-success">{{ producto.stock }} disponibles</span>
-                    <div class="text-muted small mt-1">Compra mínima: {{ producto.minimo_compra }} {{ producto.get_unidad_display }}</div>
+                    <span class="text-muted small d-block mb-1">Stock disponible:</span>
+                    <span class="badge bg-success px-3 py-2" style="font-size: 0.9rem;">
+                        <i class="bi bi-box-seam me-1"></i>{{ producto.stock }} {{ producto.nombre_unidad_stock }} disponibles
+                    </span>
+                    <div class="text-muted small mt-1">
+                        Compra mínima: <strong>{{ producto.minimo_compra }} {{ producto.nombre_unidad_minimo }}</strong>
+                    </div>
                 </div>
             </div>
 
@@ -100,19 +105,22 @@
                 <!-- Vista exclusiva de Comprador (NUNCA puede editar el producto) -->
                 {% if producto.disponible and producto.stock > 0 %}
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">1. Compra Directa</label>
+                        <label class="form-label small fw-bold">1. Compra Directa (indica cuántos {{ producto.nombre_unidad_stock }} deseas)</label>
                         <form action="{% url 'agregar_al_carrito' producto.id %}" method="post">
                             {% csrf_token %}
                             <div class="row g-2">
-                                <div class="col-sm-3">
-                                    <input type="number" name="cantidad" class="form-control" value="{{ producto.minimo_compra }}" min="1" max="{{ producto.stock }}" required>
+                                <div class="col-sm-4">
+                                    <div class="input-group">
+                                        <input type="number" name="cantidad" class="form-control" value="{{ producto.minimo_compra }}" min="1" max="{{ producto.stock }}" required>
+                                        <span class="input-group-text small bg-light text-secondary">{{ producto.nombre_unidad_stock }}</span>
+                                    </div>
                                 </div>
                                 <div class="col-sm-4">
                                     <button type="submit" class="btn btn-outline-success w-100">
                                         + Al Carrito
                                     </button>
                                 </div>
-                                <div class="col-sm-5">
+                                <div class="col-sm-4">
                                     <button type="submit" name="comprar_ahora" value="1" class="btn btn-success w-100">
                                         Comprar Ahora
                                     </button>
@@ -129,10 +137,13 @@
                             <input type="hidden" name="tipo_accion" value="enviar_oferta">
                             <div class="row g-2">
                                 <div class="col-sm-4">
-                                    <input type="number" name="cantidad" class="form-control form-control-sm" value="{{ producto.minimo_compra }}" min="1" max="{{ producto.stock }}" placeholder="Cantidad" required>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="cantidad" class="form-control" value="{{ producto.minimo_compra }}" min="1" max="{{ producto.stock }}" placeholder="Cantidad" required>
+                                        <span class="input-group-text bg-white text-secondary">{{ producto.nombre_unidad_stock }}</span>
+                                    </div>
                                 </div>
                                 <div class="col-sm-4">
-                                    <input type="number" step="0.10" name="precio_unitario_ofrecido" class="form-control form-control-sm" placeholder="Precio S/ por unid." required>
+                                    <input type="number" step="0.10" name="precio_unitario_ofrecido" class="form-control form-control-sm" placeholder="S/ por {{ producto.nombre_unidad_minimo }}" required>
                                 </div>
                                 <div class="col-sm-4">
                                     <button type="submit" class="btn btn-warning btn-sm w-100">Enviar Oferta</button>
@@ -169,21 +180,27 @@
             <p class="text-secondary mb-3">{{ producto.descripcion }}</p>
 
             <div class="row g-3 small mb-3">
-                <div class="col-sm-6 col-md-4">
+                <div class="col-6 col-md-3">
                     <div class="p-3 border rounded bg-light h-100">
                         <span class="text-muted d-block">Lugar de Origen</span>
                         <strong>{{ producto.origen }}</strong>
                     </div>
                 </div>
-                <div class="col-sm-6 col-md-4">
+                <div class="col-6 col-md-3">
                     <div class="p-3 border rounded bg-light h-100">
                         <span class="text-muted d-block">Fecha de Cosecha</span>
                         <strong>{{ producto.fecha_cosecha|date:"d/m/Y" }}</strong>
                     </div>
                 </div>
-                <div class="col-sm-12 col-md-4">
+                <div class="col-6 col-md-3">
                     <div class="p-3 border rounded bg-light h-100">
-                        <span class="text-muted d-block">Finca / Productor</span>
+                        <span class="text-muted d-block">Stock Disponible</span>
+                        <strong class="text-success">{{ producto.stock }} {{ producto.nombre_unidad_stock }} disponibles</strong>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded bg-light h-100">
+                        <span class="text-muted d-block">Productor / Chacra</span>
                         <strong>{{ producto.productor.perfil.nombre_finca|default:producto.productor.first_name }}</strong>
                     </div>
                 </div>
