@@ -25,34 +25,34 @@ class RegistroUsuarioForm(UserCreationForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     ruc_dni = forms.CharField(
-        label="DNI o RUC",
+        label="RUC o DNI del Vendedor",
         max_length=20,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 10456789123'})
     )
     telefono = forms.CharField(
-        label="Teléfono / WhatsApp",
+        label="Teléfono / Celular",
         max_length=20,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 987654321'})
     )
     ubicacion = forms.CharField(
-        label="Ciudad / Región / Valle",
+        label="Ciudad / Región",
         max_length=120,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huancayo, Junín'})
     )
     nombre_finca = forms.CharField(
-        label="Nombre de Chacra o Asociación (Solo Vendedor)",
+        label="Nombre de Chacra, Granja o Huerta (Opcional)",
         max_length=120,
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Fundo San Isidro'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional (ej. Granja Familiar)'})
     )
     cuenta_bancaria = forms.CharField(
-        label="Número de Cuenta en Soles / CCI (Solo Vendedor)",
+        label="Número de Cuenta en Soles para Depósito (Opcional)",
         max_length=120,
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. BCP Soles: 191-12345678-0-99'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional (ej. BCP Soles: 191-12345678-0-99)'})
     )
 
     class Meta:
