@@ -314,7 +314,7 @@ def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
 
 def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, total_pagar, metodo_pago):
     """
-    Envía por correo Gmail el comprobante electrónico de la compra procesada en Culqi.
+    Envía por correo Gmail la Boleta de Venta Electrónica formal de la compra procesada.
     Usa smtplib directo con las credenciales de .env para que funcione al instante.
     """
     import os
@@ -325,65 +325,183 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
     if not correo_destino:
         return False
 
+    primer_ped = lista_pedidos[0] if lista_pedidos else None
+    num_correlativo = f"{primer_ped.id:06d}" if primer_ped else "000001"
+    serie_boleta = f"B001-{num_correlativo}"
+    fecha_emision = timezone.localtime(primer_ped.fecha_pedido).strftime("%d/%m/%Y %H:%M") if primer_ped else timezone.now().strftime("%d/%m/%Y %H:%M")
+    nombre_cliente = f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username
+    direccion_cliente = f"{primer_ped.direccion_entrega} - {primer_ped.ciudad_destino}" if primer_ped else "Perú"
+    telefono_cliente = primer_ped.telefono_contacto if primer_ped else "-"
+    subtotal_productos = sum(p.total for p in lista_pedidos)
+
     lineas_productos = "\n".join(
-        [f"  - {p.producto.nombre} ({p.cantidad} {p.producto.get_unidad_display()}): S/ {p.total}" for p in lista_pedidos]
-    )
-    filas_html = "".join(
-        [f"<tr><td style='padding:6px;border:1px solid #ddd;'>{p.producto.nombre}</td>"
-         f"<td style='padding:6px;border:1px solid #ddd;'>{p.cantidad} {p.producto.get_unidad_display()}</td>"
-         f"<td style='padding:6px;border:1px solid #ddd;text-align:right;'>S/ {p.total}</td></tr>"
-         for p in lista_pedidos]
+        [
+            f"  - [P-{p.producto.id:03d}] {p.cantidad} {p.producto.nombre_unidad_stock().upper()} | "
+            f"{p.producto.nombre} (P. Unit: S/ {p.precio_unitario}) -> S/ {p.total}"
+            for p in lista_pedidos
+        ]
     )
 
-    asunto = f"Boleta de Compra {codigo_tx} - AgroComercial"
+    filas_html = "".join(
+        [
+            f"<tr>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;color:#555;'>AGR-{p.producto.id:03d}</td>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;text-align:center;'>{p.cantidad}</td>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;text-align:center;'>{p.producto.nombre_unidad_stock().upper()}</td>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;'>"
+            f"<strong>{p.producto.nombre}</strong><br>"
+            f"<span style='color:#666;font-size:11px;'>Origen: {p.producto.origen} | Productor: {p.producto.productor.first_name or p.producto.productor.username}</span>"
+            f"</td>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;text-align:right;'>S/ {p.precio_unitario}</td>"
+            f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;text-align:right;font-weight:bold;'>S/ {p.total}</td>"
+            f"</tr>"
+            for p in lista_pedidos
+        ]
+    )
+
+    asunto = f"Boleta de Venta Electrónica {serie_boleta} ({codigo_tx}) - AgroComercial"
     cuerpo_texto = (
-        f"Hola {usuario.first_name or usuario.username},\n\n"
-        f"Tu pago ha sido procesado correctamente en AgroComercial.\n\n"
-        f"=============================================\n"
-        f"COMPROBANTE ELECTRÓNICO DE COMPRA AGRÍCOLA\n"
-        f"=============================================\n"
+        f"AGROCOMERCIAL PERÚ S.A.C. - RUC: 20608945123\n"
+        f"BOLETA DE VENTA ELECTRÓNICA: {serie_boleta}\n"
+        f"====================================================\n"
+        f"Fecha de Emisión   : {fecha_emision}\n"
         f"Código de Operación: {codigo_tx}\n"
-        f"Correo Gmail asociado: {correo_destino}\n"
-        f"Modalidad de Pago: {metodo_pago}\n\n"
-        f"Detalle de Productos:\n"
+        f"Cliente            : {nombre_cliente}\n"
+        f"Correo Electrónico : {correo_destino}\n"
+        f"Dirección Entrega  : {direccion_cliente}\n"
+        f"Modalidad de Pago  : {metodo_pago}\n"
+        f"Moneda             : SOLES (PEN)\n"
+        f"====================================================\n"
+        f"DETALLE DE LA COMPRA:\n"
         f"{lineas_productos}\n"
-        f"  - Costo de envío / guía: S/ 15.00\n"
-        f"---------------------------------------------\n"
-        f"TOTAL COBRADO: S/ {total_pagar}\n"
-        f"=============================================\n\n"
-        f"Gracias por comprar directo a los productores agrícolas en AgroComercial."
+        f"  - [SERV-LOG] 1 SERV | Despacho y Guía de Remisión -> S/ 15.00\n"
+        f"----------------------------------------------------\n"
+        f"OP. EXONERADA (RÉGIMEN AGRARIO) : S/ {subtotal_productos}\n"
+        f"SERVICIO DE DESPACHO Y ACOPIO   : S/ 15.00\n"
+        f"I.G.V. (0.00% EXONERADO)        : S/ 0.00\n"
+        f"IMPORTE TOTAL PAGADO            : S/ {total_pagar}\n"
+        f"====================================================\n"
+        f"Representación impresa de la Boleta de Venta Electrónica.\n"
+        f"Gracias por su preferencia en AgroComercial."
     )
 
     cuerpo_html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e3ded3; border-radius: 8px; padding: 20px; background-color: #ffffff;">
-        <h2 style="color: #285436; margin-top: 0;">AgroComercial — Boleta Electrónica de Compra</h2>
-        <p>Hola <strong>{usuario.first_name or usuario.username}</strong>, tu pago fue procesado con éxito.</p>
-        <div style="background-color: #f7f5f0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-            <div><strong>Código de Operación:</strong> {codigo_tx}</div>
-            <div><strong>Cuenta Gmail:</strong> {correo_destino}</div>
-            <div><strong>Modalidad de Pago:</strong> {metodo_pago}</div>
-        </div>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
-            <thead>
-                <tr style="background-color: #e6f2ea; color: #1e4029;">
-                    <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Producto</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Cantidad</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                {filas_html}
-                <tr>
-                    <td colspan="2" style="padding: 6px; border: 1px solid #ddd; text-align: right;">Costo de envío / guía:</td>
-                    <td style="padding: 6px; border: 1px solid #ddd; text-align: right;">S/ 15.00</td>
-                </tr>
-                <tr style="font-weight: bold; background-color: #f7f5f0;">
-                    <td colspan="2" style="padding: 8px; border: 1px solid #ddd; text-align: right;">TOTAL COBRADO:</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: #285436;">S/ {total_pagar}</td>
-                </tr>
-            </tbody>
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 680px; margin: 0 auto; border: 1px solid #cfd6cf; background-color: #ffffff; color: #222222;">
+        <!-- Cabecera Formal tipo SUNAT -->
+        <table style="width: 100%; border-collapse: collapse; padding: 20px; border-bottom: 2px solid #264a32;">
+            <tr>
+                <td style="padding: 20px; vertical-align: top; width: 60%;">
+                    <div style="font-size: 18px; font-weight: bold; color: #264a32; letter-spacing: 0.5px;">AGROCOMERCIAL PERÚ S.A.C.</div>
+                    <div style="font-size: 12px; color: #555; margin-top: 4px;">Plataforma de Comercialización Agrícola Directa del Productor</div>
+                    <div style="font-size: 11px; color: #666; margin-top: 2px;">Av. La Molina 1450, Lima - Perú | Central: (01) 640-8890</div>
+                    <div style="font-size: 11px; color: #666;">Correo: facturacion@agrocomercial.pe</div>
+                </td>
+                <td style="padding: 20px; vertical-align: top; width: 40%; text-align: center;">
+                    <div style="border: 2px solid #264a32; border-radius: 4px; padding: 10px 8px; background-color: #f8fbf8;">
+                        <div style="font-size: 12px; font-weight: bold; color: #222;">R.U.C. N° 20608945123</div>
+                        <div style="font-size: 13px; font-weight: bold; color: #ffffff; background-color: #264a32; margin: 6px -8px; padding: 4px 0;">
+                            BOLETA DE VENTA ELECTRÓNICA
+                        </div>
+                        <div style="font-size: 14px; font-weight: bold; color: #264a32;">N° {serie_boleta}</div>
+                    </div>
+                </td>
+            </tr>
         </table>
-        <p style="font-size: 12px; color: #666;">Comprobante generado automáticamente por AgroComercial.</p>
+
+        <!-- Datos del Cliente y de la Operacion -->
+        <div style="padding: 16px 20px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px; background-color: #fafafa; border: 1px solid #e2e5e2;">
+                <tr>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; width: 22%; color: #555;"><strong>SEÑOR(ES):</strong></td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; width: 33%;">{nombre_cliente}</td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; width: 20%; color: #555;"><strong>FECHA EMISIÓN:</strong></td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; width: 25%;">{fecha_emision}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; color: #555;"><strong>CORREO CLIENTE:</strong></td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;">{correo_destino}</td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; color: #555;"><strong>CÓD. OPERACIÓN:</strong></td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;"><strong>{codigo_tx}</strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; color: #555;"><strong>DIRECCIÓN ENTREGA:</strong></td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;">{direccion_cliente}</td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; color: #555;"><strong>MONEDA:</strong></td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;">SOLES (PEN)</td>
+                </tr>
+                <tr>
+                    <td style="padding: 7px 12px; color: #555;"><strong>MEDIO DE PAGO:</strong></td>
+                    <td style="padding: 7px 12px;">{metodo_pago}</td>
+                    <td style="padding: 7px 12px; color: #555;"><strong>TELÉFONO:</strong></td>
+                    <td style="padding: 7px 12px;">{telefono_cliente}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Tabla de Items -->
+        <div style="padding: 0 20px 16px 20px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #d5dbd5;">
+                <thead>
+                    <tr style="background-color: #264a32; color: #ffffff; font-size: 11px; text-transform: uppercase;">
+                        <th style="padding: 8px 10px; text-align: left;">Código</th>
+                        <th style="padding: 8px 10px; text-align: center;">Cant.</th>
+                        <th style="padding: 8px 10px; text-align: center;">Unid.</th>
+                        <th style="padding: 8px 10px; text-align: left;">Descripción del Producto</th>
+                        <th style="padding: 8px 10px; text-align: right;">P. Unit.</th>
+                        <th style="padding: 8px 10px; text-align: right;">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filas_html}
+                    <tr>
+                        <td style="padding: 8px 10px; border-bottom: 1px solid #e0e0e0; font-size: 12px; color: #555;">SERV-LOG</td>
+                        <td style="padding: 8px 10px; border-bottom: 1px solid #e0e0e0; font-size: 12px; text-align: center;">1</td>
+                        <td style="padding: 8px 10px; border-bottom: 1px solid #e0e0e0; font-size: 12px; text-align: center;">SERV</td>
+                        <td style="padding: 8px 10px; border-bottom: 1px solid #e0e0e0; font-size: 12px;">
+                            <strong>Servicio de Despacho, Acopio y Guía de Remisión Agrícola</strong>
+                        </td>
+                        <td style="padding: 8px 10px; border-bottom: 1px solid #e0e0e0; font-size: 12px; text-align: right;">S/ 15.00</td>
+                        <td style="padding: 8px 10px; border-bottom: 1px solid #e0e0e0; font-size: 12px; text-align: right; font-weight: bold;">S/ 15.00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totales y Pie de Boleta -->
+        <div style="padding: 0 20px 20px 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="width: 55%; vertical-align: top; padding-right: 15px; font-size: 11px; color: #666;">
+                        <div style="border: 1px dashed #c5cec5; padding: 10px; background-color: #fbfcfb;">
+                            <strong>OBSERVACIONES LEGALES:</strong><br>
+                            • Bienes agrícolas exonerados del IGV según Apéndice I de la Ley del IGV.<br>
+                            • Representación impresa de la <strong>Boleta de Venta Electrónica {serie_boleta}</strong>.<br>
+                            • Código de autorización pasarela: <strong>{codigo_tx}</strong>
+                        </div>
+                    </td>
+                    <td style="width: 45%; vertical-align: top;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid #d5dbd5;">
+                            <tr>
+                                <td style="padding: 6px 10px; border-bottom: 1px solid #eaeaea; text-align: right; color: #555;">OP. EXONERADA (S/):</td>
+                                <td style="padding: 6px 10px; border-bottom: 1px solid #eaeaea; text-align: right; font-weight: bold;">S/ {subtotal_productos}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 10px; border-bottom: 1px solid #eaeaea; text-align: right; color: #555;">DESPACHO Y GUÍA (S/):</td>
+                                <td style="padding: 6px 10px; border-bottom: 1px solid #eaeaea; text-align: right; font-weight: bold;">S/ 15.00</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 10px; border-bottom: 1px solid #eaeaea; text-align: right; color: #555;">I.G.V. (0.00%):</td>
+                                <td style="padding: 6px 10px; border-bottom: 1px solid #eaeaea; text-align: right; font-weight: bold;">S/ 0.00</td>
+                            </tr>
+                            <tr style="background-color: #264a32; color: #ffffff; font-size: 14px;">
+                                <td style="padding: 8px 10px; text-align: right; font-weight: bold;">IMPORTE TOTAL:</td>
+                                <td style="padding: 8px 10px; text-align: right; font-weight: bold;">S/ {total_pagar}</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
     </div>
     """
 
@@ -876,19 +994,22 @@ def pasarela_pago(request):
 
 @login_required
 def comprobante_pago(request, codigo):
-    """Muestra la boleta / comprobante electronico generado tras pasar por la pasarela de pago."""
+    """Muestra la boleta / comprobante electronico formal generado tras pasar por la pasarela de pago."""
     pedidos_tx = Pedido.objects.filter(comprador=request.user, codigo_transaccion=codigo).select_related('producto', 'producto__productor')
     if not pedidos_tx.exists():
         return redirect('mis_pedidos')
 
+    primer_pedido = pedidos_tx.first()
+    serie_boleta = f"B001-{primer_pedido.id:06d}" if primer_pedido else "B001-000001"
     subtotal_tx = sum(p.total for p in pedidos_tx)
     costo_logistica = Decimal("15.00")
     total_tx = subtotal_tx + costo_logistica
 
     contexto = {
         'codigo': codigo,
+        'serie_boleta': serie_boleta,
         'pedidos_tx': pedidos_tx,
-        'primer_pedido': pedidos_tx.first(),
+        'primer_pedido': primer_pedido,
         'subtotal_tx': subtotal_tx,
         'costo_logistica': costo_logistica,
         'total_tx': total_tx,
