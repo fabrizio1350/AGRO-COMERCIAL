@@ -215,9 +215,9 @@
             <div>
                 {% if user.is_authenticated %}
                     {% if rol_actual == 'PRODUCTOR' %}
-                        <span>Cuenta activa: <strong>Vendedor / Productor ({{ user.first_name|default:user.username }})</strong></span>
+                        <span>Cuenta activa: <strong>Vendedor / Productor — {{ user.email|default:user.username }}</strong></span>
                     {% else %}
-                        <span>Cuenta activa: <strong>Comprador ({{ user.first_name|default:user.username }})</strong></span>
+                        <span>Cuenta activa: <strong>Comprador — {{ user.email|default:user.username }}</strong></span>
                     {% endif %}
                 {% else %}
                     <span>Plataforma de comercialización agrícola directa del campo</span>
