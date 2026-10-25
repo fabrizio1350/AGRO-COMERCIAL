@@ -4,21 +4,22 @@
 
 {% block content %}
 <!-- Portada principal con Carrusel de Ofertas del Dia a la derecha -->
-<div class="bg-white border p-4 p-md-5 mb-5">
+<div class="bg-white border p-4 p-md-5 mb-5" style="background: linear-gradient(135deg, #ffffff 0%, #f9f6ee 100%);">
     <div class="row align-items-center g-4">
         <div class="col-lg-6">
-            <h1 class="h2 fw-bold mb-3">
-                Productos agrícolas directo del productor a precios accesibles
+            <span class="badge bg-success-subtle mb-2 px-3 py-1">Comercio Directo del Campo</span>
+            <h1 class="h2 fw-bold mb-3" style="color: #1f3f29;">
+                Productos agrícolas frescos a precios directos del productor
             </h1>
             <p class="text-secondary mb-4">
                 Encuentra cosechas del día con descuentos directos para apoyar tu economía familiar o abastecer tu negocio sin intermediarios.
             </p>
             <div class="d-flex flex-wrap gap-2">
                 <a href="{% url 'ventas_por_oferta' %}" class="btn btn-success px-4 py-2">
-                    Ver todas las Ofertas
+                    Ver Ofertas del Día
                 </a>
-                <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary px-4 py-2">
-                    Ir al Marketplace
+                <a href="{% url 'catalogo' %}" class="btn btn-outline-success px-4 py-2">
+                    Explorar Marketplace
                 </a>
             </div>
         </div>
@@ -26,20 +27,24 @@
         <!-- Carrusel automatico de Ofertas del Dia -->
         <div class="col-lg-6">
             {% if productos_en_oferta %}
-            <div id="carruselOfertasDia" class="carousel slide border rounded overflow-hidden bg-light" data-bs-ride="carousel" data-bs-interval="3500">
+            <div id="carruselOfertasDia" class="carousel slide border rounded-3 overflow-hidden bg-white shadow-sm" data-bs-ride="carousel" data-bs-interval="3500">
                 <div class="carousel-inner">
                     {% for of in productos_en_oferta %}
                     <div class="carousel-item {% if forloop.first %}active{% endif %}">
                         <div class="p-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold small text-secondary">Oferta del Día ({{ forloop.counter }} de {{ productos_en_oferta.count }})</span>
-                                <span class="badge bg-danger">-{{ of.porcentaje_descuento }}% Descuento</span>
+                                <span class="fw-bold small text-success">
+                                    <i class="bi bi-stars me-1"></i>Oferta Destacada ({{ forloop.counter }}/{{ productos_en_oferta.count }})
+                                </span>
+                                <span class="etiqueta-oferta small">
+                                    <i class="bi bi-tag-fill me-1"></i>Ahorra {{ of.porcentaje_descuento }}%
+                                </span>
                             </div>
-                            <img src="{{ of.url_imagen }}" alt="{{ of.nombre }}" class="img-referencia mb-3" style="height: 190px;">
+                            <img src="{{ of.url_imagen }}" alt="{{ of.nombre }}" class="img-referencia mb-3" style="height: 190px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h5 class="h6 fw-bold mb-0">{{ of.nombre }}</h5>
-                                    <span class="text-muted small">{{ of.origen }}</span>
+                                    <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ of.origen }}</span>
                                 </div>
                                 <div class="text-end">
                                     <span class="text-decoration-line-through text-muted small me-1">S/ {{ of.precio }}</span>
@@ -47,9 +52,9 @@
                                     <span class="text-muted small">/ {{ of.get_unidad_display }}</span>
                                 </div>
                             </div>
-                            <div class="mt-2 text-end">
-                                <a href="{% url 'detalle_producto' of.id %}" class="btn btn-sm btn-success w-100">
-                                    Aprovechar esta Oferta
+                            <div class="mt-3">
+                                <a href="{% url 'detalle_producto' of.id %}" class="btn btn-sm btn-success w-100 py-2">
+                                    Ver esta Oferta
                                 </a>
                             </div>
                         </div>
@@ -93,23 +98,26 @@
 
 <!-- Productos Destacados -->
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h5 fw-bold mb-0">Productos Disponibles</h2>
-    <a href="{% url 'catalogo' %}" class="btn btn-sm btn-outline-secondary">Filtrar en Marketplace</a>
+    <h2 class="h5 fw-bold mb-0">Productos Disponibles en el Campo</h2>
+    <a href="{% url 'catalogo' %}" class="btn btn-sm btn-outline-success">Filtrar en Marketplace</a>
 </div>
 <div class="row g-4 mb-4">
     {% for prod in productos_destacados %}
     <div class="col-md-6 col-lg-4">
         <div class="card h-100 border">
-            <div class="p-3 pb-0 position-relative">
-                {% if prod.en_oferta and prod.precio_oferta %}
-                    <span class="badge bg-danger position-absolute top-0 end-0 m-4">
-                        -{{ prod.porcentaje_descuento }}% Oferta
-                    </span>
-                {% endif %}
-                <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 175px;">
+            <div class="p-3 pb-0">
+                <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 175px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
             </div>
             <div class="card-body d-flex flex-column">
-                <span class="text-muted small mb-1">{{ prod.categoria.nombre }} • {{ prod.origen }}</span>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small">{{ prod.categoria.nombre }} • {{ prod.origen }}</span>
+                    {% if prod.en_oferta and prod.precio_oferta %}
+                        <span class="etiqueta-oferta small">
+                            <i class="bi bi-tag-fill me-1"></i>-{{ prod.porcentaje_descuento }}%
+                        </span>
+                    {% endif %}
+                </div>
+
                 <h5 class="h6 fw-bold mb-3">{{ prod.nombre }}</h5>
 
                 <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
