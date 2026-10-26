@@ -20,6 +20,18 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'http://proyects.site',
+    'https://proyects.site',
+    'http://*.proyects.site',
+    'https://*.proyects.site',
+    'http://149.34.50.121',
+    'http://149.34.50.121:8000',
+]
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Permite que la ventana emergente de Google Sign-In se comunique con la pagina
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
