@@ -6,6 +6,7 @@ import uuid
 from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
+from django.utils import timezone
 from django.core.mail import send_mail
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
@@ -325,14 +326,22 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
     if not correo_destino:
         return False
 
-    primer_ped = lista_pedidos[0] if lista_pedidos else None
-    num_correlativo = f"{primer_ped.id:06d}" if primer_ped else "000001"
-    serie_boleta = f"B001-{num_correlativo}"
-    fecha_emision = timezone.localtime(primer_ped.fecha_pedido).strftime("%d/%m/%Y %H:%M") if primer_ped else timezone.now().strftime("%d/%m/%Y %H:%M")
-    nombre_cliente = f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username
-    direccion_cliente = f"{primer_ped.direccion_entrega} - {primer_ped.ciudad_destino}" if primer_ped else "Perú"
-    telefono_cliente = primer_ped.telefono_contacto if primer_ped else "-"
-    subtotal_productos = sum(p.total for p in lista_pedidos)
+    try:
+        primer_ped = lista_pedidos[0] if lista_pedidos else None
+        num_correlativo = f"{primer_ped.id:06d}" if primer_ped else "000001"
+        serie_boleta = f"B001-{num_correlativo}"
+        fecha_emision = timezone.localtime(primer_ped.fecha_pedido).strftime("%d/%m/%Y %H:%M") if primer_ped else timezone.now().strftime("%d/%m/%Y %H:%M")
+        nombre_cliente = f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username
+        direccion_cliente = f"{primer_ped.direccion_entrega} - {primer_ped.ciudad_destino}" if primer_ped else "Perú"
+        telefono_cliente = primer_ped.telefono_contacto if primer_ped else "-"
+        subtotal_productos = sum(p.total for p in lista_pedidos)
+    except Exception:
+        serie_boleta = "B001-000001"
+        fecha_emision = "26/10/2026"
+        nombre_cliente = usuario.username
+        direccion_cliente = "Perú"
+        telefono_cliente = "-"
+        subtotal_productos = total_pagar
 
     lineas_productos = "\n".join(
         [
@@ -526,11 +535,17 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
             msg.attach(MIMEText(cuerpo_texto, 'plain', 'utf-8'))
             msg.attach(MIMEText(cuerpo_html, 'html', 'utf-8'))
 
-            with smtplib.SMTP('smtp.gmail.com', 587, timeout=12) as server:
-                server.starttls()
-                server.login(remitente_gmail, clave_app_gmail)
-                server.sendmail(remitente_gmail, [correo_destino], msg.as_string())
-            return True
+            try:
+                with smtplib.SMTP('smtp.gmail.com', 587, timeout=7) as server:
+                    server.starttls()
+                    server.login(remitente_gmail, clave_app_gmail)
+                    server.sendmail(remitente_gmail, [correo_destino], msg.as_string())
+                return True
+            except Exception:
+                with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=7) as server_ssl:
+                    server_ssl.login(remitente_gmail, clave_app_gmail)
+                    server_ssl.sendmail(remitente_gmail, [correo_destino], msg.as_string())
+                return True
         except Exception as e:
             print(f"Error SMTP Gmail: {e}")
             return False
@@ -974,7 +989,7 @@ def pasarela_pago(request):
     import os
     tiene_smtp_gmail = bool((os.environ.get('EMAIL_HOST_PASSWORD') or getattr(settings, 'EMAIL_HOST_PASSWORD', '')).strip())
     algun_vendedor_tiene_cuenta = any(
-        bool(getattr(i.producto.productor, 'perfil', None) and i.producto.productor.perfil.cuenta_bancaria.strip())
+        bool((obtener_o_crear_perfil(i.producto.productor).cuenta_bancaria or '').strip())
         for i in items
     )
     contexto = {
