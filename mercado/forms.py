@@ -1,4 +1,7 @@
+from datetime import datetime, time, timedelta
 from django import forms
+from django.conf import settings
+from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import (
@@ -74,12 +77,35 @@ class RegistroUsuarioForm(UserCreationForm):
         self.fields['password2'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Repite la contraseña'})
 
 
+def _inicio_del_dia(dia):
+    return timezone.make_aware(datetime.combine(dia, time.min))
+
+
+def _fin_del_dia(dia):
+    return timezone.make_aware(datetime.combine(dia, time(23, 59, 59)))
+
+
 class ProductoForm(forms.ModelForm):
     origen = forms.ChoiceField(
         label="Lugar de origen (Arequipa)",
         choices=OPCIONES_LUGARES,
         initial=LUGAR_POR_DEFECTO,
         widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    # Fechas como dias del calendario; en save() se pasan a fecha y hora de Arequipa
+    vence_el = forms.DateField(
+        label="La publicación vence el",
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
+    )
+    oferta_desde = forms.DateField(
+        label="Oferta desde",
+        required=False,
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
+    )
+    oferta_hasta = forms.DateField(
+        label="Oferta hasta",
+        required=False,
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
     )
 
     class Meta:
@@ -110,6 +136,21 @@ class ProductoForm(forms.ModelForm):
         self.fields['categoria'].empty_label = "Elige una categoría"
         self.fields['categoria'].queryset = self.fields['categoria'].queryset.order_by('nombre')
 
+        hoy = timezone.localdate()
+        maximo = hoy + timedelta(days=settings.PUBLICACION_DIAS_MAXIMO)
+        for campo in ('vence_el', 'oferta_desde', 'oferta_hasta'):
+            self.fields[campo].widget.attrs.update({'min': hoy.isoformat(), 'max': maximo.isoformat()})
+
+        instancia = self.instance
+        if instancia.pk and instancia.fecha_vencimiento:
+            self.fields['vence_el'].initial = timezone.localtime(instancia.fecha_vencimiento).date()
+        else:
+            self.fields['vence_el'].initial = hoy + timedelta(days=settings.PUBLICACION_DIAS_VIGENCIA)
+        if instancia.pk and instancia.oferta_inicio:
+            self.fields['oferta_desde'].initial = timezone.localtime(instancia.oferta_inicio).date()
+        if instancia.pk and instancia.oferta_fin:
+            self.fields['oferta_hasta'].initial = timezone.localtime(instancia.oferta_fin).date()
+
     def clean_imagen(self):
         imagen = self.cleaned_data.get('imagen')
         if imagen and hasattr(imagen, 'size') and imagen.size > TAMANO_MAXIMO_FOTO:
@@ -126,7 +167,43 @@ class ProductoForm(forms.ModelForm):
             self.add_error('precio', "El precio debe ser mayor a cero.")
         if en_oferta and (not precio_oferta or (precio and precio_oferta >= precio)):
             self.add_error('precio_oferta', "El precio de oferta debe ser menor al precio normal.")
+
+        hoy = timezone.localdate()
+        maximo = hoy + timedelta(days=settings.PUBLICACION_DIAS_MAXIMO)
+        vence_el = cleaned_data.get('vence_el')
+        if vence_el and vence_el < hoy:
+            self.add_error('vence_el', "La fecha de vencimiento no puede estar en el pasado.")
+        elif vence_el and vence_el > maximo:
+            self.add_error('vence_el', f"Una publicación puede durar como máximo {settings.PUBLICACION_DIAS_MAXIMO} días.")
+
+        if en_oferta:
+            desde = cleaned_data.get('oferta_desde') or hoy
+            hasta = cleaned_data.get('oferta_hasta')
+            cleaned_data['oferta_desde'] = desde
+            if not hasta:
+                self.add_error('oferta_hasta', "Indica hasta qué día dura la oferta.")
+            elif hasta < hoy:
+                self.add_error('oferta_hasta', "No se puede publicar una oferta que ya venció.")
+            elif hasta < desde:
+                self.add_error('oferta_hasta', "La oferta debe terminar después de su fecha de inicio.")
+            elif vence_el and hasta > vence_el:
+                self.add_error('oferta_hasta', "La oferta no puede durar más que la publicación.")
         return cleaned_data
+
+    def save(self, commit=True):
+        producto = super().save(commit=False)
+        producto.fecha_vencimiento = _fin_del_dia(self.cleaned_data['vence_el'])
+        if producto.en_oferta:
+            desde = self.cleaned_data['oferta_desde']
+            # Si empieza hoy, rige desde este momento y no desde la medianoche
+            producto.oferta_inicio = timezone.now() if desde <= timezone.localdate() else _inicio_del_dia(desde)
+            producto.oferta_fin = _fin_del_dia(self.cleaned_data['oferta_hasta'])
+        else:
+            producto.oferta_inicio = None
+            producto.oferta_fin = None
+        if commit:
+            producto.save()
+        return producto
 
 
 class OfertaNegociacionForm(forms.ModelForm):
