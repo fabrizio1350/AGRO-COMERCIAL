@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ productor.get_full_name|default:productor.username }} | AgroComercial{% endblock %}
+
+{% block content %}
+<section class="portada-productor entrar">
+    <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
+        <span class="avatar-inicial avatar-grande">{{ productor.first_name|default:productor.username|slice:":1"|upper }}</span>
+        <div class="flex-grow-1">
+            <span class="antetitulo text-white-50"><i class="bi bi-shop" aria-hidden="true"></i>Productor</span>
+            <h1 class="h2 fw-bold mb-1">{{ productor.get_full_name|default:productor.username }}</h1>
+            <p class="mb-0 opacity-75">
+                {% if perfil.nombre_finca %}<strong>{{ perfil.nombre_finca }}</strong> · {% endif %}
+                <i class="bi bi-geo-alt" aria-hidden="true"></i> {{ perfil.ubicacion|default:"Arequipa" }}
+                · En AgroComercial desde {{ productor.date_joined|date:"F Y" }}
+            </p>
+        </div>
+        {% if user.is_authenticated and user != productor and productos %}
+            <form action="{% url 'iniciar_chat' productos.0.id %}" method="post" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Enviar mensaje</button>
+            </form>
+        {% endif %}
+    </div>
+    <div class="cifras-productor">
+        <div><strong>{{ productos|length }}</strong><span>publicados</span></div>
+        <div><strong>{{ total_vendidos }}</strong><span>pedidos recibidos</span></div>
+        <div>
+            <strong>{% if promedio %}{{ promedio|floatformat:1 }} <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>{% else %}—{% endif %}</strong>
+            <span>{{ total_resenas }} calificaci{{ total_resenas|pluralize:"ón,ones" }}</span>
+        </div>
+    </div>
+</section>
+
+<h2 class="h4 fw-bold mt-4 mb-3">Productos publicados</h2>
+<div class="row g-3 g-lg-4" data-escalonado>
+    {% for prod in productos %}
+        <div class="col-6 col-md-4 col-xl-3">{% include 'includes/tarjeta_producto.html' with prod=prod %}</div>
+    {% empty %}
+        <div class="col-12"><div class="estado-vacio py-4"><i class="bi bi-basket" aria-hidden="true"></i><p class="text-muted mb-0">Este productor no tiene publicaciones vigentes ahora.</p></div></div>
+    {% endfor %}
+</div>
+
+{% if resenas %}
+<h2 class="h4 fw-bold mt-5 mb-3">Lo que dicen los compradores</h2>
+<div class="row g-3">
+    {% for r in resenas %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 p-3">
+            <div class="text-warning mb-1" aria-label="{{ r.calificacion }} de 5 estrellas">
+                {% for i in "12345" %}<i class="bi {% if forloop.counter <= r.calificacion %}bi-star-fill{% else %}bi-star{% endif %}" aria-hidden="true"></i>{% endfor %}
+            </div>
+            <p class="mb-2">{{ r.comentario }}</p>
+            <small class="text-muted">{{ r.autor.get_full_name|default:r.autor.username }} · {{ r.producto.nombre }}</small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
