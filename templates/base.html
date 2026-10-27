@@ -21,12 +21,12 @@
             <div>
                 {% if user.is_authenticated %}
                     {% if rol_actual == 'PRODUCTOR' %}
-                        <span>Cuenta activa: <strong>Vendedor / Productor — {{ user.email|default:user.username }}</strong></span>
+                        <span><i class="bi bi-person-check me-1"></i>Cuenta activa: <strong>Vendedor / Productor<span class="d-none d-sm-inline"> — {{ user.email|default:user.username }}</span></strong></span>
                     {% else %}
-                        <span>Cuenta activa: <strong>Comprador — {{ user.email|default:user.username }}</strong></span>
+                        <span><i class="bi bi-person-check me-1"></i>Cuenta activa: <strong>Comprador<span class="d-none d-sm-inline"> — {{ user.email|default:user.username }}</span></strong></span>
                     {% endif %}
                 {% else %}
-                    <span><i class="bi bi-flower2 me-1 text-success"></i>Plataforma de comercialización agrícola directa del campo</span>
+                    <span class="d-none d-sm-inline"><i class="bi bi-flower2 me-1 text-success"></i>Plataforma de comercialización agrícola directa del campo</span>
                 {% endif %}
             </div>
             <div>
