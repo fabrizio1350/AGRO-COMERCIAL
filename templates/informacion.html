@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Ayuda e información | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="encabezado-seccion entrar">
+    <div>
+        <span class="antetitulo"><i class="bi bi-info-circle-fill" aria-hidden="true"></i>Ayuda</span>
+        <h1 class="h2 fw-bold mb-0">Información de AgroComercial</h1>
+    </div>
+</div>
+
+<div class="alert alert-warning small mb-4" role="note">
+    AgroComercial es un proyecto de innovación en etapa de prueba. Los textos de términos y privacidad son una versión inicial y deben revisarse antes de abrir la plataforma al público.
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <section class="info-bloque mb-5" id="preguntas">
+            <h2 class="h4 fw-bold mb-3">Preguntas frecuentes</h2>
+            <div class="accordion" id="acordeonPreguntas">
+                <div class="accordion-item">
+                    <h3 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#p1">¿Quién puede vender en AgroComercial?</button></h3>
+                    <div id="p1" class="accordion-collapse collapse show" data-bs-parent="#acordeonPreguntas"><div class="accordion-body">Cualquier productor, asociación o comerciante agrícola de la región Arequipa que cree una cuenta de vendedor.</div></div>
+                </div>
+                <div class="accordion-item">
+                    <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#p2">¿Cuánto dura una publicación?</button></h3>
+                    <div id="p2" class="accordion-collapse collapse" data-bs-parent="#acordeonPreguntas"><div class="accordion-body">El vendedor elige la fecha de vencimiento (hasta 90 días). Al vencer, la publicación se oculta y el vendedor puede renovarla desde su panel.</div></div>
+                </div>
+                <div class="accordion-item">
+                    <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#p3">¿Cómo funcionan las ofertas?</button></h3>
+                    <div id="p3" class="accordion-collapse collapse" data-bs-parent="#acordeonPreguntas"><div class="accordion-body">El vendedor pone un precio menor al normal con fecha de inicio y fin. La oferta solo se muestra mientras está vigente y la barra de tiempo indica cuánto le queda.</div></div>
+                </div>
+                <div class="accordion-item">
+                    <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#p4">¿Puedo negociar el precio?</button></h3>
+                    <div id="p4" class="accordion-collapse collapse" data-bs-parent="#acordeonPreguntas"><div class="accordion-body">Sí. Si el vendedor acepta propuestas, puedes enviarle un precio por cantidad desde la sección Ofertas y él decide si la acepta.</div></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="info-bloque mb-5" id="terminos">
+            <h2 class="h4 fw-bold mb-3">Términos y condiciones</h2>
+            <ul class="text-secondary">
+                <li>Cada vendedor es responsable de la información, calidad y disponibilidad de lo que publica.</li>
+                <li>Los precios de oferta deben ser reales y menores al precio normal del producto.</li>
+                <li>Las publicaciones vencidas o pausadas no pueden comprarse.</li>
+                <li>Se pueden retirar publicaciones con contenido falso u ofensivo.</li>
+            </ul>
+        </section>
+
+        <section class="info-bloque mb-5" id="privacidad">
+            <h2 class="h4 fw-bold mb-3">Privacidad</h2>
+            <ul class="text-secondary">
+                <li>Guardamos tu nombre, correo, teléfono y distrito para que compradores y vendedores puedan coordinar.</li>
+                <li>Las contraseñas se guardan encriptadas.</li>
+                <li>No vendemos tus datos a terceros.</li>
+            </ul>
+        </section>
+
+        <section class="info-bloque" id="contacto">
+            <h2 class="h4 fw-bold mb-3">Contacto</h2>
+            {% if correo_contacto %}
+                <p class="text-secondary">Escríbenos a <a href="mailto:{{ correo_contacto }}">{{ correo_contacto }}</a>.</p>
+            {% else %}
+                <p class="text-secondary">Pronto publicaremos un correo de contacto.</p>
+            {% endif %}
+        </section>
+    </div>
+    <div class="col-lg-4">
+        <div class="bg-white border p-4 position-sticky" style="top: 140px;">
+            <h2 class="h6 fw-bold">En esta página</h2>
+            <nav class="d-grid gap-2 small">
+                <a href="#preguntas" class="enlace-ver-todo">Preguntas frecuentes</a>
+                <a href="#terminos" class="enlace-ver-todo">Términos y condiciones</a>
+                <a href="#privacidad" class="enlace-ver-todo">Privacidad</a>
+                <a href="#contacto" class="enlace-ver-todo">Contacto</a>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}
