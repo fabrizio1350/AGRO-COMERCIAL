@@ -1,4 +1,14 @@
-from .models import PerfilUsuario, ItemCarrito, OfertaNegociacion
+from django.conf import settings
+from .models import Categoria, PerfilUsuario, ItemCarrito, OfertaNegociacion
+
+
+def datos_del_sitio(request):
+    """Datos que usa la cabecera en todas las paginas (menu de categorias y version de estaticos)."""
+    return {
+        'categorias_menu': Categoria.objects.order_by('nombre'),
+        'version_estaticos': settings.VERSION_ESTATICOS,
+        'correo_contacto': settings.CORREO_CONTACTO,
+    }
 
 
 def datos_globales_usuario(request):
