@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Pagar Comisión de Oferta | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 fw-bold mb-1">Pago de Comisión para Publicar tu Oferta</h1>
+        <p class="text-muted small mb-0">Tu producto se publicará como oferta apenas se confirme el pago de la comisión.</p>
+    </div>
+    <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary btn-sm">
+        &larr; Volver a Mi Panel
+    </a>
+</div>
+
+<div class="alert alert-warning small">
+    <i class="bi bi-info-circle-fill me-1"></i>
+    <strong>Modo simulación:</strong> este pago es de prueba, no se cobra dinero real.
+</div>
+
+<form method="post" action="{% url 'pagar_comision_oferta' producto.id %}">
+    {% csrf_token %}
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="bg-white border p-4">
+                <h5 class="h6 fw-bold mb-3">Elige cómo pagar la comisión</h5>
+
+                <div class="row g-3">
+                    <!-- Opcion 1: Yape / Plin con QR -->
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100" style="background-color: #faf8f3;">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoYape" value="YAPE_PLIN" checked>
+                                <label class="form-check-label fw-bold" for="pagoYape">
+                                    Yape / Plin
+                                </label>
+                            </div>
+                            <p class="text-muted small ms-4 mb-2">Escanea el QR de AgroComercial y paga el monto exacto.</p>
+                            <div class="text-center">
+                                <img src="/static/imagenes/qr_pago.svg" alt="QR de pago AgroComercial" style="width: 140px; height: 140px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Opcion 2: Tarjeta de prueba -->
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="metodo_pago" id="pagoTarjeta" value="TARJETA">
+                                <label class="form-check-label fw-bold" for="pagoTarjeta">
+                                    Tarjeta de Crédito / Débito
+                                </label>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label small text-muted mb-1">Número de Tarjeta (prueba)</label>
+                                    <input type="text" class="form-control form-control-sm" value="4111 1111 1111 1111">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted mb-1">Vencimiento</label>
+                                    <input type="text" class="form-control form-control-sm" value="09/28">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted mb-1">CVV</label>
+                                    <input type="password" class="form-control form-control-sm" value="123">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen de la comision -->
+        <div class="col-lg-4">
+            <div class="bg-white border p-4">
+                <h5 class="h6 fw-bold mb-3">Resumen de la Comisión</h5>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" class="img-referencia" style="height: 55px; width: 70px; object-fit: cover;">
+                    <div>
+                        <div class="fw-semibold small">{{ producto.nombre }}</div>
+                        <span class="badge bg-danger">Oferta: S/ {{ producto.precio_oferta }} (-{{ producto.porcentaje_descuento }}%)</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between small text-secondary mb-1">
+                    <span>Stock en oferta:</span>
+                    <span>{{ producto.stock }} {{ producto.nombre_unidad_stock }}</span>
+                </div>
+                <div class="d-flex justify-content-between small text-secondary mb-1">
+                    <span>Valor del lote:</span>
+                    <span>S/ {{ producto.valor_oferta }}</span>
+                </div>
+                <div class="d-flex justify-content-between small text-secondary mb-2">
+                    <span>Comisión AgroComercial:</span>
+                    <span>{{ porcentaje|floatformat:"-2" }}% (mín. S/ {{ minimo|floatformat:2 }})</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold">Total a Pagar:</span>
+                    <span class="fs-4 fw-bold text-success">S/ {{ monto }}</span>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
+                    Pagar y Publicar mi Oferta
+                </button>
+                <p class="text-muted small mt-2 mb-0">Si no pagas ahora, tu producto queda guardado y puedes pagar luego desde tu panel.</p>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
