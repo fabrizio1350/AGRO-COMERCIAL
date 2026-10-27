@@ -21,6 +21,8 @@
     </div>
 </div>
 
+{% include 'includes/carrusel_ofertas.html' %}
+
 <!-- Barra de busqueda y filtros bien proporcionada y responsive -->
 <form method="get" action="{% url 'catalogo' %}" class="bg-white border p-3 mb-4 entrar entrar-2">
     <div class="row g-2 align-items-end">
@@ -48,6 +50,8 @@
                 <option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes</option>
                 <option value="precio_asc" {% if orden_seleccionado == 'precio_asc' %}selected{% endif %}>Menor precio</option>
                 <option value="precio_desc" {% if orden_seleccionado == 'precio_desc' %}selected{% endif %}>Mayor precio</option>
+                <option value="stock" {% if orden_seleccionado == 'stock' %}selected{% endif %}>Más cantidad</option>
+                <option value="vence" {% if orden_seleccionado == 'vence' %}selected{% endif %}>Vencen pronto</option>
             </select>
         </div>
         <div class="col-12 col-md-3 d-flex gap-2">
@@ -55,7 +59,50 @@
             <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary btn-sm flex-grow-1"><i class="bi bi-x-circle me-1"></i>Limpiar</a>
         </div>
     </div>
+    <details class="filtros-avanzados mt-3" {% if ubicacion_seleccionada or unidad_seleccionada or precio_min or precio_max or cantidad_min or solo_ofertas %}open{% endif %}>
+        <summary>Más filtros <i class="bi bi-chevron-down ms-1" aria-hidden="true"></i></summary>
+        <div class="row g-2 align-items-end mt-1">
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-semibold mb-1" for="filtroUbicacion">Ubicación</label>
+                <select name="ubicacion" id="filtroUbicacion" class="form-select form-select-sm">
+                    <option value="">Todo Arequipa</option>
+                    {% for valor, nombre in lugares %}
+                    <option value="{{ valor }}" {% if ubicacion_seleccionada == valor %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold mb-1" for="filtroUnidad">Unidad</label>
+                <select name="unidad" id="filtroUnidad" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for valor, nombre in unidades %}
+                    <option value="{{ valor }}" {% if unidad_seleccionada == valor %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold mb-1" for="filtroPrecioMin">Precio mín. (S/)</label>
+                <input type="number" min="0" step="0.10" name="precio_min" id="filtroPrecioMin" value="{{ precio_min }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold mb-1" for="filtroPrecioMax">Precio máx. (S/)</label>
+                <input type="number" min="0" step="0.10" name="precio_max" id="filtroPrecioMax" value="{{ precio_max }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold mb-1" for="filtroCantidad">Cantidad disponible mín.</label>
+                <input type="number" min="0" step="1" name="cantidad_min" id="filtroCantidad" value="{{ cantidad_min }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-12 col-md-1">
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" name="ofertas" value="1" id="filtroOfertas" {% if solo_ofertas == '1' %}checked{% endif %}>
+                    <label class="form-check-label small fw-semibold" for="filtroOfertas">En oferta</label>
+                </div>
+            </div>
+        </div>
+    </details>
 </form>
+
+<p class="text-muted small mb-3">{{ total_resultados }} producto{{ total_resultados|pluralize }} encontrado{{ total_resultados|pluralize }}</p>
 
 <!-- Listado limpio de productos -->
 <div class="row g-4">
@@ -70,7 +117,7 @@
             <div class="card-body d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ prod.categoria.nombre|default:"Agrícola" }} • {{ prod.origen }}</span>
-                    {% if prod.en_oferta and prod.precio_oferta %}
+                    {% if prod.oferta_activa %}
                         <span class="etiqueta-oferta small">
                             <i class="bi bi-tag-fill me-1"></i>-{{ prod.porcentaje_descuento }}%
                         </span>
@@ -89,13 +136,17 @@
                     </span>
                 </div>
 
-                <p class="text-secondary small mb-3 flex-grow-1">
+                <p class="text-secondary small mb-2 flex-grow-1">
                     {{ prod.descripcion|truncatewords:14 }}
                 </p>
+                <div class="text-muted small mb-2">
+                    <i class="bi bi-person me-1" aria-hidden="true"></i>{{ prod.productor.get_full_name|default:prod.productor.username }} · mín. {{ prod.minimo_compra }} {{ prod.nombre_unidad_minimo }}
+                </div>
+                {% include 'includes/barra_tiempo.html' with prod=prod compacta=True %}
 
                 <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
                     <div>
-                        {% if prod.en_oferta and prod.precio_oferta %}
+                        {% if prod.oferta_activa %}
                             <span class="text-decoration-line-through text-muted small me-1">S/ {{ prod.precio }}</span>
                             <span class="fs-5 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
                         {% else %}
@@ -132,4 +183,22 @@
     </div>
     {% endfor %}
 </div>
+
+{% if pagina.has_other_pages %}
+<nav class="mt-4" aria-label="Páginas del marketplace">
+    <ul class="pagination pagination-sm justify-content-center flex-wrap">
+        {% if pagina.has_previous %}
+        <li class="page-item"><a class="page-link" href="?{% if parametros_filtro %}{{ parametros_filtro }}&{% endif %}pagina={{ pagina.previous_page_number }}" aria-label="Página anterior">&laquo;</a></li>
+        {% endif %}
+        {% for numero in pagina.paginator.page_range %}
+        <li class="page-item {% if numero == pagina.number %}active{% endif %}">
+            <a class="page-link" href="?{% if parametros_filtro %}{{ parametros_filtro }}&{% endif %}pagina={{ numero }}" {% if numero == pagina.number %}aria-current="page"{% endif %}>{{ numero }}</a>
+        </li>
+        {% endfor %}
+        {% if pagina.has_next %}
+        <li class="page-item"><a class="page-link" href="?{% if parametros_filtro %}{{ parametros_filtro }}&{% endif %}pagina={{ pagina.next_page_number }}" aria-label="Página siguiente">&raquo;</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
 {% endblock %}
