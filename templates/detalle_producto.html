@@ -5,7 +5,7 @@
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3 small">
     <ol class="breadcrumb mb-0">
-        <li class="breadcrumb-item"><a href="{% url 'catalogo' %}" class="text-success text-decoration-none">Marketplace</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'catalogo' %}" class="text-success text-decoration-none">Productos</a></li>
         <li class="breadcrumb-item active" aria-current="page">{{ producto.nombre }}</li>
     </ol>
 </nav>
@@ -13,8 +13,9 @@
 <div class="row g-4 mb-4">
     <!-- Columna izquierda: Foto limpia y tarjeta de contacto del productor -->
     <div class="col-lg-5">
-        <div class="bg-white border p-3 mb-3">
-            <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" class="img-referencia" style="height: 280px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+        <div class="foto-detalle mb-3">
+            <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" style="view-transition-name: foto-producto-{{ producto.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+            {% if producto.oferta_activa %}<span class="chip chip-descuento">-{{ producto.porcentaje_descuento }}%</span>{% endif %}
         </div>
 
         <div class="bg-white border p-3">
@@ -267,4 +268,21 @@
         </div>
     </div>
 </div>
+
+{% if relacionados %}
+<section class="seccion pt-5">
+    <div class="encabezado-seccion revelar">
+        <div>
+            <span class="antetitulo"><i class="bi bi-basket-fill" aria-hidden="true"></i>También te puede interesar</span>
+            <h2>Productos relacionados</h2>
+        </div>
+        <a href="{% url 'catalogo' %}?categoria={{ producto.categoria_id }}" class="enlace-ver-todo">Ver la categoría <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="row g-3 g-lg-4" data-escalonado>
+        {% for prod in relacionados %}
+        <div class="col-6 col-lg-4">{% include 'includes/tarjeta_producto.html' with prod=prod %}</div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 {% endblock %}
