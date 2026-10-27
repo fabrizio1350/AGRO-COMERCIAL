@@ -117,6 +117,15 @@
                             </div>
                         </div>
 
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold mb-1" for="{{ form.vence_el.id_for_label }}">La publicación vence el</label>
+                            {{ form.vence_el }}
+                            {% if form.vence_el.errors %}
+                                <div class="text-danger small mt-1">{{ form.vence_el.errors|striptags }}</div>
+                            {% endif %}
+                            <div class="form-text small">Al vencer, el producto deja de mostrarse. Puedes renovarlo desde tu panel.</div>
+                        </div>
+
                         <div class="col-12"><hr class="my-1 text-muted"></div>
 
                         <div class="col-md-6">
@@ -132,6 +141,20 @@
                                 {% if form.precio_oferta.errors %}
                                     <div class="text-danger small mt-1">{{ form.precio_oferta.errors|striptags }}</div>
                                 {% endif %}
+                                <div class="row g-2 mt-1">
+                                    <div class="col-6">
+                                        <label class="form-label small text-muted mb-1" for="{{ form.oferta_desde.id_for_label }}">Desde</label>
+                                        {{ form.oferta_desde }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small text-muted mb-1" for="{{ form.oferta_hasta.id_for_label }}">Hasta</label>
+                                        {{ form.oferta_hasta }}
+                                    </div>
+                                </div>
+                                {% if form.oferta_hasta.errors %}
+                                    <div class="text-danger small mt-1">{{ form.oferta_hasta.errors|striptags }}</div>
+                                {% endif %}
+                                <div class="vista-previa-oferta small mt-2" id="vistaPreviaOferta" aria-live="polite"></div>
                                 <div class="form-text small">
                                     Publicar como oferta tiene una comisión de AgroComercial del {{ comision_porcentaje|floatformat:"-2" }}% del valor del lote (mín. S/ {{ comision_minima|floatformat:2 }}). Tu oferta se publica al pagarla.
                                 </div>
@@ -167,6 +190,37 @@
 </div>
 
 <script>
+    // Vista previa del descuento mientras el vendedor escribe (el servidor vuelve a validar todo)
+    (function() {
+        const precio = document.getElementById('id_precio');
+        const precioOferta = document.getElementById('id_precio_oferta');
+        const enOferta = document.getElementById('id_en_oferta');
+        const caja = document.getElementById('vistaPreviaOferta');
+        if (!precio || !precioOferta || !caja) return;
+        function actualizar() {
+            const normal = parseFloat(precio.value);
+            const oferta = parseFloat(precioOferta.value);
+            if (!enOferta.checked || !(normal > 0) || !(oferta > 0)) {
+                caja.textContent = '';
+                caja.className = 'vista-previa-oferta small mt-2';
+                return;
+            }
+            if (oferta >= normal) {
+                caja.textContent = 'El precio de oferta debe ser menor a S/ ' + normal.toFixed(2) + '.';
+                caja.className = 'vista-previa-oferta small mt-2 text-danger';
+                return;
+            }
+            const descuento = Math.round((normal - oferta) * 100 / normal);
+            caja.textContent = 'Vista previa: S/ ' + normal.toFixed(2) + ' → S/ ' + oferta.toFixed(2) + ' (−' + descuento + '%, ahorro S/ ' + (normal - oferta).toFixed(2) + ')';
+            caja.className = 'vista-previa-oferta small mt-2 text-success fw-semibold';
+        }
+        [precio, precioOferta, enOferta].forEach(function(el) {
+            el.addEventListener('input', actualizar);
+            el.addEventListener('change', actualizar);
+        });
+        actualizar();
+    })();
+
     (function() {
         const selectUnidad = document.getElementById('id_unidad');
         const sufijoStock = document.getElementById('sufijoStockUnidad');
