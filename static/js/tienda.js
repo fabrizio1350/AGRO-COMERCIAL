@@ -86,6 +86,45 @@
         });
     });
 
+    // ---------- Favoritos (corazon) ----------
+    document.addEventListener('submit', function (e) {
+        var form = e.target.closest('form[data-favorito]');
+        if (!form || !window.fetch) return;
+        e.preventDefault();
+        var boton = form.querySelector('button');
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Rapido': '1' },
+            credentials: 'same-origin'
+        }).then(function (r) {
+            var tipo = r.headers.get('content-type') || '';
+            if (tipo.indexOf('application/json') === -1) { window.location = r.url; return null; }
+            return r.json();
+        }).then(function (datos) {
+            if (!datos) return;
+            boton.classList.toggle('activo', datos.favorito);
+            boton.setAttribute('aria-pressed', datos.favorito ? 'true' : 'false');
+            boton.querySelector('i').className = 'bi ' + (datos.favorito ? 'bi-heart-fill' : 'bi-heart');
+            boton.classList.remove('latido');
+            void boton.offsetWidth;
+            if (datos.favorito) boton.classList.add('latido');
+            window.mostrarAviso(datos.mensaje, 'success');
+        }).catch(function () {
+            window.mostrarAviso('No pudimos guardar el favorito. Intenta de nuevo.', 'error');
+        });
+    });
+
+    // ---------- Galeria del detalle ----------
+    document.addEventListener('click', function (e) {
+        var mini = e.target.closest('[data-galeria] .miniatura');
+        if (!mini) return;
+        var principal = document.querySelector('.foto-detalle img');
+        if (!principal) return;
+        principal.src = mini.getAttribute('data-foto');
+        mini.parentNode.querySelectorAll('.miniatura').forEach(function (m) { m.classList.toggle('activa', m === mini); });
+    });
+
     // ---------- Despues de filtrar con HTMX ----------
     document.addEventListener('htmx:afterSwap', function (e) {
         var zona = e.detail.target && document.getElementById(e.detail.target.id) || document;
