@@ -40,14 +40,14 @@
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
         <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
-            <span class="text-muted small d-block mb-1">Productos Publicados</span>
-            <h3 class="h4 fw-bold text-dark mb-0">{{ mis_productos.count }}</h3>
+            <span class="text-muted small d-block mb-1">Productos Activos</span>
+            <h3 class="h4 fw-bold text-dark mb-0">{{ total_activos }} <span class="text-muted fs-6">/ {{ mis_productos.count }}</span></h3>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
-            <span class="text-muted small d-block mb-1">Ofertas Recibidas</span>
-            <h3 class="h4 fw-bold text-dark mb-0">{{ ofertas_recibidas.count }}</h3>
+            <span class="text-muted small d-block mb-1">Ofertas Activas / Vencidas</span>
+            <h3 class="h4 fw-bold text-dark mb-0">{{ total_ofertas_activas }} <span class="text-muted fs-6">/ {{ total_vencidas }} vencidas</span></h3>
         </div>
     </div>
     <div class="col-6 col-md-3">
@@ -101,8 +101,13 @@
                         <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
                     </td>
                     <td>
-                        {% if prod.en_oferta and prod.precio_oferta %}
+                        {% if prod.oferta_activa %}
                             <span class="badge bg-danger">En Oferta: S/ {{ prod.precio_oferta }} (-{{ prod.porcentaje_descuento }}%)</span>
+                            {% if prod.oferta_fin %}<div class="small text-muted mt-1">Hasta {{ prod.oferta_fin|date:"d/m/Y" }}</div>{% endif %}
+                        {% elif prod.oferta_programada %}
+                            <span class="estado-publicacion programada">Programada desde {{ prod.oferta_inicio|date:"d/m" }}</span>
+                        {% elif prod.en_oferta and prod.oferta_fin and not prod.oferta_pendiente_pago %}
+                            <span class="badge bg-light text-secondary border">Oferta terminada</span>
                         {% else %}
                             <span class="badge bg-light text-secondary border">Precio Regular</span>
                         {% endif %}
@@ -113,12 +118,23 @@
                     <td class="fw-semibold">{{ prod.stock }} {{ prod.nombre_unidad_stock }}</td>
                     <td>
                         {% if prod.oferta_pendiente_pago %}
-                            <span class="badge bg-warning text-dark">Pendiente de pago</span>
-                        {% elif prod.disponible and prod.stock > 0 %}
-                            <span class="badge bg-success">Activo</span>
+                            <span class="estado-publicacion pendiente">Pendiente de pago</span>
+                        {% elif prod.esta_vencida %}
+                            <span class="estado-publicacion vencida">Vencida</span>
+                        {% elif prod.stock == 0 %}
+                            <span class="estado-publicacion pausada">Agotado</span>
+                        {% elif not prod.disponible %}
+                            <span class="estado-publicacion pausada">Pausada</span>
                         {% else %}
-                            <span class="badge bg-secondary">Pausado/Agotado</span>
+                            <span class="estado-publicacion activa">Activa</span>
                         {% endif %}
+                        <div class="mt-2" style="min-width: 170px;">
+                            {% if prod.esta_vencida %}
+                                <span class="small text-muted">Venció el {{ prod.fecha_vencimiento|date:"d/m/Y" }}</span>
+                            {% else %}
+                                {% include 'includes/barra_tiempo.html' with prod=prod compacta=True %}
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="text-end">
                         <div class="d-inline-flex gap-1">
@@ -126,6 +142,17 @@
                             <a href="{% url 'pagar_comision_oferta' prod.id %}" class="btn btn-success btn-sm">
                                 Pagar comisión
                             </a>
+                            {% endif %}
+                            {% if prod.esta_vencida %}
+                            <form action="{% url 'renovar_producto' prod.id %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm">Renovar</button>
+                            </form>
+                            {% elif not prod.oferta_pendiente_pago and prod.stock > 0 %}
+                            <form action="{% url 'pausar_producto' prod.id %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">{% if prod.disponible %}Pausar{% else %}Activar{% endif %}</button>
+                            </form>
                             {% endif %}
                             <a href="{% url 'editar_producto' prod.id %}" class="btn btn-outline-secondary btn-sm">
                                 Editar
