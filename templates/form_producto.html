@@ -110,6 +110,9 @@
                                 {% if form.precio_oferta.errors %}
                                     <div class="text-danger small mt-1">{{ form.precio_oferta.errors|striptags }}</div>
                                 {% endif %}
+                                <div class="form-text small">
+                                    Publicar como oferta tiene una comisión de AgroComercial del {{ comision_porcentaje|floatformat:"-2" }}% del valor del lote (mín. S/ {{ comision_minima|floatformat:2 }}). Tu oferta se publica al pagarla.
+                                </div>
                             </div>
                         </div>
 
