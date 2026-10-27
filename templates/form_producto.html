@@ -81,6 +81,22 @@
                         </div>
 
                         <div class="col-12">
+                            <label class="form-label small fw-semibold" for="fotosExtra">Más fotos (opcional, hasta 4)</label>
+                            {% if producto and producto.fotos.exists %}
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                {% for foto in producto.fotos.all %}
+                                <label class="foto-extra">
+                                    <img src="{{ foto.imagen.url }}" alt="Foto adicional {{ forloop.counter }}">
+                                    <span class="small"><input type="checkbox" name="borrar_foto" value="{{ foto.id }}" class="form-check-input me-1">Quitar</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <input type="file" name="fotos_extra" id="fotosExtra" class="form-control" accept=".jpg,.jpeg,.png,.webp" multiple>
+                            <div class="form-text">Muestra el lote, el empaque o la chacra. JPG, PNG o WEBP de hasta 5 MB cada una.</div>
+                        </div>
+
+                        <div class="col-12">
                             <label class="form-label small fw-semibold">Descripción del Producto</label>
                             {{ form.descripcion }}
                         </div>
