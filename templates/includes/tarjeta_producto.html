@@ -9,6 +9,7 @@ La foto lleva un nombre de transicion para que "vuele" hasta el detalle en Chrom
             {% if prod.oferta_activa %}<span class="chip chip-descuento">-{{ prod.porcentaje_descuento }}%</span>{% endif %}
             {% if prod.tipo_cultivo == 'ORGANICO' %}<span class="chip"><i class="bi bi-leaf" aria-hidden="true"></i>Orgánico</span>{% endif %}
         </div>
+        {% if user.is_authenticated %}{% include 'includes/boton_favorito.html' with prod=prod %}{% endif %}
     </div>
     <div class="cuerpo">
         <div class="meta text-truncate">{{ prod.categoria.nombre|default:"Agrícola" }} · {{ prod.origen|cut:", Arequipa" }}</div>
