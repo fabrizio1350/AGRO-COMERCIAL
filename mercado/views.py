@@ -23,6 +23,9 @@ from .models import (
     Pedido,
     ResenaProducto,
     PagoComision,
+    CATEGORIAS_AGRICOLAS,
+    LUGARES_AREQUIPA,
+    LUGAR_POR_DEFECTO,
 )
 from .forms import (
     RegistroUsuarioForm,
@@ -39,22 +42,12 @@ def asegurar_datos_iniciales():
     if Producto.objects.exists():
         return
 
-    cat_tuberculos, _ = Categoria.objects.get_or_create(
-        nombre="Tubérculos y Raíces",
-        defaults={"descripcion": "Papas nativas, camotes, yucas y ollucos cosechados en sierra y costa."}
-    )
-    cat_hortalizas, _ = Categoria.objects.get_or_create(
-        nombre="Hortalizas y Verduras",
-        defaults={"descripcion": "Verduras frescas de huerta listas para distribución directa."}
-    )
-    cat_frutas, _ = Categoria.objects.get_or_create(
-        nombre="Frutas de Estación",
-        defaults={"descripcion": "Frutas seleccionadas directamente de los valles productores."}
-    )
-    cat_granos, _ = Categoria.objects.get_or_create(
-        nombre="Granos y Cereales",
-        defaults={"descripcion": "Quinua, maíz amiláceo, habas secas y menestras andinas."}
-    )
+    for nombre_cat, descripcion_cat in CATEGORIAS_AGRICOLAS:
+        Categoria.objects.get_or_create(nombre=nombre_cat, defaults={"descripcion": descripcion_cat})
+    cat_tuberculos = Categoria.objects.get(nombre="Tubérculos y Raíces")
+    cat_hortalizas = Categoria.objects.get(nombre="Hortalizas y Verduras")
+    cat_frutas = Categoria.objects.get(nombre="Frutas de Estación")
+    cat_granos = Categoria.objects.get(nombre="Granos y Cereales")
 
     productor1, creado1 = User.objects.get_or_create(
         username="productor_mantaro",
@@ -72,8 +65,8 @@ def asegurar_datos_iniciales():
             rol="PRODUCTOR",
             ruc_dni="10445566771",
             telefono="964112233",
-            ubicacion="Huancayo, Junín",
-            nombre_finca="Asociación Agrícola Valle del Mantaro",
+            ubicacion="Chiguata, Arequipa",
+            nombre_finca="Asociación Agrícola Valle de Chiguata",
             cuenta_bancaria="BCP Soles: 355-98765432-0-11"
         )
     else:
@@ -98,7 +91,7 @@ def asegurar_datos_iniciales():
             rol="PRODUCTOR",
             ruc_dni="20556677889",
             telefono="945887766",
-            ubicacion="Huaral, Lima",
+            ubicacion="Majes (Caylloma), Arequipa",
             nombre_finca="Fundo Santa Elena",
             cuenta_bancaria="BBVA Soles: 0011-0234-0200112233"
         )
@@ -124,7 +117,7 @@ def asegurar_datos_iniciales():
             rol="COMPRADOR",
             ruc_dni="20601122334",
             telefono="999445566",
-            ubicacion="Lima Metropolitana",
+            ubicacion="Cerro Colorado, Arequipa",
             nombre_finca="Distribuidora Mayorista Mendoza SAC"
         )
 
@@ -146,7 +139,7 @@ def asegurar_datos_iniciales():
             "unidad": "KG",
             "stock": 450,
             "minimo_compra": 10,
-            "origen": "Huancayo, Junín",
+            "origen": "Chiguata, Arequipa",
         },
         {
             "productor": productor1,
@@ -164,7 +157,7 @@ def asegurar_datos_iniciales():
             "unidad": "KG",
             "stock": 200,
             "minimo_compra": 5,
-            "origen": "Jauja, Junín",
+            "origen": "Chivay (Caylloma), Arequipa",
         },
         {
             "productor": productor1,
@@ -182,7 +175,7 @@ def asegurar_datos_iniciales():
             "unidad": "SACO",
             "stock": 35,
             "minimo_compra": 1,
-            "origen": "Tarma, Junín",
+            "origen": "Characato, Arequipa",
         },
         {
             "productor": productor2,
@@ -192,7 +185,7 @@ def asegurar_datos_iniciales():
             "tipo_cultivo": "INVERNADERO",
             "fecha_cosecha": hoy - timedelta(days=3),
             "calidad": "PRIMERA",
-            "descripcion": "Caja de 20 kg de mandarina dulce de exportación, cosechada esta semana en el valle de Huaral con riego tecnificado.",
+            "descripcion": "Caja de 20 kg de mandarina dulce de exportación, cosechada esta semana en el Valle de Tambo con riego tecnificado.",
             "precio": Decimal("48.00"),
             "en_oferta": True,
             "precio_oferta": Decimal("39.90"),
@@ -200,7 +193,7 @@ def asegurar_datos_iniciales():
             "unidad": "CAJA",
             "stock": 60,
             "minimo_compra": 2,
-            "origen": "Huaral, Lima",
+            "origen": "Valle de Tambo (Islay), Arequipa",
         },
         {
             "productor": productor2,
@@ -218,7 +211,7 @@ def asegurar_datos_iniciales():
             "unidad": "KG",
             "stock": 300,
             "minimo_compra": 15,
-            "origen": "Chancay, Lima",
+            "origen": "Majes (Caylloma), Arequipa",
         },
         {
             "productor": productor2,
@@ -236,7 +229,7 @@ def asegurar_datos_iniciales():
             "unidad": "CAJA",
             "stock": 40,
             "minimo_compra": 1,
-            "origen": "Barranca, Lima",
+            "origen": "La Joya, Arequipa",
         },
     ]
 
@@ -403,7 +396,7 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
                 <td style="padding: 20px; vertical-align: top; width: 60%;">
                     <div style="font-size: 18px; font-weight: bold; color: #264a32; letter-spacing: 0.5px;">AGROCOMERCIAL PERÚ S.A.C.</div>
                     <div style="font-size: 12px; color: #555; margin-top: 4px;">Plataforma de Comercialización Agrícola Directa del Productor</div>
-                    <div style="font-size: 11px; color: #666; margin-top: 2px;">Av. La Molina 1450, Lima - Perú | Central: (01) 640-8890</div>
+                    <div style="font-size: 11px; color: #666; margin-top: 2px;">Av. Ejército 1020, Cayma - Arequipa | Central: (054) 640-889</div>
                     <div style="font-size: 11px; color: #666;">Correo: facturacion@agrocomercial.pe</div>
                 </td>
                 <td style="padding: 20px; vertical-align: top; width: 40%; text-align: center;">
@@ -558,7 +551,7 @@ def inicio(request):
     if not request.user.is_authenticated:
         return redirect('login')
 
-    categorias = Categoria.objects.all()
+    categorias = Categoria.objects.all()[:8]
     productos_destacados = Producto.objects.filter(disponible=True, stock__gt=0)[:6]
     productos_en_oferta = Producto.objects.filter(disponible=True, en_oferta=True, stock__gt=0)
     total_productos = Producto.objects.filter(disponible=True).count()
@@ -982,7 +975,7 @@ def pasarela_pago(request):
             return redirect('comprobante_pago', codigo=codigo_tx)
     else:
         form = PasarelaPagoForm(initial={
-            'ciudad_destino': perfil.ubicacion or 'Lima Metropolitana',
+            'ciudad_destino': perfil.ubicacion if perfil.ubicacion in LUGARES_AREQUIPA else LUGAR_POR_DEFECTO,
             'telefono_contacto': perfil.telefono or '999445566',
             'metodo_pago': 'TARJETA',
         })
@@ -1262,7 +1255,7 @@ def login_google_callback(request):
         PerfilUsuario.objects.create(
             usuario=usuario,
             rol=rol_elegido,
-            ubicacion="Perú",
+            ubicacion=LUGAR_POR_DEFECTO,
             telefono="",
         )
     else:
@@ -1381,7 +1374,7 @@ def crear_producto(request):
         return redirect('panel_comprador')
 
     if request.method == 'POST':
-        form = ProductoForm(request.POST)
+        form = ProductoForm(request.POST, request.FILES)
         if form.is_valid():
             producto = form.save(commit=False)
             producto.productor = request.user
@@ -1416,7 +1409,7 @@ def editar_producto(request, producto_id):
     producto = get_object_or_404(Producto, id=producto_id, productor=request.user)
     estaba_en_oferta = producto.en_oferta and not producto.oferta_pendiente_pago
     if request.method == 'POST':
-        form = ProductoForm(request.POST, instance=producto)
+        form = ProductoForm(request.POST, request.FILES, instance=producto)
         if form.is_valid():
             producto = form.save(commit=False)
             if producto.en_oferta and not estaba_en_oferta:
