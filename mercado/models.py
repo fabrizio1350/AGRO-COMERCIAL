@@ -1,8 +1,58 @@
 from decimal import Decimal
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+
+
+# Por ahora la plataforma solo trabaja en Arequipa: estos son los lugares de compra y venta
+LUGARES_AREQUIPA = [
+    'Arequipa (Cercado), Arequipa',
+    'Cayma, Arequipa',
+    'Cerro Colorado, Arequipa',
+    'Yanahuara, Arequipa',
+    'Paucarpata, Arequipa',
+    'José Luis Bustamante y Rivero, Arequipa',
+    'Socabaya, Arequipa',
+    'Sachaca, Arequipa',
+    'Tiabaya, Arequipa',
+    'Characato, Arequipa',
+    'Sabandía, Arequipa',
+    'Chiguata, Arequipa',
+    'Mollebaya, Arequipa',
+    'Uchumayo, Arequipa',
+    'Yura, Arequipa',
+    'La Joya, Arequipa',
+    'Majes (Caylloma), Arequipa',
+    'Chivay (Caylloma), Arequipa',
+    'Valle de Tambo (Islay), Arequipa',
+    'Mollendo (Islay), Arequipa',
+    'Camaná, Arequipa',
+    'Aplao (Castilla), Arequipa',
+    'Chuquibamba (Condesuyos), Arequipa',
+    'Cotahuasi (La Unión), Arequipa',
+    'Caravelí, Arequipa',
+]
+LUGAR_POR_DEFECTO = 'Arequipa (Cercado), Arequipa'
+OPCIONES_LUGARES = [(lugar, lugar.replace(', Arequipa', '')) for lugar in LUGARES_AREQUIPA]
+
+# Categorias que puede elegir el vendedor al publicar (nombre, descripcion)
+CATEGORIAS_AGRICOLAS = [
+    ("Tubérculos y Raíces", "Papas nativas, camotes, yucas y ollucos cosechados en sierra y costa."),
+    ("Hortalizas y Verduras", "Verduras frescas de huerta listas para distribución directa."),
+    ("Frutas de Estación", "Frutas seleccionadas directamente de los valles productores."),
+    ("Granos y Cereales", "Quinua, maíz amiláceo, habas secas y menestras andinas."),
+    ("Legumbres y Menestras", "Frijol, haba, arveja, pallar y lenteja secos o en vaina."),
+    ("Ajíes, Rocotos y Condimentos", "Rocoto arequipeño, ají amarillo, panca, ajo y cebolla."),
+    ("Hierbas Aromáticas y Medicinales", "Huacatay, muña, orégano, hierba buena y plantas medicinales."),
+    ("Lácteos y Quesos", "Leche fresca, queso paria, queso fresco y derivados del campo."),
+    ("Forrajes y Pastos", "Alfalfa, avena forrajera y pastos para ganado."),
+    ("Semillas y Plantones", "Semillas certificadas y plantones para siembra."),
+    ("Frutos Secos y Deshidratados", "Pasas, higos secos, nueces y frutas deshidratadas."),
+    ("Flores y Plantas Ornamentales", "Flores de corte y plantas de vivero."),
+    ("Huevos y Animales Menores", "Huevos de granja, cuyes y aves de corral."),
+]
 
 
 class PerfilUsuario(models.Model):
@@ -40,7 +90,11 @@ class Categoria(models.Model):
             return '/static/imagenes/mandarina.jpg'
         if 'grano' in nombre_low or 'cereal' in nombre_low:
             return '/static/imagenes/quinua_blanca.jpg'
-        return '/static/imagenes/finca_productor.jpg'
+        # Para las categorias nuevas se usa la foto que subio algun vendedor
+        con_foto = self.productos.exclude(imagen='').exclude(imagen__isnull=True).first()
+        if con_foto:
+            return con_foto.imagen.url
+        return '/static/imagenes/banner_agro.jpg'
 
     def __str__(self):
         return self.nombre
@@ -83,6 +137,12 @@ class Producto(models.Model):
     stock = models.PositiveIntegerField(default=1)
     minimo_compra = models.PositiveIntegerField(default=1)
     origen = models.CharField(max_length=120, help_text="Región o valle de cosecha")
+    imagen = models.FileField(
+        upload_to='productos/',
+        blank=True,
+        validators=[FileExtensionValidator(['jpg', 'jpeg', 'png', 'webp'])],
+        help_text="Foto del producto subida por el vendedor",
+    )
     imagen_url = models.CharField(max_length=350, blank=True, help_text="Enlace de imagen de referencia (opcional)")
     disponible = models.BooleanField(default=True)
     oferta_pendiente_pago = models.BooleanField(default=False, help_text="La oferta no se publica hasta pagar la comisión")
@@ -140,6 +200,8 @@ class Producto(models.Model):
         return singular if self.minimo_compra == 1 else plural
 
     def url_imagen(self):
+        if self.imagen:
+            return self.imagen.url
         if self.imagen_url and self.imagen_url.strip():
             return self.imagen_url.strip()
         texto = f"{self.nombre} {self.variedad}".lower()
@@ -235,7 +297,7 @@ class Pedido(models.Model):
     precio_unitario = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=10, decimal_places=2)
     direccion_entrega = models.CharField(max_length=200)
-    ciudad_destino = models.CharField(max_length=100, default='Lima')
+    ciudad_destino = models.CharField(max_length=100, default=LUGAR_POR_DEFECTO)
     telefono_contacto = models.CharField(max_length=30, blank=True)
     comentario = models.TextField(blank=True)
     metodo_pago = models.CharField(max_length=20, choices=METODOS_PAGO, default='TARJETA')
