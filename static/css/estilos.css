@@ -1,0 +1,595 @@
+/* ==========================================================
+   Estilos generales de AgroComercial
+   Paleta tierra, hoja y cosecha (sin tonos azules frios)
+   ========================================================== */
+
+:root {
+    --verde-bosque: #1f3f29;
+    --verde-campo: #285436;
+    --verde-oscuro: #1e4029;
+    --verde-suave: #e6f2ea;
+    --ambar: #c67d28;
+    --ambar-claro: #fef3c7;
+    --arena: #f7f5f0;
+    --borde: #e3ded3;
+    --texto: #262925;
+    --sombra-suave: 0 1px 3px rgba(40, 36, 28, 0.05);
+    --sombra-hover: 0 10px 24px rgba(40, 36, 28, 0.12);
+    --radio: 12px;
+    --transicion: 0.25s ease;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--arena);
+    color: var(--texto);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.95rem;
+    -webkit-font-smoothing: antialiased;
+}
+
+main {
+    flex: 1;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.01em;
+}
+
+/* Tarjetas y contenedores con borde calido suave */
+.card, .caja-blanca, .bg-white.border {
+    background-color: #ffffff !important;
+    border: 1px solid var(--borde) !important;
+    border-radius: var(--radio) !important;
+    box-shadow: var(--sombra-suave);
+}
+
+/* Las tarjetas se elevan un poco al pasar el mouse */
+.card {
+    transition: transform var(--transicion), box-shadow var(--transicion);
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--sombra-hover);
+}
+
+/* Inputs y selects sin sobreponer la flecha */
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #cfc9bc;
+    padding: 0.5rem 0.75rem;
+    background-color: #ffffff;
+}
+
+.form-select {
+    border-radius: 8px;
+    border: 1px solid #cfc9bc;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 2.25rem;
+    background-color: #ffffff;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--verde-campo);
+    box-shadow: 0 0 0 0.2rem rgba(40, 84, 54, 0.14);
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background-color var(--transicion), transform 0.15s ease, box-shadow var(--transicion);
+}
+.btn:active {
+    transform: scale(0.97);
+}
+
+/* Botones principales en verde campo y tonos tierra */
+.btn-success, .btn-primary {
+    background-color: var(--verde-campo) !important;
+    border-color: var(--verde-campo) !important;
+    color: #ffffff !important;
+}
+.btn-success:hover, .btn-primary:hover {
+    background-color: var(--verde-oscuro) !important;
+    border-color: var(--verde-oscuro) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(40, 84, 54, 0.25);
+}
+.btn-outline-success, .btn-outline-primary {
+    color: var(--verde-campo) !important;
+    border-color: var(--verde-campo) !important;
+}
+.btn-outline-success:hover, .btn-outline-primary:hover {
+    background-color: var(--verde-campo) !important;
+    color: #ffffff !important;
+}
+
+.btn-warning {
+    background-color: var(--ambar) !important;
+    border-color: var(--ambar) !important;
+    color: #ffffff !important;
+}
+.btn-warning:hover {
+    background-color: #a8681e !important;
+    border-color: #a8681e !important;
+    color: #ffffff !important;
+}
+
+.text-success, .text-primary { color: var(--verde-campo) !important; }
+.bg-success { background-color: var(--verde-campo) !important; color: #ffffff !important; }
+.bg-success-subtle {
+    background-color: var(--verde-suave) !important;
+    color: var(--verde-oscuro) !important;
+    border: 1px solid #c5dfce;
+}
+
+/* Etiqueta de oferta estilo cosecha dorado/ambar */
+.badge.bg-danger, .etiqueta-oferta {
+    background-color: var(--ambar-claro) !important;
+    color: #92400e !important;
+    border: 1px solid #f59e0b !important;
+    font-weight: 600 !important;
+    padding: 0.35em 0.65em !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Precio en oferta en tono terracota calido legible */
+.text-danger {
+    color: #b45309 !important;
+}
+
+.bg-warning {
+    background-color: #f6efe2 !important;
+    color: #6e4e1f !important;
+    border: 1px solid #dfd2be;
+    font-weight: 500;
+}
+
+/* Pestañas en tonos verdes y tierra */
+.nav-tabs {
+    border-bottom: 1px solid #ded8cc;
+}
+.nav-tabs .nav-link {
+    color: #5c5852 !important;
+    font-weight: 500;
+    border-radius: 8px 8px 0 0;
+}
+.nav-tabs .nav-link:hover {
+    color: var(--texto) !important;
+}
+.nav-tabs .nav-link.active {
+    color: var(--verde-campo) !important;
+    font-weight: 600;
+    background-color: #ffffff !important;
+    border-color: #ded8cc #ded8cc #ffffff !important;
+}
+
+.nav-pills .nav-link {
+    color: #4a4742 !important;
+    border-radius: 8px;
+    font-weight: 500;
+}
+.nav-pills .nav-link.active {
+    background-color: var(--verde-campo) !important;
+    color: #ffffff !important;
+}
+
+/* ==========================================================
+   Header / barra de navegacion
+   ========================================================== */
+
+.navbar-principal {
+    background-color: var(--verde-bosque);
+    border-bottom: 2px solid #162e1e;
+}
+.navbar-comprador {
+    background-color: #264a32;
+    border-bottom: 2px solid #c68b38;
+}
+
+/* El header queda fijo arriba y gana sombra al bajar */
+.header-fijo {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    transition: box-shadow var(--transicion);
+}
+.header-fijo.con-sombra {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.logo-marca {
+    font-size: 1.2rem;
+    letter-spacing: 0.2px;
+}
+.logo-icono {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background-color: var(--ambar);
+    color: #ffffff;
+    font-size: 1.05rem;
+    transition: transform 0.4s ease;
+}
+.navbar-brand:hover .logo-icono {
+    transform: rotate(-12deg) scale(1.08);
+}
+
+.insignia-rol-comprador {
+    background-color: var(--ambar-claro);
+    color: #78350f;
+    border: 1px solid #f59e0b;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+.insignia-rol-vendedor {
+    background-color: #dcfce7;
+    color: #14532d;
+    border: 1px solid #86efac;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+.navbar-nav .nav-link {
+    position: relative;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9) !important;
+    border-radius: 8px;
+    transition: background-color var(--transicion), color var(--transicion);
+}
+.navbar-nav .nav-link i {
+    font-size: 1rem;
+    transition: transform var(--transicion);
+}
+.navbar-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff !important;
+}
+.navbar-nav .nav-link:hover i {
+    transform: translateY(-2px);
+}
+.navbar-nav .nav-link.activo {
+    background-color: rgba(255, 255, 255, 0.16);
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+.contador-carrito {
+    font-size: 0.7rem;
+    background-color: var(--ambar) !important;
+    color: #ffffff !important;
+}
+
+.barra-cambio-rol {
+    background-color: #ece7dc;
+    border-bottom: 1px solid #dcd4c4;
+    font-size: 0.82rem;
+    color: #4a463f;
+}
+
+/* ==========================================================
+   Imagenes
+   ========================================================== */
+
+.img-referencia {
+    width: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--borde);
+}
+
+/* Contenedor que hace zoom suave a la imagen al pasar el mouse */
+.img-zoom {
+    overflow: hidden;
+    border-radius: 10px;
+}
+.img-zoom img {
+    transition: transform 0.5s ease;
+}
+.card:hover .img-zoom img,
+.img-zoom:hover img {
+    transform: scale(1.06);
+}
+
+/* ==========================================================
+   Portada (inicio)
+   ========================================================== */
+
+.portada {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    background:
+        linear-gradient(110deg, rgba(20, 42, 27, 0.92) 0%, rgba(31, 63, 41, 0.78) 55%, rgba(31, 63, 41, 0.35) 100%),
+        url("../imagenes/banner_agro.jpg") center / cover no-repeat;
+    color: #ffffff;
+}
+.portada h1 {
+    color: #ffffff;
+}
+.portada .texto-portada {
+    color: rgba(255, 255, 255, 0.85);
+}
+.portada .btn-outline-light:hover {
+    color: var(--verde-bosque) !important;
+}
+.portada .carousel {
+    color: var(--texto);
+}
+
+.dato-portada {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+.dato-portada i {
+    color: #f7c873;
+    font-size: 1.1rem;
+}
+
+.titulo-seccion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.titulo-seccion i {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background-color: var(--verde-suave);
+    color: var(--verde-campo);
+    font-size: 1rem;
+}
+
+/* Tarjeta de categoria con texto encima de la foto */
+.tarjeta-categoria {
+    position: relative;
+    display: block;
+    height: 140px;
+    border-radius: var(--radio);
+    overflow: hidden;
+    color: #ffffff;
+    box-shadow: var(--sombra-suave);
+}
+.tarjeta-categoria img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+.tarjeta-categoria::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.05) 65%);
+}
+.tarjeta-categoria .texto-categoria {
+    position: absolute;
+    left: 0.85rem;
+    right: 0.85rem;
+    bottom: 0.7rem;
+    z-index: 1;
+}
+.tarjeta-categoria:hover img {
+    transform: scale(1.08);
+}
+.tarjeta-categoria:hover .flecha-categoria {
+    transform: translateX(4px);
+}
+.flecha-categoria {
+    display: inline-block;
+    transition: transform var(--transicion);
+}
+
+/* ==========================================================
+   Animaciones
+   ========================================================== */
+
+/* Elementos que aparecen al hacer scroll (se activa con animaciones.js) */
+.aparecer {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.aparecer.visible {
+    opacity: 1;
+    transform: none;
+}
+
+@keyframes entrarArriba {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
+}
+.entrar {
+    animation: entrarArriba 0.6s ease both;
+}
+.entrar-2 { animation-delay: 0.1s; }
+.entrar-3 { animation-delay: 0.2s; }
+.entrar-4 { animation-delay: 0.3s; }
+
+@keyframes latido {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.12); }
+}
+.latido {
+    animation: latido 1.8s ease-in-out infinite;
+}
+
+/* Si la persona prefiere menos movimiento, se quitan las animaciones */
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+    .aparecer { opacity: 1; transform: none; }
+}
+
+/* ==========================================================
+   Pie de pagina
+   ========================================================== */
+
+.pie-pagina {
+    background-color: var(--verde-bosque);
+    color: rgba(255, 255, 255, 0.8);
+}
+.pie-pagina a {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: color var(--transicion);
+}
+.pie-pagina a:hover {
+    color: #ffffff;
+}
+
+/* Boton para volver arriba */
+.btn-subir {
+    position: fixed;
+    right: 16px;
+    bottom: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--verde-campo);
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px);
+    transition: opacity var(--transicion), transform var(--transicion);
+    z-index: 1020;
+}
+.btn-subir.mostrar {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+}
+
+/* ==========================================================
+   Version movil
+   ========================================================== */
+
+/* Menu lateral (offcanvas) para telefonos */
+.menu-movil {
+    background-color: var(--verde-bosque);
+    color: #ffffff;
+}
+@media (max-width: 1199.98px) {
+    .menu-movil {
+        max-width: 82vw;
+    }
+    .menu-movil .navbar-nav .nav-link {
+        display: flex;
+        padding: 0.8rem 0.9rem !important;
+        font-size: 1rem;
+    }
+    .menu-movil .navbar-nav .nav-link i {
+        font-size: 1.15rem;
+        width: 1.4rem;
+        text-align: center;
+    }
+}
+.menu-movil .offcanvas-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 991.98px) {
+    .barra-cambio-rol {
+        font-size: 0.75rem;
+    }
+    .barra-cambio-rol .container-fluid {
+        gap: 0.25rem;
+        justify-content: center !important;
+        text-align: center;
+    }
+}
+
+@media (max-width: 767.98px) {
+    body {
+        font-size: 0.92rem;
+    }
+    main.container {
+        margin-top: 1rem !important;
+    }
+    .portada {
+        border-radius: 14px;
+    }
+    .portada h1 {
+        font-size: 1.5rem;
+    }
+    .tarjeta-categoria {
+        height: 115px;
+    }
+    /* Botones de la portada a todo lo ancho en telefono */
+    .acciones-portada .btn {
+        flex: 1 1 100%;
+    }
+    /* Evitar que la tarjeta se mueva al tocar en el celular */
+    .card:hover {
+        transform: none;
+    }
+    .alert {
+        font-size: 0.85rem;
+    }
+}
+
+/* En pantallas medianas el menu se compacta para que todo entre en una fila */
+@media (min-width: 1200px) {
+    .navbar-nav .nav-link {
+        font-size: 0.84rem;
+        padding: 0.45rem 0.5rem !important;
+        gap: 0.3rem;
+    }
+    .logo-marca {
+        font-size: 1.05rem;
+    }
+}
+
+/* Botones mas faciles de tocar en pantallas tactiles */
+@media (pointer: coarse) {
+    .btn-sm:not(.btn-link) {
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* Al imprimir (ej. la boleta) no mostrar elementos flotantes */
+@media print {
+    .btn-subir, .barra-cambio-rol {
+        display: none !important;
+    }
+    .aparecer {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
