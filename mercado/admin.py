@@ -7,6 +7,7 @@ from .models import (
     ItemCarrito,
     Pedido,
     ResenaProducto,
+    PagoComision,
 )
 
 
@@ -23,8 +24,8 @@ class CategoriaAdmin(admin.ModelAdmin):
 
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'productor', 'categoria', 'precio', 'en_oferta', 'precio_oferta', 'unidad', 'stock', 'disponible')
-    list_filter = ('categoria', 'en_oferta', 'disponible', 'unidad')
+    list_display = ('nombre', 'productor', 'categoria', 'precio', 'en_oferta', 'precio_oferta', 'unidad', 'stock', 'disponible', 'oferta_pendiente_pago')
+    list_filter = ('categoria', 'en_oferta', 'oferta_pendiente_pago', 'disponible', 'unidad')
     search_fields = ('nombre', 'origen')
 
 
@@ -43,6 +44,12 @@ class ItemCarritoAdmin(admin.ModelAdmin):
 class PedidoAdmin(admin.ModelAdmin):
     list_display = ('id', 'comprador', 'producto', 'cantidad', 'total', 'metodo_pago', 'estado_pago', 'estado', 'fecha_pedido')
     list_filter = ('estado', 'metodo_pago', 'estado_pago')
+
+
+@admin.register(PagoComision)
+class PagoComisionAdmin(admin.ModelAdmin):
+    list_display = ('codigo_transaccion', 'producto', 'productor', 'porcentaje', 'monto', 'metodo_pago', 'fecha_pago')
+    list_filter = ('metodo_pago',)
 
 
 @admin.register(ResenaProducto)
