@@ -80,7 +80,7 @@
                     <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" class="img-referencia" style="height: 55px; width: 70px; object-fit: cover;">
                     <div>
                         <div class="fw-semibold small">{{ producto.nombre }}</div>
-                        <span class="badge bg-danger">Oferta: S/ {{ producto.precio_oferta }} (-{{ producto.porcentaje_descuento }}%)</span>
+                        <span class="badge bg-danger">Oferta: S/ {{ producto.precio_oferta }} (-{{ producto.descuento_configurado }}%)</span>
                     </div>
                 </div>
 
