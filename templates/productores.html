@@ -1,63 +1,40 @@
 {% extends 'base.html' %}
 
-{% block title %}Directorio de Productores | AgroComercial{% endblock %}
+{% block title %}Productores | AgroComercial{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+<div class="encabezado-seccion entrar">
     <div>
-        <h1 class="h3 fw-bold mb-1 titulo-seccion entrar"><i class="bi bi-people"></i>Directorio de Productores Agrícolas</h1>
-        <p class="text-muted mb-0">Conoce a los agricultores y asociaciones que abastecen directamente la plataforma.</p>
+        <span class="antetitulo"><i class="bi bi-people-fill" aria-hidden="true"></i>Directo del campo</span>
+        <h1 class="h2 fw-bold mb-1">Productores de Arequipa</h1>
+        <p class="text-muted mb-0">Agricultores y asociaciones que venden en la plataforma. Entra a su página para ver sus productos y calificaciones.</p>
     </div>
     {% if not user.is_authenticated %}
-    <div class="mt-3 mt-md-0">
-        <a href="{% url 'registro' %}" class="btn btn-outline-success">
-            <i class="bi bi-person-plus me-1"></i>Registrarme como Productor
-        </a>
-    </div>
+        <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-outline-success"><i class="bi bi-person-plus me-1" aria-hidden="true"></i>Vender en AgroComercial</a>
     {% endif %}
 </div>
 
-<div class="row g-4">
+<div class="row g-3 g-lg-4" data-escalonado>
     {% for perfil in perfiles_productores %}
-    <div class="col-md-6 aparecer">
-        <div class="card p-3 p-md-4 h-100 d-flex flex-column">
-            <div class="d-flex gap-3 align-items-center mb-3">
-                <div class="img-zoom flex-shrink-0" style="width: 90px; height: 90px;">
-                    <img src="/static/imagenes/finca_productor.jpg" alt="Finca Productora" class="img-referencia h-100" loading="lazy">
-                </div>
-                <div>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle mb-1">
-                        <i class="bi bi-patch-check-fill me-1"></i>Productor Verificado
-                    </span>
-                    <h4 class="h5 fw-bold mb-1">
-                        {{ perfil.usuario.first_name|default:perfil.usuario.username }} {{ perfil.usuario.last_name }}
-                    </h4>
-                    <p class="text-muted small mb-0">
-                        {% if perfil.nombre_finca %}
-                            <strong>{{ perfil.nombre_finca }}</strong>
-                        {% else %}
-                            Productor Independiente
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-
-            <div class="bg-light rounded-2 p-3 mb-3 small text-secondary flex-grow-1">
-                <div class="mb-1"><i class="bi bi-geo-alt me-1 text-success"></i><strong>Región / Valle:</strong> {{ perfil.ubicacion|default:"Por especificar" }}</div>
-                <div class="mb-1"><i class="bi bi-telephone me-1 text-success"></i><strong>Teléfono:</strong> {{ perfil.telefono|default:"No registrado" }}</div>
-                <div class="mb-1 text-break"><i class="bi bi-envelope me-1 text-success"></i><strong>Correo:</strong> {{ perfil.usuario.email|default:"No especificado" }}</div>
-                <div><i class="bi bi-box-seam me-1 text-success"></i><strong>Productos publicados:</strong> {{ perfil.usuario.productos.count }} lotes activos</div>
-            </div>
-
-            <a href="{% url 'catalogo' %}?productor={{ perfil.usuario.id }}" class="btn btn-success btn-sm w-100">
-                <i class="bi bi-basket me-1"></i>Ver productos de {{ perfil.usuario.first_name|default:perfil.usuario.username }}
-            </a>
-        </div>
+    <div class="col-md-6 col-xl-4">
+        <a href="{% url 'perfil_productor' perfil.usuario.id %}" class="tarjeta-productor h-100">
+            <span class="avatar-inicial">{{ perfil.usuario.first_name|default:perfil.usuario.username|slice:":1"|upper }}</span>
+            <span class="flex-grow-1 min-w-0">
+                <strong class="d-block text-truncate">{{ perfil.usuario.get_full_name|default:perfil.usuario.username }}</strong>
+                <span class="small text-muted d-block text-truncate">{{ perfil.nombre_finca|default:"Productor independiente" }}</span>
+                <span class="small text-muted d-block text-truncate"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ perfil.ubicacion|default:"Arequipa" }}</span>
+                <span class="small text-success fw-semibold">{{ perfil.total_publicados }} producto{{ perfil.total_publicados|pluralize }} publicado{{ perfil.total_publicados|pluralize }}</span>
+            </span>
+            <i class="bi bi-arrow-right text-muted" aria-hidden="true"></i>
+        </a>
     </div>
     {% empty %}
     <div class="col-12">
-        <div class="alert alert-secondary text-center">
-            Aún no hay productores registrados en el directorio.
+        <div class="estado-vacio">
+            <i class="bi bi-people" aria-hidden="true"></i>
+            <h2 class="h5 fw-bold">Aún no hay productores registrados</h2>
+            <p class="text-muted">Si cultivas en Arequipa, crea tu cuenta de vendedor y publica tu primera cosecha.</p>
+            <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-success">Crear cuenta de vendedor</a>
         </div>
     </div>
     {% endfor %}
