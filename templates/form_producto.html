@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ accion }} | AgroComercial{% endblock %}
 
@@ -16,7 +17,7 @@
                 </a>
             </div>
 
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
 
                 {% if form.errors %}
@@ -46,16 +47,37 @@
                             {{ form.fecha_cosecha }}
                         </div>
                         <div class="col-md-7">
-                            <label class="form-label small fw-semibold">Lugar / Ciudad de Origen</label>
+                            <label class="form-label small fw-semibold">Lugar de Origen (Arequipa)</label>
                             {{ form.origen }}
+                            {% if form.origen.errors %}
+                                <div class="text-danger small mt-1">{{ form.origen.errors|striptags }}</div>
+                            {% endif %}
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label small fw-semibold">Imagen de Referencia del Producto (Enlace de Internet)</label>
-                            {{ form.imagen_url }}
-                            <div class="form-text small">
-                                Puedes pegar el enlace (URL) de cualquier foto de tu producto o chacra sacada de internet. Si lo dejas en blanco, se asignará una imagen de referencia automáticamente.
+                            <label class="form-label small fw-semibold" for="{{ form.imagen.id_for_label }}">Foto del Producto</label>
+                            <!-- Zona para arrastrar o elegir la foto; se ajusta sola al tamaño de la web -->
+                            <div class="zona-foto {% if producto.imagen %}con-foto{% endif %}" id="zonaFoto" tabindex="0" role="button" aria-label="Subir foto del producto">
+                                <img id="vistaFoto" class="vista-foto" alt="Vista previa de la foto" {% if producto.imagen %}src="{{ producto.imagen.url }}"{% endif %}>
+                                <div class="texto-zona-foto">
+                                    <i class="bi bi-cloud-arrow-up"></i>
+                                    <span class="fw-semibold">Arrastra tu foto aquí</span>
+                                    <span class="small text-muted">o toca para elegirla desde tu celular o PC</span>
+                                    <span class="small text-muted">JPG, PNG o WEBP</span>
+                                </div>
                             </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                                <button type="button" class="btn btn-outline-success btn-sm" id="btnElegirFoto">
+                                    <i class="bi bi-image me-1"></i><span id="textoBtnFoto">{% if producto.imagen %}Cambiar foto{% else %}Elegir foto{% endif %}</span>
+                                </button>
+                                <span class="small text-muted" id="estadoFoto">
+                                    {% if producto.imagen %}Esta es la foto actual del producto.{% else %}Si no subes foto se usará una imagen automática.{% endif %}
+                                </span>
+                            </div>
+                            {{ form.imagen }}
+                            {% if form.imagen.errors %}
+                                <div class="text-danger small mt-1">{{ form.imagen.errors|striptags }}</div>
+                            {% endif %}
                         </div>
 
                         <div class="col-12">
@@ -168,4 +190,8 @@
         }
     })();
 </script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/subir_foto.js' %}"></script>
 {% endblock %}
