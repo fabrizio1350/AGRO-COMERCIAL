@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Favoritos | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="encabezado-seccion entrar">
+    <div>
+        <span class="antetitulo"><i class="bi bi-heart-fill" aria-hidden="true"></i>Guardados para después</span>
+        <h1 class="h2 fw-bold mb-0">Mis favoritos</h1>
+    </div>
+</div>
+
+<div class="row g-3 g-lg-4" data-escalonado>
+    {% for fav in favoritos %}
+        <div class="col-6 col-md-4 col-xl-3">
+            {% include 'includes/tarjeta_producto.html' with prod=fav.producto %}
+            {% if not fav.producto.esta_publicado %}<p class="small text-muted mt-1 mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Esta publicación ya no está disponible.</p>{% endif %}
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="estado-vacio">
+                <i class="bi bi-heart" aria-hidden="true"></i>
+                <h2 class="h5 fw-bold">Todavía no guardas productos</h2>
+                <p class="text-muted">Toca el corazón de cualquier producto para tenerlo a mano aquí.</p>
+                <a href="{% url 'catalogo' %}" class="btn btn-success">Explorar productos</a>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
