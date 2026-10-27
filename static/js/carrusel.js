@@ -1,84 +1,71 @@
-// Carrusel horizontal de ofertas: flechas, deslizar con el dedo (scroll nativo) y avance automatico con pausa
+// Carrusel de ofertas: muestra una oferta a la vez y pasa sola a la siguiente.
+// Se detiene mientras el mouse o el foco estan encima y no avanza solo si se prefiere menos movimiento.
 document.addEventListener('DOMContentLoaded', function () {
     var sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var TIEMPO = 5000;
 
     document.querySelectorAll('.carrusel-ofertas').forEach(function (carrusel) {
-        var pista = carrusel.querySelector('[data-carrusel-pista]');
+        var slides = Array.prototype.slice.call(carrusel.querySelectorAll('.carrusel-slide'));
+        var contador = carrusel.querySelector('[data-carrusel-contador]');
         var btnAnterior = carrusel.querySelector('[data-carrusel-anterior]');
         var btnSiguiente = carrusel.querySelector('[data-carrusel-siguiente]');
-        var btnPausa = carrusel.querySelector('[data-carrusel-pausa]');
-        if (!pista) return;
+        if (slides.length < 2) return;
 
-        function paso() {
-            var tarjeta = pista.querySelector('.carrusel-tarjeta');
-            return tarjeta ? tarjeta.getBoundingClientRect().width + 16 : pista.clientWidth;
-        }
-
-        function mover(direccion) {
-            var alFinal = pista.scrollLeft + pista.clientWidth >= pista.scrollWidth - 4;
-            if (direccion > 0 && alFinal) {
-                pista.scrollTo({ left: 0, behavior: sinMovimiento ? 'auto' : 'smooth' });
-            } else {
-                pista.scrollBy({ left: direccion * paso(), behavior: sinMovimiento ? 'auto' : 'smooth' });
-            }
-        }
-
-        function revisarFlechas() {
-            var sobra = pista.scrollWidth - pista.clientWidth > 4;
-            carrusel.classList.toggle('sin-desborde', !sobra);
-        }
-
-        // Avance automatico: no corre si el usuario prefiere menos movimiento
+        var actual = 0;
         var temporizador = null;
-        var pausado = sinMovimiento;
+
+        function mostrar(indice) {
+            actual = (indice + slides.length) % slides.length;
+            slides.forEach(function (slide, i) {
+                var activo = i === actual;
+                slide.classList.toggle('activo', activo);
+                slide.setAttribute('aria-hidden', activo ? 'false' : 'true');
+                slide.querySelectorAll('a.btn').forEach(function (a) {
+                    if (activo) a.removeAttribute('tabindex'); else a.setAttribute('tabindex', '-1');
+                });
+            });
+            if (contador) contador.textContent = (actual + 1) + ' / ' + slides.length;
+        }
 
         function iniciar() {
             detener();
-            if (!pausado) temporizador = setInterval(function () { mover(1); }, 5000);
+            if (!sinMovimiento) temporizador = setInterval(function () { mostrar(actual + 1); }, TIEMPO);
         }
         function detener() {
             if (temporizador) clearInterval(temporizador);
             temporizador = null;
         }
-        function pintarPausa() {
-            if (!btnPausa) return;
-            btnPausa.innerHTML = pausado ? '<i class="bi bi-play-fill" aria-hidden="true"></i>' : '<i class="bi bi-pause-fill" aria-hidden="true"></i>';
-            btnPausa.setAttribute('aria-label', pausado ? 'Reanudar el avance automático' : 'Pausar el avance automático');
-            btnPausa.title = pausado ? 'Reanudar' : 'Pausar';
-            btnPausa.setAttribute('aria-pressed', pausado ? 'true' : 'false');
-        }
 
-        // Cuando el usuario interactua, el carrusel se detiene
-        function interaccionUsuario() {
-            pausado = true;
-            detener();
-            pintarPausa();
-        }
+        btnAnterior.addEventListener('click', function () { mostrar(actual - 1); iniciar(); });
+        btnSiguiente.addEventListener('click', function () { mostrar(actual + 1); iniciar(); });
 
-        if (btnAnterior) btnAnterior.addEventListener('click', function () { interaccionUsuario(); mover(-1); });
-        if (btnSiguiente) btnSiguiente.addEventListener('click', function () { interaccionUsuario(); mover(1); });
-        if (btnPausa) btnPausa.addEventListener('click', function () {
-            pausado = !pausado;
-            pintarPausa();
+        // Deslizar con el dedo en el celular
+        var inicioX = null;
+        carrusel.addEventListener('touchstart', function (e) { inicioX = e.touches[0].clientX; detener(); }, { passive: true });
+        carrusel.addEventListener('touchend', function (e) {
+            if (inicioX === null) return;
+            var diferencia = e.changedTouches[0].clientX - inicioX;
+            if (Math.abs(diferencia) > 40) mostrar(diferencia < 0 ? actual + 1 : actual - 1);
+            inicioX = null;
             iniciar();
+        }, { passive: true });
+
+        carrusel.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowRight') { mostrar(actual + 1); iniciar(); }
+            if (e.key === 'ArrowLeft') { mostrar(actual - 1); iniciar(); }
         });
-        pista.addEventListener('touchstart', interaccionUsuario, { passive: true });
-        pista.addEventListener('wheel', function (e) { if (Math.abs(e.deltaX) > 0) interaccionUsuario(); }, { passive: true });
-        pista.addEventListener('keydown', function (e) {
-            if (e.key === 'ArrowRight') { e.preventDefault(); interaccionUsuario(); mover(1); }
-            if (e.key === 'ArrowLeft') { e.preventDefault(); interaccionUsuario(); mover(-1); }
-        });
-        // Pausa temporal mientras el mouse o el foco estan dentro
         carrusel.addEventListener('mouseenter', detener);
         carrusel.addEventListener('mouseleave', iniciar);
         carrusel.addEventListener('focusin', detener);
         carrusel.addEventListener('focusout', function (e) {
             if (!carrusel.contains(e.relatedTarget)) iniciar();
         });
+        // No gastar recursos si la pestaña no esta visible
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) detener(); else iniciar();
+        });
 
-        window.addEventListener('resize', revisarFlechas);
-        revisarFlechas();
-        pintarPausa();
+        mostrar(0);
         iniciar();
     });
 });
