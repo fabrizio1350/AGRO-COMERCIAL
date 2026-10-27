@@ -1,0 +1,9 @@
+<form action="{% url 'alternar_favorito' prod.id %}" method="post" class="form-favorito" data-favorito>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    {% if prod.id in favoritos_ids %}
+        <button type="submit" class="boton-favorito activo" aria-pressed="true" aria-label="Quitar de favoritos: {{ prod.nombre }}"><i class="bi bi-heart-fill" aria-hidden="true"></i></button>
+    {% else %}
+        <button type="submit" class="boton-favorito" aria-pressed="false" aria-label="Guardar en favoritos: {{ prod.nombre }}"><i class="bi bi-heart" aria-hidden="true"></i></button>
+    {% endif %}
+</form>
