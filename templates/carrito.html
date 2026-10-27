@@ -2,6 +2,22 @@
 
 {% block title %}Carrito de Compras | AgroComercial{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* En PC la foto es chica al costado; en el celular va arriba a todo lo ancho */
+    .img-item-carrito {
+        width: 95px;
+        height: 85px;
+    }
+    @media (max-width: 575.98px) {
+        .img-item-carrito {
+            width: 100%;
+            height: 160px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
@@ -32,8 +48,8 @@
                     <div class="row g-3 align-items-center">
                         <!-- Imagen y resumen rápido del producto -->
                         <div class="col-md-6">
-                            <div class="d-flex gap-3 align-items-start">
-                                <img src="{{ item.producto.url_imagen }}" alt="{{ item.producto.nombre }}" class="img-referencia flex-shrink-0" style="width: 95px; height: 85px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                            <div class="d-flex flex-column flex-sm-row gap-3 align-items-sm-start">
+                                <img src="{{ item.producto.url_imagen }}" alt="{{ item.producto.nombre }}" class="img-referencia img-item-carrito flex-shrink-0" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
                                 <div>
                                     <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
                                         <span class="badge bg-success-subtle text-success">{{ item.producto.categoria.nombre|default:"Agrícola" }}</span>
