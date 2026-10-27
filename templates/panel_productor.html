@@ -86,7 +86,7 @@
             </thead>
             <tbody>
                 {% for prod in mis_productos %}
-                <tr>
+                <tr id="producto-{{ prod.id }}">
                     <td style="width: 100px;">
                         <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 55px;">
                     </td>
