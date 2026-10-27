@@ -383,6 +383,7 @@ class OfertaNegociacion(models.Model):
         ('ACEPTADA', 'Aceptada'),
         ('RECHAZADA', 'Rechazada'),
         ('PAGADA', 'Comprada'),
+        ('CANCELADA', 'Cancelada'),
     ]
 
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='ofertas_recibidas')
@@ -495,3 +496,81 @@ class ResenaProducto(models.Model):
 
     class Meta:
         ordering = ['-fecha']
+
+
+class FotoProducto(models.Model):
+    """Fotos extra de un producto (la principal sigue en Producto.imagen). Maximo 4 extra."""
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='fotos')
+    imagen = models.FileField(
+        upload_to='productos/',
+        validators=[FileExtensionValidator(['jpg', 'jpeg', 'png', 'webp'])],
+    )
+    orden = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['orden', 'id']
+
+
+class Favorito(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favoritos')
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='favoritos')
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha']
+        constraints = [models.UniqueConstraint(fields=['usuario', 'producto'], name='favorito_unico')]
+
+
+class Conversacion(models.Model):
+    """Chat entre un comprador y el vendedor de un producto. Hay una sola por producto y comprador."""
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='conversaciones')
+    comprador = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chats_como_comprador')
+    vendedor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chats_como_vendedor')
+    creada = models.DateTimeField(auto_now_add=True)
+    actualizada = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-actualizada']
+        constraints = [models.UniqueConstraint(fields=['producto', 'comprador'], name='chat_unico_por_producto')]
+
+    def participa(self, usuario):
+        return usuario.id in (self.comprador_id, self.vendedor_id)
+
+    def otro(self, usuario):
+        return self.vendedor if usuario.id == self.comprador_id else self.comprador
+
+    def no_leidos(self, usuario):
+        return self.mensajes.filter(leido=False).exclude(autor=usuario).count()
+
+    def ultimo_mensaje(self):
+        return self.mensajes.order_by('-fecha').first()
+
+    def __str__(self):
+        return f"{self.comprador} - {self.vendedor} ({self.producto})"
+
+
+class Mensaje(models.Model):
+    conversacion = models.ForeignKey(Conversacion, on_delete=models.CASCADE, related_name='mensajes')
+    autor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mensajes_enviados')
+    texto = models.TextField(max_length=1000)
+    fecha = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['fecha', 'id']
+
+
+class Notificacion(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notificaciones')
+    texto = models.CharField(max_length=200)
+    enlace = models.CharField(max_length=200, blank=True)
+    icono = models.CharField(max_length=40, default='bi-bell')
+    leida = models.BooleanField(default=False)
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha']
+
+    @classmethod
+    def avisar(cls, usuario, texto, enlace='', icono='bi-bell'):
+        return cls.objects.create(usuario=usuario, texto=texto[:200], enlace=enlace, icono=icono)
