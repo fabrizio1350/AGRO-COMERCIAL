@@ -16,17 +16,38 @@
         <div class="foto-detalle mb-3">
             <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" style="view-transition-name: foto-producto-{{ producto.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
             {% if producto.oferta_activa %}<span class="chip chip-descuento">-{{ producto.porcentaje_descuento }}%</span>{% endif %}
+            {% if user.is_authenticated %}{% include 'includes/boton_favorito.html' with prod=producto %}{% endif %}
         </div>
+        {% with extras=producto.fotos.all %}
+        {% if extras %}
+        <div class="miniaturas mb-3" data-galeria role="list" aria-label="Más fotos del producto">
+            <button type="button" class="miniatura activa" data-foto="{{ producto.url_imagen }}" aria-label="Ver foto 1"><img src="{{ producto.url_imagen }}" alt=""></button>
+            {% for foto in extras %}
+            <button type="button" class="miniatura" data-foto="{{ foto.imagen.url }}" aria-label="Ver foto {{ forloop.counter|add:1 }}"><img src="{{ foto.imagen.url }}" alt="" loading="lazy"></button>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
 
         <div class="bg-white border p-3">
             <div class="d-flex align-items-center gap-3 mb-2">
-                <img src="/static/imagenes/finca_productor.jpg" alt="Productor" class="img-referencia flex-shrink-0" style="width: 58px; height: 58px;">
-                <div>
+                <span class="avatar-inicial flex-shrink-0" style="width: 52px; height: 52px; font-size: 1.2rem;">{{ producto.productor.first_name|default:producto.productor.username|slice:":1"|upper }}</span>
+                <div class="flex-grow-1">
                     <div class="text-muted small">Vendido por el productor:</div>
-                    <div class="fw-bold">{{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}</div>
+                    <a href="{% url 'perfil_productor' producto.productor.id %}" class="fw-bold text-reset">{{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}</a>
                     <div class="text-muted small">{{ producto.productor.perfil.nombre_finca|default:producto.origen }}</div>
                 </div>
             </div>
+            {% if producto.productor != user %}
+                {% if user.is_authenticated %}
+                    <form action="{% url 'iniciar_chat' producto.id %}" method="post" class="d-grid my-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Chatear con el productor</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}?modo=comprador&next={{ request.path|urlencode }}" class="btn btn-outline-success w-100 my-2"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Ingresa para chatear con el productor</a>
+                {% endif %}
+            {% endif %}
             <div class="border-top pt-2 mt-2 small d-flex justify-content-between align-items-center">
                 <span class="text-secondary"><i class="bi bi-telephone-fill text-success me-1"></i>Contacto directo:</span>
                 <strong class="text-dark">{{ producto.productor.perfil.telefono|default:"No registrado" }}</strong>
