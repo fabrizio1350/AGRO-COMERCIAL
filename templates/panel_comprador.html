@@ -176,6 +176,7 @@
                     <small class="text-muted">{{ rec.origen }}</small>
                 </div>
                 <h6 class="fw-bold mb-1">{{ rec.nombre }}</h6>
+                {% include 'includes/barra_tiempo.html' with prod=rec compacta=True %}
                 <div class="d-flex justify-content-between align-items-center mt-2">
                     <span class="fw-bold text-danger">S/ {{ rec.precio_oferta }} / {{ rec.get_unidad_display }}</span>
                     <a href="{% url 'detalle_producto' rec.id %}" class="btn btn-outline-success btn-sm">Comprar</a>
