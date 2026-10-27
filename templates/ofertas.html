@@ -3,6 +3,8 @@
 {% block title %}Ventas por Oferta | AgroComercial{% endblock %}
 
 {% block content %}
+{% include 'includes/carrusel_ofertas.html' %}
+
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
         <h1 class="h4 fw-bold mb-1">Ventas por Oferta y Descuentos</h1>
@@ -13,8 +15,6 @@
         {% endif %}
     </div>
 </div>
-
-{% include 'includes/carrusel_ofertas.html' %}
 
 {% if rol_actual == 'PRODUCTOR' %}
     <!-- VISTA EXCLUSIVA PARA EL VENDEDOR -->
