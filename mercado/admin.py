@@ -8,6 +8,11 @@ from .models import (
     Pedido,
     ResenaProducto,
     PagoComision,
+    FotoProducto,
+    Favorito,
+    Conversacion,
+    Mensaje,
+    Notificacion,
 )
 
 
@@ -55,3 +60,24 @@ class PagoComisionAdmin(admin.ModelAdmin):
 @admin.register(ResenaProducto)
 class ResenaProductoAdmin(admin.ModelAdmin):
     list_display = ('producto', 'autor', 'calificacion', 'fecha')
+
+
+@admin.register(Conversacion)
+class ConversacionAdmin(admin.ModelAdmin):
+    list_display = ('producto', 'comprador', 'vendedor', 'actualizada')
+    search_fields = ('producto__nombre', 'comprador__username', 'vendedor__username')
+
+
+@admin.register(Mensaje)
+class MensajeAdmin(admin.ModelAdmin):
+    list_display = ('conversacion', 'autor', 'fecha', 'leido')
+
+
+@admin.register(Notificacion)
+class NotificacionAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'texto', 'leida', 'fecha')
+    list_filter = ('leida',)
+
+
+admin.site.register(FotoProducto)
+admin.site.register(Favorito)
