@@ -754,3 +754,73 @@ h1, h2, h3, h4, h5, h6 {
         transform: none !important;
     }
 }
+
+/* ==========================================================
+   Subir foto del producto (arrastrar y soltar)
+   ========================================================== */
+
+.zona-foto {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    max-height: 340px;
+    width: 100%;
+    border: 2px dashed #b9c9bd;
+    border-radius: var(--radio);
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color var(--transicion), background-color var(--transicion);
+}
+.zona-foto:hover,
+.zona-foto:focus-visible,
+.zona-foto.arrastrando {
+    border-color: var(--verde-campo);
+    background-color: var(--verde-suave);
+    outline: none;
+}
+.zona-foto.arrastrando {
+    transform: scale(1.01);
+}
+.texto-zona-foto {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    text-align: center;
+    padding: 1rem;
+    color: var(--texto);
+}
+.texto-zona-foto i {
+    font-size: 2.4rem;
+    color: var(--verde-campo);
+}
+.vista-foto {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+}
+.zona-foto.con-foto .vista-foto {
+    display: block;
+}
+.zona-foto.con-foto .texto-zona-foto {
+    display: none;
+}
+.zona-foto.cargando::after {
+    content: "";
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--verde-suave);
+    border-top-color: var(--verde-campo);
+    border-radius: 50%;
+    animation: girar 0.8s linear infinite;
+}
+@keyframes girar {
+    to { transform: rotate(360deg); }
+}
