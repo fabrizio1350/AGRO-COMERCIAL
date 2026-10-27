@@ -5,13 +5,13 @@
 {% block content %}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
-        <h1 class="h3 fw-bold mb-1">Directorio de Productores Agrícolas</h1>
+        <h1 class="h3 fw-bold mb-1 titulo-seccion entrar"><i class="bi bi-people"></i>Directorio de Productores Agrícolas</h1>
         <p class="text-muted mb-0">Conoce a los agricultores y asociaciones que abastecen directamente la plataforma.</p>
     </div>
     {% if not user.is_authenticated %}
     <div class="mt-3 mt-md-0">
         <a href="{% url 'registro' %}" class="btn btn-outline-success">
-            Registrarme como Productor
+            <i class="bi bi-person-plus me-1"></i>Registrarme como Productor
         </a>
     </div>
     {% endif %}
@@ -19,13 +19,15 @@
 
 <div class="row g-4">
     {% for perfil in perfiles_productores %}
-    <div class="col-md-6">
-        <div class="bg-white border rounded-3 p-4 shadow-sm h-100 d-flex flex-column">
+    <div class="col-md-6 aparecer">
+        <div class="card p-3 p-md-4 h-100 d-flex flex-column">
             <div class="d-flex gap-3 align-items-center mb-3">
-                <img src="/static/imagenes/finca_productor.jpg" alt="Finca Productora" class="img-referencia flex-shrink-0" style="width: 100px; height: 100px;">
+                <div class="img-zoom flex-shrink-0" style="width: 90px; height: 90px;">
+                    <img src="/static/imagenes/finca_productor.jpg" alt="Finca Productora" class="img-referencia h-100" loading="lazy">
+                </div>
                 <div>
                     <span class="badge bg-success-subtle text-success border border-success-subtle mb-1">
-                        Productor Verificado
+                        <i class="bi bi-patch-check-fill me-1"></i>Productor Verificado
                     </span>
                     <h4 class="h5 fw-bold mb-1">
                         {{ perfil.usuario.first_name|default:perfil.usuario.username }} {{ perfil.usuario.last_name }}
@@ -41,14 +43,14 @@
             </div>
 
             <div class="bg-light rounded-2 p-3 mb-3 small text-secondary flex-grow-1">
-                <div class="mb-1"><strong>Región / Valle:</strong> {{ perfil.ubicacion|default:"Por especificar" }}</div>
-                <div class="mb-1"><strong>Teléfono de contacto:</strong> {{ perfil.telefono|default:"No registrado" }}</div>
-                <div class="mb-1"><strong>Correo:</strong> {{ perfil.usuario.email|default:"No especificado" }}</div>
-                <div><strong>Productos publicados:</strong> {{ perfil.usuario.productos.count }} lotes activos</div>
+                <div class="mb-1"><i class="bi bi-geo-alt me-1 text-success"></i><strong>Región / Valle:</strong> {{ perfil.ubicacion|default:"Por especificar" }}</div>
+                <div class="mb-1"><i class="bi bi-telephone me-1 text-success"></i><strong>Teléfono:</strong> {{ perfil.telefono|default:"No registrado" }}</div>
+                <div class="mb-1 text-break"><i class="bi bi-envelope me-1 text-success"></i><strong>Correo:</strong> {{ perfil.usuario.email|default:"No especificado" }}</div>
+                <div><i class="bi bi-box-seam me-1 text-success"></i><strong>Productos publicados:</strong> {{ perfil.usuario.productos.count }} lotes activos</div>
             </div>
 
             <a href="{% url 'catalogo' %}?productor={{ perfil.usuario.id }}" class="btn btn-success btn-sm w-100">
-                Ver productos de {{ perfil.usuario.first_name|default:perfil.usuario.username }}
+                <i class="bi bi-basket me-1"></i>Ver productos de {{ perfil.usuario.first_name|default:perfil.usuario.username }}
             </a>
         </div>
     </div>
