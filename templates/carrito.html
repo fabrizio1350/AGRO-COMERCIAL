@@ -55,7 +55,7 @@
                                         <span class="badge bg-success-subtle text-success">{{ item.producto.categoria.nombre|default:"Agrícola" }}</span>
                                         {% if item.precio_unitario_acordado %}
                                             <span class="badge bg-warning text-dark">Oferta Aceptada</span>
-                                        {% elif item.producto.en_oferta and item.producto.precio_oferta %}
+                                        {% elif item.producto.oferta_activa %}
                                             <span class="etiqueta-oferta small">-{{ item.producto.porcentaje_descuento }}% Oferta</span>
                                         {% endif %}
                                     </div>
