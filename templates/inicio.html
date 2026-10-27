@@ -254,7 +254,7 @@
         <div class="row g-3" data-escalonado>
             {% for perfil in productores_destacados %}
             <div class="col-md-6 col-lg-4">
-                <a href="{% url 'catalogo' %}?productor={{ perfil.usuario.id }}" class="tarjeta-productor">
+                <a href="{% url 'perfil_productor' perfil.usuario.id %}" class="tarjeta-productor">
                     <span class="avatar-inicial">{{ perfil.usuario.first_name|default:perfil.usuario.username|slice:":1"|upper }}</span>
                     <span class="flex-grow-1 min-w-0">
                         <strong class="d-block text-truncate">{{ perfil.nombre_finca|default:perfil.usuario.get_full_name|default:perfil.usuario.username }}</strong>
