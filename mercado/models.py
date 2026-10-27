@@ -1,7 +1,9 @@
 from decimal import Decimal
 from django.conf import settings
 from django.core.validators import FileExtensionValidator
+from datetime import timedelta
 from django.db import models
+from django.db.models import F, Q
 from django.contrib.auth.models import User
 from django.utils import timezone
 
@@ -100,6 +102,34 @@ class Categoria(models.Model):
         return self.nombre
 
 
+def fecha_vencimiento_por_defecto():
+    """Cada publicacion dura PUBLICACION_DIAS_VIGENCIA dias si el vendedor no elige otra fecha."""
+    return timezone.now() + timedelta(days=settings.PUBLICACION_DIAS_VIGENCIA)
+
+
+class ProductoQuerySet(models.QuerySet):
+    def publicados(self):
+        """Productos que se pueden ver y comprar: activos, con stock y sin vencer."""
+        ahora = timezone.now()
+        return self.filter(disponible=True, stock__gt=0).filter(
+            Q(fecha_vencimiento__isnull=True) | Q(fecha_vencimiento__gt=ahora)
+        )
+
+    def ofertas_activas(self):
+        """Ofertas pagadas, con precio menor al normal y dentro de sus fechas."""
+        ahora = timezone.now()
+        return self.publicados().filter(
+            en_oferta=True,
+            oferta_pendiente_pago=False,
+            precio_oferta__isnull=False,
+            precio_oferta__lt=F('precio'),
+        ).filter(
+            Q(oferta_inicio__isnull=True) | Q(oferta_inicio__lte=ahora)
+        ).filter(
+            Q(oferta_fin__isnull=True) | Q(oferta_fin__gt=ahora)
+        )
+
+
 class Producto(models.Model):
     UNIDADES = [
         ('KG', 'Kilogramo (kg)'),
@@ -147,14 +177,108 @@ class Producto(models.Model):
     disponible = models.BooleanField(default=True)
     oferta_pendiente_pago = models.BooleanField(default=False, help_text="La oferta no se publica hasta pagar la comisión")
     fecha_publicacion = models.DateTimeField(auto_now_add=True)
+    fecha_vencimiento = models.DateTimeField(
+        null=True, blank=True, default=fecha_vencimiento_por_defecto,
+        help_text="Cuando vence la publicación deja de mostrarse en la web",
+    )
+    oferta_inicio = models.DateTimeField(null=True, blank=True, help_text="Desde cuándo rige el precio de oferta")
+    oferta_fin = models.DateTimeField(null=True, blank=True, help_text="Hasta cuándo rige el precio de oferta")
+
+    objects = ProductoQuerySet.as_manager()
 
     class Meta:
         ordering = ['-fecha_publicacion']
 
+    def esta_vencida(self):
+        return bool(self.fecha_vencimiento and self.fecha_vencimiento <= timezone.now())
+
+    def esta_publicado(self):
+        return self.disponible and self.stock > 0 and not self.esta_vencida()
+
+    def oferta_activa(self):
+        """True si el precio de oferta rige ahora mismo (mismas reglas que ofertas_activas())."""
+        if not (self.en_oferta and self.precio_oferta and self.precio_oferta < self.precio):
+            return False
+        if self.oferta_pendiente_pago or not self.esta_publicado():
+            return False
+        ahora = timezone.now()
+        if self.oferta_inicio and self.oferta_inicio > ahora:
+            return False
+        if self.oferta_fin and self.oferta_fin <= ahora:
+            return False
+        return True
+
+    def oferta_programada(self):
+        """La oferta ya se pago pero todavia no llega su fecha de inicio."""
+        return bool(
+            self.en_oferta and not self.oferta_pendiente_pago and self.oferta_inicio
+            and self.oferta_inicio > timezone.now() and self.esta_publicado()
+        )
+
+    def fecha_limite(self):
+        """Fecha real en que termina lo que se muestra: la oferta o, si no hay, la publicacion."""
+        if self.oferta_activa() and self.oferta_fin:
+            if self.fecha_vencimiento and self.fecha_vencimiento < self.oferta_fin:
+                return self.fecha_vencimiento
+            return self.oferta_fin
+        return self.fecha_vencimiento
+
+    def fecha_inicio_periodo(self):
+        if self.oferta_activa() and self.oferta_fin and self.oferta_inicio:
+            return self.oferta_inicio
+        return self.fecha_publicacion
+
+    def porcentaje_tiempo_restante(self):
+        """Que porcentaje del tiempo de la publicacion (u oferta) queda, de 0 a 100."""
+        limite = self.fecha_limite()
+        inicio = self.fecha_inicio_periodo()
+        if not limite or not inicio:
+            return 100
+        total = (limite - inicio).total_seconds()
+        restante = (limite - timezone.now()).total_seconds()
+        if total <= 0 or restante <= 0:
+            return 0
+        return max(1, min(100, int(round(restante * 100 / total))))
+
+    def texto_tiempo_restante(self):
+        limite = self.fecha_limite()
+        if not limite:
+            return "Sin fecha límite"
+        segundos = int((limite - timezone.now()).total_seconds())
+        if segundos <= 0:
+            return "Vencida"
+        dias, resto = divmod(segundos, 86400)
+        horas = resto // 3600
+        if dias >= 2:
+            return f"Quedan {dias} días"
+        if dias == 1:
+            return f"Queda 1 día y {horas} h" if horas else "Queda 1 día"
+        if horas >= 1:
+            return f"Quedan {horas} h"
+        return f"Quedan {max(1, resto // 60)} min"
+
+    def nivel_tiempo_restante(self):
+        """Color de la barra: ok, medio o poco."""
+        limite = self.fecha_limite()
+        if not limite:
+            return 'ok'
+        segundos = (limite - timezone.now()).total_seconds()
+        porcentaje = self.porcentaje_tiempo_restante()
+        if segundos < 86400 or porcentaje <= 20:
+            return 'poco'
+        if porcentaje <= 50:
+            return 'medio'
+        return 'ok'
+
     def precio_actual(self):
-        if self.en_oferta and self.precio_oferta and self.precio_oferta < self.precio:
+        if self.oferta_activa():
             return self.precio_oferta
         return self.precio
+
+    def ahorro(self):
+        if self.oferta_activa():
+            return self.precio - self.precio_oferta
+        return Decimal('0.00')
 
     def valor_oferta(self):
         """Valor total del lote en oferta (precio de oferta x stock)."""
@@ -169,10 +293,15 @@ class Producto(models.Model):
         monto = (self.valor_oferta() * porcentaje / 100).quantize(Decimal('0.01'))
         return max(monto, minimo)
 
+    def descuento_configurado(self):
+        """Descuento que puso el vendedor, aunque la oferta todavia no este vigente."""
+        if self.precio_oferta and self.precio > 0 and self.precio_oferta < self.precio:
+            return int(round((self.precio - self.precio_oferta) / self.precio * 100))
+        return 0
+
     def porcentaje_descuento(self):
-        if self.en_oferta and self.precio_oferta and self.precio > 0 and self.precio_oferta < self.precio:
-            descuento = ((self.precio - self.precio_oferta) / self.precio) * 100
-            return int(round(descuento))
+        if self.oferta_activa():
+            return self.descuento_configurado()
         return 0
 
     def nombre_unidad_stock(self):
