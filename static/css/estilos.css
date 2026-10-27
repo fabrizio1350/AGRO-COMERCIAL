@@ -533,20 +533,45 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 767.98px) {
+    /* Texto un poco mas grande y con mas interlineado para que se lea suelto */
     body {
-        font-size: 0.92rem;
+        font-size: 0.97rem;
+        line-height: 1.6;
     }
     main.container {
-        margin-top: 1rem !important;
+        margin-top: 1.25rem !important;
+        margin-bottom: 2rem !important;
     }
+    .container, .container-fluid {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    h1, .h1, .h2, .h3 {
+        font-size: 1.45rem;
+        line-height: 1.3;
+    }
+    .h4 {
+        font-size: 1.3rem;
+        line-height: 1.3;
+    }
+    .h5, h5 {
+        font-size: 1.1rem;
+    }
+    p {
+        line-height: 1.65;
+    }
+    .small, small {
+        font-size: 0.86rem;
+    }
+
     .portada {
         border-radius: 14px;
     }
     .portada h1 {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
     }
     .tarjeta-categoria {
-        height: 115px;
+        height: 120px;
     }
     /* Botones de la portada a todo lo ancho en telefono */
     .acciones-portada .btn {
@@ -557,7 +582,143 @@ h1, h2, h3, h4, h5, h6 {
         transform: none;
     }
     .alert {
-        font-size: 0.85rem;
+        font-size: 0.88rem;
+    }
+}
+
+/* ==========================================================
+   Telefonos (hasta 576px): mas aire en todas las paginas
+   ========================================================== */
+@media (max-width: 575.98px) {
+    /* Barra de cuenta en una sola linea */
+    .barra-cambio-rol {
+        padding-top: 0.4rem !important;
+        padding-bottom: 0.4rem !important;
+    }
+
+    /* Separacion entre bloques de la pagina */
+    .row {
+        --bs-gutter-y: 1.25rem;
+    }
+    .mb-4 {
+        margin-bottom: 1.75rem !important;
+    }
+    .mb-5 {
+        margin-bottom: 2.5rem !important;
+    }
+
+    /* Cajas: menos relleno lateral, asi el contenido tiene mas ancho */
+    .p-4, .p-md-4, .p-md-5, .p-5 {
+        padding: 1.15rem !important;
+    }
+    .card-body {
+        padding: 1.1rem;
+    }
+    /* Cajas dentro de otras cajas: sin doble borde ni doble relleno */
+    .bg-white.border .border.rounded-3,
+    .bg-white.border .card,
+    .card .card {
+        padding: 0.9rem !important;
+        box-shadow: none;
+    }
+
+    /* Que ningun texto se salga de la pantalla */
+    .d-flex > div,
+    .d-flex > a {
+        min-width: 0;
+    }
+    .badge {
+        white-space: normal;
+        text-align: left;
+        line-height: 1.35;
+    }
+
+    /* Titulo de cada pagina arriba y sus botones debajo, a lo ancho */
+    main > .d-flex.justify-content-between:first-child {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.85rem;
+    }
+    main > .d-flex.justify-content-between:first-child > :not(:first-child) {
+        margin-top: 0 !important;
+    }
+    main > .d-flex.justify-content-between:first-child .btn {
+        width: 100%;
+    }
+
+    /* Encabezados de seccion con botones: botones abajo y a lo ancho */
+    .flex-column.flex-md-row > .d-flex,
+    .flex-column.flex-md-row > div:last-child:not(:first-child) {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .flex-column.flex-md-row > div:last-child:not(:first-child) > .btn,
+    .flex-column.flex-md-row > div:last-child:not(:first-child) > a.btn {
+        flex: 1 1 auto;
+    }
+
+    /* Filas de las tarjetas (precio + botones) pueden bajar de linea */
+    .card .d-flex.justify-content-between,
+    .bg-white.border .d-flex.justify-content-between {
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    /* Botones e inputs mas comodos para el dedo */
+    .btn {
+        padding: 0.6rem 1rem;
+    }
+    .btn-sm:not(.btn-link) {
+        padding: 0.45rem 0.8rem;
+        font-size: 0.88rem;
+    }
+    .form-control, .form-select {
+        font-size: 16px; /* evita que el iPhone haga zoom al escribir */
+        min-height: 46px;
+    }
+    .input-group-sm > .form-control,
+    .input-group-sm > .btn,
+    .input-group-sm > .input-group-text,
+    .form-control-sm, .form-select-sm {
+        min-height: 42px;
+        font-size: 15px;
+    }
+    .form-label {
+        margin-bottom: 0.4rem;
+    }
+
+    /* Tablas: se deslizan de lado en vez de aplastar las columnas */
+    .table-responsive {
+        -webkit-overflow-scrolling: touch;
+    }
+    .table-responsive > .table {
+        min-width: 640px;
+        font-size: 0.88rem;
+    }
+    .table-responsive > .table th {
+        white-space: nowrap;
+    }
+    .table > :not(caption) > * > * {
+        padding: 0.75rem 0.6rem;
+    }
+
+    /* Pestañas deslizables en una sola fila */
+    .nav-tabs, .nav-pills {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+    }
+    .nav-tabs .nav-link, .nav-pills .nav-link {
+        white-space: nowrap;
+    }
+
+    /* Pie de pagina con mas aire */
+    .pie-pagina {
+        padding-top: 2rem !important;
+    }
+    .pie-pagina li {
+        padding: 0.15rem 0;
     }
 }
 
