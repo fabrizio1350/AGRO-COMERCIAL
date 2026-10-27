@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mensajes | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="encabezado-seccion encabezado-chat entrar {% if actual %}con-chat{% endif %}">
+    <div>
+        <span class="antetitulo"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i>Chat comprador - vendedor</span>
+        <h1 class="h2 fw-bold mb-0">Mensajes</h1>
+    </div>
+</div>
+
+<div class="chat {% if actual %}con-chat{% endif %}">
+    <!-- Lista de conversaciones -->
+    <aside class="chat-lista" aria-label="Conversaciones">
+        {% for c in conversaciones %}
+            <a href="{% url 'conversacion' c.id %}" class="chat-item {% if actual and actual.id == c.id %}activo{% endif %}">
+                <img src="{{ c.producto.url_imagen }}" alt="" loading="lazy">
+                <span class="flex-grow-1 min-w-0">
+                    <strong class="d-block text-truncate">{{ c.otro_usuario.get_full_name|default:c.otro_usuario.username }}</strong>
+                    <small class="d-block text-truncate text-muted">{{ c.producto.nombre }}</small>
+                </span>
+                <span class="text-end">
+                    <small class="text-muted d-block">{{ c.actualizada|date:"d/m" }}</small>
+                    {% if c.sin_leer %}<span class="badge rounded-pill text-bg-success">{{ c.sin_leer }}</span>{% endif %}
+                </span>
+            </a>
+        {% empty %}
+            <div class="estado-vacio py-4">
+                <i class="bi bi-chat-square-text" aria-hidden="true"></i>
+                <h2 class="h6 fw-bold">Aún no tienes conversaciones</h2>
+                <p class="text-muted small">Abre un producto y pulsa "Chatear con el productor" para hacer preguntas antes de comprar.</p>
+                <a href="{% url 'catalogo' %}" class="btn btn-success btn-sm">Ver productos</a>
+            </div>
+        {% endfor %}
+    </aside>
+
+    <!-- Conversacion abierta -->
+    <section class="chat-panel" aria-label="Conversación">
+        {% if actual %}
+            <header class="chat-cabecera">
+                <a href="{% url 'mensajes' %}" class="btn btn-light btn-sm d-lg-none" aria-label="Volver a la lista"><i class="bi bi-arrow-left" aria-hidden="true"></i></a>
+                <span class="avatar-inicial">{{ otro.first_name|default:otro.username|slice:":1"|upper }}</span>
+                <div class="flex-grow-1 min-w-0">
+                    <strong class="d-block text-truncate">{{ otro.get_full_name|default:otro.username }}</strong>
+                    <small class="text-muted">{% if es_comprador_chat %}Vendedor{% else %}Comprador{% endif %}</small>
+                </div>
+                <a href="{% url 'detalle_producto' actual.producto.id %}" class="chat-producto">
+                    <img src="{{ actual.producto.url_imagen }}" alt="">
+                    <span class="d-none d-sm-block">
+                        <small class="d-block text-truncate">{{ actual.producto.nombre }}</small>
+                        <strong>S/ {{ actual.producto.precio_actual }}</strong> <small class="text-muted">/ {{ actual.producto.unidad_corta }}</small>
+                    </span>
+                </a>
+            </header>
+
+            <div class="chat-burbujas" id="burbujas" aria-live="polite"
+                 data-nuevos="{% url 'mensajes_nuevos' actual.id %}">
+                {% if not mensajes_chat %}
+                    <p class="chat-vacio">Escribe tu primera pregunta: precio por volumen, fecha de cosecha, recojo o transporte.</p>
+                {% endif %}
+                {% include 'includes/mensajes_chat.html' %}
+            </div>
+
+            {% if es_comprador_chat %}
+            <details class="chat-solicitud">
+                <summary><i class="bi bi-clipboard-check" aria-hidden="true"></i>Convertir en solicitud de compra</summary>
+                <form action="{% url 'solicitud_desde_chat' actual.id %}" method="post" class="row g-2 align-items-end pt-2">
+                    {% csrf_token %}
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-semibold" for="solCantidad">Cantidad ({{ actual.producto.unidad_corta }})</label>
+                        <input type="number" min="1" name="cantidad" id="solCantidad" class="form-control" value="{{ actual.producto.minimo_compra }}" required>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-semibold" for="solPrecio">Precio por unidad (S/)</label>
+                        <input type="number" min="0.10" step="0.10" name="precio_unitario_ofrecido" id="solPrecio" class="form-control" value="{{ actual.producto.precio_actual|stringformat:'.2f' }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold" for="solNota">Nota (opcional)</label>
+                        <input type="text" maxlength="250" name="mensaje" id="solNota" class="form-control" placeholder="Ej. recojo el sábado en Majes">
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button type="submit" class="btn btn-warning">Enviar</button>
+                    </div>
+                </form>
+                {% if solicitudes_chat %}
+                <ul class="list-unstyled small mt-2 mb-0">
+                    {% for s in solicitudes_chat %}
+                    <li>#{{ s.id }} · {{ s.cantidad }} a S/ {{ s.precio_unitario_ofrecido }} · <span class="estado-solicitud estado-{{ s.estado|lower }}">{{ s.get_estado_display }}</span></li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </details>
+            {% endif %}
+
+            <form action="{% url 'enviar_mensaje' actual.id %}" method="post" class="chat-escribir" id="formChat">
+                {% csrf_token %}
+                <label for="textoChat" class="visually-hidden">Escribe un mensaje</label>
+                <textarea name="texto" id="textoChat" rows="1" maxlength="1000" placeholder="Escribe un mensaje..." required></textarea>
+                <button type="submit" class="btn btn-success" aria-label="Enviar mensaje"><i class="bi bi-send-fill" aria-hidden="true"></i></button>
+            </form>
+        {% else %}
+            <div class="chat-sin-seleccion">
+                <i class="bi bi-chat-heart" aria-hidden="true"></i>
+                <p class="mb-0">Elige una conversación para verla aquí.</p>
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/chat.js' %}?v={{ version_estaticos }}"></script>
+{% endblock %}
