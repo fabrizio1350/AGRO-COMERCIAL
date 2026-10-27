@@ -343,6 +343,12 @@
                                         <input type="hidden" name="decision" value="PAGAR_OFERTA">
                                         <button type="submit" class="btn btn-success btn-sm">Ir a Pagar Oferta</button>
                                     </form>
+                                    {% elif of.estado == 'PENDIENTE' %}
+                                    <form action="{% url 'responder_oferta' of.id %}" method="post" onsubmit="return confirm('¿Cancelar tu solicitud #{{ of.id }} por {{ of.producto.nombre|escapejs }}?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="decision" value="CANCELAR">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">Cancelar solicitud</button>
+                                    </form>
                                     {% else %}
                                         <span class="text-muted small">-</span>
                                     {% endif %}
