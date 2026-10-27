@@ -310,7 +310,9 @@ def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
     monto_centimos = int(Decimal(str(total_soles)) * 100)
     secret_key = getattr(settings, 'CULQI_SECRET_KEY', '').strip()
 
-    if secret_key and culqi_token and culqi_token.startswith('tkn_'):
+    if secret_key:
+        if not culqi_token.startswith('tkn_'):
+            return False, None, "No se recibió la tarjeta. Vuelve a ingresar los datos de pago."
         url = "https://api.culqi.com/v2/charges"
         payload = json.dumps({
             "amount": monto_centimos,
@@ -343,9 +345,9 @@ def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
         except Exception as e:
             return False, None, f"Error de conexión con Culqi: {e}"
 
-    # Modo Sandbox / Prueba local cuando se usa tarjeta de prueba de Culqi
-    codigo_culqi = f"CULQI-CHR-{uuid.uuid4().hex[:6].upper()}"
-    return True, codigo_culqi, "Cobro aprobado en Pasarela Culqi (Modo Prueba)"
+    # Sin clave secreta la plataforma esta en version de prueba: el pago es simulado y no se cobra nada
+    codigo_culqi = f"SIMULADO-{uuid.uuid4().hex[:6].upper()}"
+    return True, codigo_culqi, "Pago simulado (versión de prueba, no se cobró dinero real)"
 
 
 def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, total_pagar, metodo_pago):
@@ -1062,28 +1064,9 @@ def pasarela_pago(request):
     if request.method == 'POST':
         form = PasarelaPagoForm(request.POST)
         if form.is_valid():
-            import os
             metodo = form.cleaned_data['metodo_pago']
             correo_culqi = request.POST.get('correo_culqi', '').strip() or correo_gmail_usuario
             culqi_token = request.POST.get('culqi_token', '').strip()
-            clave_app_ingresada = request.POST.get('clave_app_gmail', '').strip().replace(' ', '')
-
-            # Si el usuario ingreso su Contrasena de Aplicacion de Gmail (16 letras), la guardamos segura en .env
-            if clave_app_ingresada:
-                os.environ['EMAIL_HOST_USER'] = correo_culqi
-                os.environ['EMAIL_HOST_PASSWORD'] = clave_app_ingresada
-                settings.EMAIL_HOST_USER = correo_culqi
-                settings.EMAIL_HOST_PASSWORD = clave_app_ingresada
-                env_path = settings.BASE_DIR / '.env'
-                lineas_actuales = {}
-                if env_path.exists():
-                    for lin in env_path.read_text(encoding='utf-8').splitlines():
-                        if '=' in lin and not lin.strip().startswith('#'):
-                            k, v = lin.split('=', 1)
-                            lineas_actuales[k.strip()] = v.strip()
-                lineas_actuales['EMAIL_HOST_USER'] = correo_culqi
-                lineas_actuales['EMAIL_HOST_PASSWORD'] = clave_app_ingresada
-                env_path.write_text("\n".join([f"{k}={v}" for k, v in lineas_actuales.items()]) + "\n", encoding='utf-8')
 
             # Actualizar el Gmail en el usuario si estaba vacio
             if correo_culqi and request.user.email != correo_culqi:
@@ -1146,12 +1129,12 @@ def pasarela_pago(request):
             if enviado_ok:
                 messages.success(
                     request,
-                    f"¡Pago procesado con Culqi ({codigo_tx})! La boleta fue enviada a tu bandeja de Gmail ({correo_culqi})."
+                    f"¡Compra registrada ({codigo_tx})! La boleta fue enviada a tu correo ({correo_culqi})."
                 )
             else:
                 messages.success(
                     request,
-                    f"¡Pago procesado con Culqi ({codigo_tx})! Para que llegue el correo a tu bandeja de Gmail, agrega tu Contraseña de Aplicación de 16 letras."
+                    f"¡Compra registrada ({codigo_tx})! No pudimos enviar la boleta por correo, pero puedes verla e imprimirla aquí."
                 )
             return redirect('comprobante_pago', codigo=codigo_tx)
     else:
@@ -1327,36 +1310,18 @@ def login_google(request):
     if rol_elegido not in ['COMPRADOR', 'PRODUCTOR']:
         rol_elegido = 'COMPRADOR'
     request.session['rol_google_pendiente'] = rol_elegido
+    # Codigo aleatorio para comprobar que la respuesta de Google viene de este mismo inicio de sesion
+    estado_oauth = uuid.uuid4().hex
+    request.session['estado_google'] = estado_oauth
 
-    # Si el usuario pega su Client ID y Client Secret desde la pantalla de configuracion rapida, se guarda en .env
-    if request.method == 'POST' and request.POST.get('guardar_credenciales_google') == '1':
-        nuevo_id = request.POST.get('google_client_id', '').strip()
-        nuevo_secret = request.POST.get('google_client_secret', '').strip()
-        if nuevo_id and nuevo_secret:
-            os.environ['GOOGLE_CLIENT_ID'] = nuevo_id
-            os.environ['GOOGLE_CLIENT_SECRET'] = nuevo_secret
-            settings.GOOGLE_CLIENT_ID = nuevo_id
-            settings.GOOGLE_CLIENT_SECRET = nuevo_secret
-
-            env_path = settings.BASE_DIR / '.env'
-            lineas_actuales = {}
-            if env_path.exists():
-                for lin in env_path.read_text(encoding='utf-8').splitlines():
-                    if '=' in lin and not lin.strip().startswith('#'):
-                        k, v = lin.split('=', 1)
-                        lineas_actuales[k.strip()] = v.strip()
-            lineas_actuales['GOOGLE_CLIENT_ID'] = nuevo_id
-            lineas_actuales['GOOGLE_CLIENT_SECRET'] = nuevo_secret
-            contenido_env = "\n".join([f"{k}={v}" for k, v in lineas_actuales.items()]) + "\n"
-            env_path.write_text(contenido_env, encoding='utf-8')
-
+    # Las credenciales de Google solo se configuran en el .env del servidor, nunca desde la web
     client_id = (os.environ.get('GOOGLE_CLIENT_ID') or getattr(settings, 'GOOGLE_CLIENT_ID', '')).strip()
     redirect_uri = request.build_absolute_uri('/login/google/callback/')
 
     if not client_id:
         messages.warning(
             request,
-            f"Para abrir el selector oficial de Google, pega tu GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET de Google Cloud (URI de redirección: {redirect_uri})."
+            "El ingreso con Google aún no está configurado en este servidor. Ingresa con tu usuario y contraseña."
         )
         return render(request, 'login.html', {
             'modo_acceso': 'vendedor' if rol_elegido == 'PRODUCTOR' else 'comprador',
@@ -1371,7 +1336,7 @@ def login_google(request):
         'scope': 'openid email profile',
         'access_type': 'online',
         'prompt': 'select_account',
-        'state': rol_elegido,
+        'state': estado_oauth,
     })
     return redirect(f"https://accounts.google.com/o/oauth2/v2/auth?{parametros}")
 
@@ -1390,7 +1355,11 @@ def login_google_callback(request):
         return redirect('login')
 
     code = request.GET.get('code', '').strip()
-    rol_elegido = request.GET.get('state') or request.session.get('rol_google_pendiente', 'COMPRADOR')
+    estado_esperado = request.session.pop('estado_google', None)
+    if not estado_esperado or request.GET.get('state') != estado_esperado:
+        messages.error(request, "No pudimos validar el inicio con Google. Intenta de nuevo.")
+        return redirect('login')
+    rol_elegido = request.session.get('rol_google_pendiente', 'COMPRADOR')
     if rol_elegido not in ['COMPRADOR', 'PRODUCTOR']:
         rol_elegido = 'COMPRADOR'
 
@@ -1558,6 +1527,21 @@ def panel_productor(request):
         p.total for p in pedidos_recibidos if p.estado in ['CONFIRMADO', 'EN_CAMINO', 'ENTREGADO']
     )
 
+    # Ventas de las ultimas 8 semanas para el grafico de barras del panel
+    hoy = timezone.localdate()
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    semanas = []
+    for atras in range(7, -1, -1):
+        desde = inicio_semana - timedelta(weeks=atras)
+        total_semana = sum(
+            p.total for p in pedidos_recibidos
+            if p.estado in ['CONFIRMADO', 'EN_CAMINO', 'ENTREGADO'] and desde <= timezone.localtime(p.fecha_pedido).date() < desde + timedelta(days=7)
+        )
+        semanas.append({'desde': desde, 'total': total_semana})
+    maximo_semana = max((s['total'] for s in semanas), default=0)
+    for semana in semanas:
+        semana['alto'] = round(semana['total'] * 100 / maximo_semana) if maximo_semana else 0
+
     contexto = {
         'perfil': perfil,
         'mis_productos': mis_productos,
@@ -1568,6 +1552,8 @@ def panel_productor(request):
         'ofertas_recibidas': ofertas_recibidas,
         'ingresos_estimados': ingresos_estimados,
         'estados_pedido': Pedido.ESTADOS,
+        'ventas_semanas': semanas,
+        'hay_ventas_semanas': maximo_semana > 0,
     }
     return render(request, 'panel_productor.html', contexto)
 
@@ -1739,6 +1725,8 @@ def cambiar_estado_pedido(request, pedido_id):
         if perfil.rol == 'PRODUCTOR' and pedido.producto.productor == request.user and nuevo_estado in estados_validos:
             pedido.estado = nuevo_estado
             pedido.save()
+            Notificacion.avisar(pedido.comprador, f"Tu pedido #{pedido.id} de {pedido.producto.nombre} ahora está: {pedido.get_estado_display()}.",
+                                reverse('mis_pedidos'), 'bi-truck')
             messages.success(request, f"Estado del pedido #{pedido.id} actualizado a '{pedido.get_estado_display()}'.")
             return redirect('panel_productor')
 
@@ -1749,6 +1737,8 @@ def cambiar_estado_pedido(request, pedido_id):
             pedido.producto.stock += pedido.cantidad
             pedido.producto.disponible = True
             pedido.producto.save()
+            Notificacion.avisar(pedido.producto.productor, f"{request.user.username} canceló el pedido #{pedido.id} de {pedido.producto.nombre}.",
+                                reverse('panel_productor'), 'bi-x-octagon')
             messages.info(request, f"El pedido #{pedido.id} fue cancelado y el stock fue repuesto.")
             return redirect('mis_pedidos')
 
