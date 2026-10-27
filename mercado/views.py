@@ -8,15 +8,16 @@ from decimal import Decimal
 from django.conf import settings
 from django.utils import timezone
 from django.core.mail import send_mail
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.paginator import Paginator
-from django.db.models import Q, F, Case, When, Count, DecimalField, ExpressionWrapper
+from django.db.models import Q, F, Case, When, Count, Avg, DecimalField, ExpressionWrapper
 from .models import (
     PerfilUsuario,
     Categoria,
@@ -26,6 +27,11 @@ from .models import (
     Pedido,
     ResenaProducto,
     PagoComision,
+    FotoProducto,
+    Favorito,
+    Conversacion,
+    Mensaje,
+    Notificacion,
     CATEGORIAS_AGRICOLAS,
     LUGARES_AREQUIPA,
     LUGAR_POR_DEFECTO,
@@ -836,6 +842,11 @@ def detalle_producto(request, producto_id):
                 propuesta.producto = producto
                 propuesta.comprador = request.user
                 propuesta.save()
+                Notificacion.avisar(
+                    producto.productor,
+                    f"{request.user.get_full_name() or request.user.username} te envió una solicitud de compra por {producto.nombre}.",
+                    reverse('ventas_por_oferta'), 'bi-cash-coin',
+                )
                 messages.success(
                     request,
                     f"Oferta enviada al vendedor: S/ {propuesta.precio_unitario_ofrecido} por {propuesta.cantidad} unidades."
@@ -877,12 +888,25 @@ def responder_oferta(request, oferta_id):
                 oferta.estado = 'ACEPTADA'
                 oferta.respuesta_vendedor = respuesta or "Oferta aceptada. Puedes proceder al pago."
                 oferta.save()
+                Notificacion.avisar(oferta.comprador, f"Tu solicitud por {oferta.producto.nombre} fue aceptada. Ya puedes pagarla.",
+                                    reverse('ventas_por_oferta'), 'bi-check-circle')
                 messages.success(request, f"Aceptaste la oferta #{oferta.id} de {oferta.comprador.username}.")
             elif decision == 'RECHAZAR':
                 oferta.estado = 'RECHAZADA'
                 oferta.respuesta_vendedor = respuesta or "No es posible aceptar ese precio por el momento."
                 oferta.save()
+                Notificacion.avisar(oferta.comprador, f"Tu solicitud por {oferta.producto.nombre} fue rechazada.",
+                                    reverse('ventas_por_oferta'), 'bi-x-circle')
                 messages.info(request, f"Rechazaste la oferta #{oferta.id}.")
+            return redirect('ventas_por_oferta')
+
+        # El comprador puede cancelar su solicitud mientras siga pendiente
+        if oferta.comprador == request.user and oferta.estado == 'PENDIENTE' and decision == 'CANCELAR':
+            oferta.estado = 'CANCELADA'
+            oferta.save()
+            Notificacion.avisar(oferta.producto.productor, f"{request.user.username} canceló su solicitud por {oferta.producto.nombre}.",
+                                reverse('ventas_por_oferta'), 'bi-slash-circle')
+            messages.info(request, "Cancelaste tu solicitud de compra.")
             return redirect('ventas_por_oferta')
 
         # Accion del comprador para pagar una oferta ya aceptada
@@ -1098,6 +1122,8 @@ def pasarela_pago(request):
                     codigo_transaccion=codigo_tx,
                     estado='CONFIRMADO',
                 )
+                Notificacion.avisar(prod.productor, f"Nuevo pedido: {cant} {prod.nombre_unidad_stock()} de {prod.nombre}.",
+                                    reverse('panel_productor'), 'bi-bag-check')
                 pedidos_creados.append(ped)
                 if prod.stock >= cant:
                     prod.stock -= cant
@@ -1184,7 +1210,31 @@ def comprobante_pago(request, codigo):
 def lista_productores(request):
     asegurar_datos_iniciales()
     perfiles_productores = PerfilUsuario.objects.filter(rol='PRODUCTOR').select_related('usuario')
+    publicados = Producto.objects.publicados()
+    perfiles_productores = list(perfiles_productores)
+    for perfil in perfiles_productores:
+        perfil.total_publicados = publicados.filter(productor=perfil.usuario).count()
     return render(request, 'productores.html', {'perfiles_productores': perfiles_productores})
+
+
+def perfil_productor(request, usuario_id):
+    """Pagina publica del productor: sus datos de finca, productos publicados y calificaciones."""
+    # Se busca por productos publicados ademas del rol, porque el usuario puede cambiar de modo
+    perfil = get_object_or_404(
+        PerfilUsuario.objects.select_related('usuario').filter(Q(rol='PRODUCTOR') | Q(usuario__productos__isnull=False)).distinct(),
+        usuario_id=usuario_id,
+    )
+    productos = Producto.objects.publicados().filter(productor=perfil.usuario).select_related('categoria')
+    resenas = ResenaProducto.objects.filter(producto__productor=perfil.usuario).select_related('autor', 'producto')
+    return render(request, 'perfil_productor.html', {
+        'perfil': perfil,
+        'productor': perfil.usuario,
+        'productos': productos,
+        'resenas': resenas[:6],
+        'total_resenas': resenas.count(),
+        'promedio': resenas.aggregate(p=Avg('calificacion'))['p'],
+        'total_vendidos': Pedido.objects.filter(producto__productor=perfil.usuario).exclude(estado='CANCELADO').count(),
+    })
 
 
 def registro_vista(request):
@@ -1539,9 +1589,11 @@ def crear_producto(request):
                 producto.oferta_pendiente_pago = True
                 producto.disponible = False
                 producto.save()
+                guardar_fotos_extra(request, producto)
                 messages.info(request, "Para publicar tu producto como oferta primero debes pagar la comisión de AgroComercial.")
                 return redirect('pagar_comision_oferta', producto_id=producto.id)
             producto.save()
+            guardar_fotos_extra(request, producto)
             messages.success(request, f"El producto '{producto.nombre}' fue publicado exitosamente.")
             return redirect('panel_productor')
     else:
@@ -1577,10 +1629,12 @@ def editar_producto(request, producto_id):
                 producto.oferta_pendiente_pago = True
                 producto.disponible = False
                 producto.save()
+                guardar_fotos_extra(request, producto)
                 messages.info(request, "Para publicar tu producto como oferta primero debes pagar la comisión de AgroComercial.")
                 return redirect('pagar_comision_oferta', producto_id=producto.id)
             producto.oferta_pendiente_pago = False
             producto.save()
+            guardar_fotos_extra(request, producto)
             messages.success(request, f"El producto '{producto.nombre}' fue actualizado.")
             return redirect('panel_productor')
     else:
@@ -1736,3 +1790,197 @@ def perfil_vista(request):
         })
 
     return render(request, 'perfil.html', {'form': form, 'perfil': perfil})
+
+
+# ---------------------------------------------------------------------------
+# Fotos extra, favoritos, notificaciones y chat comprador - vendedor
+# ---------------------------------------------------------------------------
+
+MAXIMO_FOTOS_EXTRA = 4
+TAMANO_MAXIMO_FOTO = 5 * 1024 * 1024
+
+
+def soles(monto):
+    return f"{monto:.2f}".replace('.', ',')
+
+
+def guardar_fotos_extra(request, producto):
+    """Guarda las fotos adicionales del formulario y borra las que el vendedor marco."""
+    borrar = request.POST.getlist('borrar_foto')
+    if borrar:
+        producto.fotos.filter(id__in=borrar).delete()
+    espacio = MAXIMO_FOTOS_EXTRA - producto.fotos.count()
+    omitidas = 0
+    for archivo in request.FILES.getlist('fotos_extra'):
+        extension = archivo.name.rsplit('.', 1)[-1].lower()
+        if espacio <= 0 or extension not in ('jpg', 'jpeg', 'png', 'webp') or archivo.size > TAMANO_MAXIMO_FOTO:
+            omitidas += 1
+            continue
+        FotoProducto.objects.create(producto=producto, imagen=archivo, orden=producto.fotos.count())
+        espacio -= 1
+    if omitidas:
+        messages.warning(request, f"{omitidas} foto(s) no se guardaron: máximo {MAXIMO_FOTOS_EXTRA} extra, en JPG, PNG o WEBP de hasta 5 MB.")
+
+
+@login_required
+def alternar_favorito(request, producto_id):
+    if request.method != 'POST':
+        return redirect('detalle_producto', producto_id=producto_id)
+    producto = get_object_or_404(Producto, id=producto_id)
+    favorito, creado = Favorito.objects.get_or_create(usuario=request.user, producto=producto)
+    if not creado:
+        favorito.delete()
+    mensaje = "Guardado en tus favoritos" if creado else "Quitado de tus favoritos"
+    if request.headers.get('X-Rapido') == '1':
+        return JsonResponse({'ok': True, 'favorito': creado, 'mensaje': mensaje})
+    messages.success(request, mensaje)
+    siguiente = request.POST.get('next', '')
+    if url_has_allowed_host_and_scheme(siguiente, allowed_hosts={request.get_host()}):
+        return redirect(siguiente)
+    return redirect('detalle_producto', producto_id=producto.id)
+
+
+@login_required
+def mis_favoritos(request):
+    favoritos = Favorito.objects.filter(usuario=request.user).select_related('producto', 'producto__categoria', 'producto__productor')
+    return render(request, 'favoritos.html', {'favoritos': favoritos})
+
+
+@login_required
+def notificaciones(request):
+    lista = list(Notificacion.objects.filter(usuario=request.user)[:50])
+    Notificacion.objects.filter(usuario=request.user, leida=False).update(leida=True)
+    return render(request, 'notificaciones.html', {'notificaciones': lista})
+
+
+@login_required
+def abrir_notificacion(request, notificacion_id):
+    aviso = get_object_or_404(Notificacion, id=notificacion_id, usuario=request.user)
+    aviso.leida = True
+    aviso.save(update_fields=['leida'])
+    if aviso.enlace and url_has_allowed_host_and_scheme(aviso.enlace, allowed_hosts={request.get_host()}):
+        return redirect(aviso.enlace)
+    return redirect('notificaciones')
+
+
+def conversaciones_de(usuario):
+    return Conversacion.objects.filter(Q(comprador=usuario) | Q(vendedor=usuario)).select_related(
+        'producto', 'comprador', 'vendedor'
+    ).annotate(
+        sin_leer=Count('mensajes', filter=Q(mensajes__leido=False) & ~Q(mensajes__autor=usuario))
+    )
+
+
+@login_required
+def iniciar_chat(request, producto_id):
+    """El comprador abre (o retoma) la conversacion con el vendedor de un producto."""
+    producto = get_object_or_404(Producto, id=producto_id)
+    if producto.productor == request.user:
+        messages.info(request, "Este producto es tuyo: los compradores te escribirán desde aquí.")
+        return redirect('mensajes')
+    conversacion, _ = Conversacion.objects.get_or_create(
+        producto=producto, comprador=request.user, defaults={'vendedor': producto.productor}
+    )
+    texto = request.POST.get('texto', '').strip() if request.method == 'POST' else ''
+    if texto:
+        registrar_mensaje(request, conversacion, texto)
+    return redirect('conversacion', conversacion_id=conversacion.id)
+
+
+def registrar_mensaje(request, conversacion, texto):
+    mensaje = Mensaje.objects.create(conversacion=conversacion, autor=request.user, texto=texto[:1000])
+    conversacion.actualizada = mensaje.fecha
+    conversacion.save(update_fields=['actualizada'])
+    destinatario = conversacion.otro(request.user)
+    enlace = reverse('conversacion', args=[conversacion.id])
+    # Un solo aviso por chat mientras no lo lea, para no llenar la campana
+    if not Notificacion.objects.filter(usuario=destinatario, enlace=enlace, leida=False).exists():
+        Notificacion.avisar(
+            destinatario,
+            f"Nuevo mensaje de {request.user.get_full_name() or request.user.username} sobre {conversacion.producto.nombre}",
+            enlace, 'bi-chat-dots',
+        )
+    return mensaje
+
+
+@login_required
+def mensajes(request, conversacion_id=None):
+    """Bandeja de chats: lista a la izquierda y la conversacion abierta a la derecha."""
+    lista = list(conversaciones_de(request.user))
+    for c in lista:
+        c.otro_usuario = c.otro(request.user)
+    actual = None
+    mensajes_chat = []
+    if conversacion_id is not None:
+        actual = get_object_or_404(Conversacion.objects.select_related('producto', 'comprador', 'vendedor'), id=conversacion_id)
+        if not actual.participa(request.user):
+            return HttpResponseForbidden("No participas en esta conversación.")
+        actual.mensajes.filter(leido=False).exclude(autor=request.user).update(leido=True)
+        Notificacion.objects.filter(usuario=request.user, enlace=reverse('conversacion', args=[actual.id])).update(leida=True)
+        mensajes_chat = actual.mensajes.select_related('autor')
+    return render(request, 'mensajes.html', {
+        'conversaciones': lista,
+        'actual': actual,
+        'mensajes_chat': mensajes_chat,
+        'otro': actual.otro(request.user) if actual else None,
+        'es_comprador_chat': actual is not None and actual.comprador_id == request.user.id,
+        'solicitudes_chat': OfertaNegociacion.objects.filter(producto=actual.producto, comprador=actual.comprador)[:3] if actual else [],
+    })
+
+
+@login_required
+def enviar_mensaje(request, conversacion_id):
+    conversacion = get_object_or_404(Conversacion, id=conversacion_id)
+    if not conversacion.participa(request.user):
+        return HttpResponseForbidden("No participas en esta conversación.")
+    texto = request.POST.get('texto', '').strip() if request.method == 'POST' else ''
+    if texto:
+        registrar_mensaje(request, conversacion, texto)
+    if request.headers.get('HX-Request'):
+        return mensajes_nuevos(request, conversacion_id)
+    return redirect('conversacion', conversacion_id=conversacion.id)
+
+
+@login_required
+def mensajes_nuevos(request, conversacion_id):
+    """Devuelve solo los mensajes posteriores al ultimo que ya se ve (lo pide HTMX cada 3 segundos)."""
+    conversacion = get_object_or_404(Conversacion, id=conversacion_id)
+    if not conversacion.participa(request.user):
+        return HttpResponseForbidden("No participas en esta conversación.")
+    try:
+        despues = int(request.GET.get('despues') or request.POST.get('despues') or 0)
+    except ValueError:
+        despues = 0
+    nuevos = list(conversacion.mensajes.filter(id__gt=despues).select_related('autor'))
+    # Quien tiene el chat abierto ya ve todo lo que le escribieron
+    conversacion.mensajes.filter(leido=False).exclude(autor=request.user).update(leido=True)
+    return render(request, 'includes/mensajes_chat.html', {'mensajes_chat': nuevos, 'actual': conversacion})
+
+
+@login_required
+def solicitud_desde_chat(request, conversacion_id):
+    """Convierte lo conversado en una solicitud de compra formal (cantidad y precio)."""
+    conversacion = get_object_or_404(Conversacion.objects.select_related('producto'), id=conversacion_id)
+    if request.method != 'POST' or conversacion.comprador != request.user:
+        return redirect('conversacion', conversacion_id=conversacion.id)
+    producto = conversacion.producto
+    if not producto.esta_publicado():
+        messages.error(request, "Esta publicación ya no está disponible.")
+        return redirect('conversacion', conversacion_id=conversacion.id)
+    form = OfertaNegociacionForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Revisa la cantidad y el precio de la solicitud.")
+        return redirect('conversacion', conversacion_id=conversacion.id)
+    solicitud = form.save(commit=False)
+    solicitud.producto = producto
+    solicitud.comprador = request.user
+    solicitud.save()
+    registrar_mensaje(
+        request, conversacion,
+        f"📋 Envié una solicitud de compra: {solicitud.cantidad} {producto.nombre_unidad_stock()} a S/ {soles(solicitud.precio_unitario_ofrecido)} c/u "
+        f"(total S/ {soles(solicitud.total_ofrecido())}).",
+    )
+    Notificacion.avisar(producto.productor, f"{request.user.username} te envió una solicitud de compra por {producto.nombre}.",
+                        reverse('ventas_por_oferta'), 'bi-cash-coin')
+    messages.success(request, "Solicitud enviada. El vendedor la verá en su sección de Ofertas.")
+    return redirect('conversacion', conversacion_id=conversacion.id)
