@@ -1,3 +1,5 @@
+from decimal import Decimal
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -83,6 +85,7 @@ class Producto(models.Model):
     origen = models.CharField(max_length=120, help_text="Región o valle de cosecha")
     imagen_url = models.CharField(max_length=350, blank=True, help_text="Enlace de imagen de referencia (opcional)")
     disponible = models.BooleanField(default=True)
+    oferta_pendiente_pago = models.BooleanField(default=False, help_text="La oferta no se publica hasta pagar la comisión")
     fecha_publicacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -92,6 +95,19 @@ class Producto(models.Model):
         if self.en_oferta and self.precio_oferta and self.precio_oferta < self.precio:
             return self.precio_oferta
         return self.precio
+
+    def valor_oferta(self):
+        """Valor total del lote en oferta (precio de oferta x stock)."""
+        if self.precio_oferta:
+            return self.precio_oferta * self.stock
+        return Decimal('0.00')
+
+    def monto_comision_oferta(self):
+        """Comisión que cobra AgroComercial por publicar el producto como oferta."""
+        porcentaje = Decimal(str(settings.COMISION_OFERTA_PORCENTAJE))
+        minimo = Decimal(str(settings.COMISION_OFERTA_MINIMA))
+        monto = (self.valor_oferta() * porcentaje / 100).quantize(Decimal('0.01'))
+        return max(monto, minimo)
 
     def porcentaje_descuento(self):
         if self.en_oferta and self.precio_oferta and self.precio > 0 and self.precio_oferta < self.precio:
@@ -233,6 +249,28 @@ class Pedido(models.Model):
 
     def __str__(self):
         return f"Pedido #{self.id} - {self.producto.nombre} ({self.comprador.username})"
+
+
+class PagoComision(models.Model):
+    """Registro del pago (simulado) de la comisión por publicar un producto en oferta."""
+    METODOS = [
+        ('YAPE_PLIN', 'Yape / Plin'),
+        ('TARJETA', 'Tarjeta de Crédito / Débito'),
+    ]
+
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='pagos_comision')
+    productor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pagos_comision')
+    porcentaje = models.DecimalField(max_digits=5, decimal_places=2)
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    metodo_pago = models.CharField(max_length=20, choices=METODOS, default='YAPE_PLIN')
+    codigo_transaccion = models.CharField(max_length=40)
+    fecha_pago = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_pago']
+
+    def __str__(self):
+        return f"Comisión {self.codigo_transaccion} - {self.producto.nombre} (S/ {self.monto})"
 
 
 class ResenaProducto(models.Model):
