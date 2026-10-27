@@ -5,7 +5,7 @@
 {% block content %}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
-        <h1 class="h4 fw-bold mb-1">Marketplace Agrícola</h1>
+        <h1 class="h4 fw-bold mb-1 titulo-seccion entrar"><i class="bi bi-shop"></i>Marketplace Agrícola</h1>
         <p class="text-muted small mb-0">Explora los productos disponibles por categoría, región o precio.</p>
     </div>
     <div class="mt-2 mt-md-0">
@@ -22,14 +22,17 @@
 </div>
 
 <!-- Barra de busqueda y filtros bien proporcionada y responsive -->
-<form method="get" action="{% url 'catalogo' %}" class="bg-white border p-3 mb-4">
+<form method="get" action="{% url 'catalogo' %}" class="bg-white border p-3 mb-4 entrar entrar-2">
     <div class="row g-2 align-items-end">
         <div class="col-12 col-md-4">
             <label class="form-label small fw-semibold mb-1">Buscar producto o región</label>
-            <input type="text" name="q" value="{{ busqueda }}" class="form-control form-control-sm" placeholder="Ej. Papa, Quinua, Huaral...">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" value="{{ busqueda }}" class="form-control form-control-sm" placeholder="Ej. Papa, Quinua, Huaral...">
+            </div>
         </div>
         <div class="col-6 col-md-3">
-            <label class="form-label small fw-semibold mb-1">Categoría</label>
+            <label class="form-label small fw-semibold mb-1"><i class="bi bi-grid me-1"></i>Categoría</label>
             <select name="categoria" class="form-select form-select-sm">
                 <option value="">Todas las categorías</option>
                 {% for cat in categorias %}
@@ -40,7 +43,7 @@
             </select>
         </div>
         <div class="col-6 col-md-2">
-            <label class="form-label small fw-semibold mb-1">Ordenar por</label>
+            <label class="form-label small fw-semibold mb-1"><i class="bi bi-sort-down me-1"></i>Ordenar por</label>
             <select name="orden" class="form-select form-select-sm">
                 <option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes</option>
                 <option value="precio_asc" {% if orden_seleccionado == 'precio_asc' %}selected{% endif %}>Menor precio</option>
@@ -48,8 +51,8 @@
             </select>
         </div>
         <div class="col-12 col-md-3 d-flex gap-2">
-            <button type="submit" class="btn btn-success btn-sm flex-grow-1">Filtrar</button>
-            <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary btn-sm flex-grow-1">Limpiar</a>
+            <button type="submit" class="btn btn-success btn-sm flex-grow-1"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+            <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary btn-sm flex-grow-1"><i class="bi bi-x-circle me-1"></i>Limpiar</a>
         </div>
     </div>
 </form>
@@ -57,14 +60,16 @@
 <!-- Listado limpio de productos -->
 <div class="row g-4">
     {% for prod in productos %}
-    <div class="col-md-6 col-lg-4">
+    <div class="col-sm-6 col-lg-4 aparecer">
         <div class="card h-100 border">
             <div class="p-3 pb-0">
-                <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 175px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                <a href="{% url 'detalle_producto' prod.id %}" class="img-zoom d-block">
+                    <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 175px;" loading="lazy" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                </a>
             </div>
             <div class="card-body d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted small">{{ prod.categoria.nombre|default:"Agrícola" }} • {{ prod.origen }}</span>
+                    <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ prod.categoria.nombre|default:"Agrícola" }} • {{ prod.origen }}</span>
                     {% if prod.en_oferta and prod.precio_oferta %}
                         <span class="etiqueta-oferta small">
                             <i class="bi bi-tag-fill me-1"></i>-{{ prod.porcentaje_descuento }}%
@@ -101,16 +106,16 @@
 
                     {% if user.is_authenticated and rol_actual == 'COMPRADOR' %}
                         <div class="d-flex gap-1">
-                            <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-secondary btn-sm">Ver</a>
+                            <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-secondary btn-sm" aria-label="Ver producto"><i class="bi bi-eye"></i></a>
                             <form action="{% url 'agregar_al_carrito' prod.id %}" method="post">
                                 {% csrf_token %}
                                 <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
-                                <button type="submit" class="btn btn-success btn-sm">+ Carrito</button>
+                                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-cart-plus me-1"></i>Carrito</button>
                             </form>
                         </div>
                     {% else %}
                         <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-success btn-sm">
-                            Ver Detalle
+                            Ver Detalle <i class="bi bi-arrow-right"></i>
                         </a>
                     {% endif %}
                 </div>
@@ -119,7 +124,8 @@
     </div>
     {% empty %}
     <div class="col-12">
-        <div class="bg-white border p-5 text-center">
+        <div class="bg-white border p-5 text-center entrar">
+            <i class="bi bi-search fs-1 text-muted d-block mb-2"></i>
             <h6 class="fw-bold text-secondary">No se encontraron productos con esos filtros</h6>
             <a href="{% url 'catalogo' %}" class="btn btn-outline-success btn-sm mt-2">Ver todos</a>
         </div>
