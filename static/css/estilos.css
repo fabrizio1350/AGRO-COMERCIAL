@@ -4,17 +4,21 @@
    ========================================================== */
 
 :root {
-    --verde-bosque: #1f3f29;
-    --verde-campo: #285436;
-    --verde-oscuro: #1e4029;
-    --verde-suave: #e6f2ea;
-    --ambar: #c67d28;
-    --ambar-claro: #fef3c7;
-    --arena: #f7f5f0;
-    --borde: #e3ded3;
-    --texto: #262925;
-    --sombra-suave: 0 1px 3px rgba(40, 36, 28, 0.05);
-    --sombra-hover: 0 10px 24px rgba(40, 36, 28, 0.12);
+    /* Paleta del proyecto: verdes de campo, dorado de cosecha y rojo solo para descuentos */
+    --verde-bosque: #173b2c;
+    --verde-campo: #1f4d3a;
+    --verde-oscuro: #173b2c;
+    --verde-secundario: #3d7657;
+    --verde-suave: #eaf3ec;
+    --ambar: #c59a50;
+    --ambar-claro: #f8f0e1;
+    --rojo-descuento: #c84b4b;
+    --arena: #f7f9f7;
+    --borde: #e0e7e2;
+    --texto: #202c26;
+    --texto-secundario: #68766e;
+    --sombra-suave: 0 1px 3px rgba(32, 44, 38, 0.05);
+    --sombra-hover: 0 10px 24px rgba(32, 44, 38, 0.10);
     --radio: 12px;
     --transicion: 0.25s ease;
 }
@@ -29,7 +33,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     font-size: 0.95rem;
     -webkit-font-smoothing: antialiased;
 }
@@ -39,8 +43,12 @@ main {
 }
 
 h1, h2, h3, h4, h5, h6 {
+    font-family: "Manrope", "Inter", system-ui, sans-serif;
     letter-spacing: -0.01em;
 }
+
+.text-muted, .text-secondary { color: var(--texto-secundario) !important; }
+.text-danger { color: var(--rojo-descuento) !important; }
 
 /* Tarjetas y contenedores con borde calido suave */
 .card, .caja-blanca, .bg-white.border {
@@ -62,14 +70,14 @@ h1, h2, h3, h4, h5, h6 {
 /* Inputs y selects sin sobreponer la flecha */
 .form-control {
     border-radius: 8px;
-    border: 1px solid #cfc9bc;
+    border: 1px solid #d3ddd6;
     padding: 0.5rem 0.75rem;
     background-color: #ffffff;
 }
 
 .form-select {
     border-radius: 8px;
-    border: 1px solid #cfc9bc;
+    border: 1px solid #d3ddd6;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
     padding-left: 0.75rem;
@@ -131,11 +139,11 @@ h1, h2, h3, h4, h5, h6 {
     border: 1px solid #c5dfce;
 }
 
-/* Etiqueta de oferta estilo cosecha dorado/ambar */
+/* Etiqueta de descuento en rojo suave */
 .badge.bg-danger, .etiqueta-oferta {
-    background-color: var(--ambar-claro) !important;
-    color: #92400e !important;
-    border: 1px solid #f59e0b !important;
+    background-color: #fbeceb !important;
+    color: var(--rojo-descuento) !important;
+    border: 1px solid #efc7c5 !important;
     font-weight: 600 !important;
     padding: 0.35em 0.65em !important;
     border-radius: 6px !important;
@@ -824,3 +832,223 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes girar {
     to { transform: rotate(360deg); }
 }
+
+
+/* ==========================================================
+   Barra de tiempo restante de cada publicacion u oferta
+   ========================================================== */
+
+.barra-tiempo {
+    font-size: 0.78rem;
+    margin-bottom: 0.5rem;
+}
+.barra-tiempo-texto {
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+    color: var(--verde-campo);
+}
+.barra-tiempo-texto time {
+    font-weight: 500;
+    white-space: nowrap;
+}
+.barra-tiempo-pista {
+    height: 6px;
+    border-radius: 999px;
+    background-color: var(--verde-suave);
+    overflow: hidden;
+}
+.barra-tiempo-relleno {
+    height: 100%;
+    border-radius: 999px;
+    background-color: var(--verde-secundario);
+    transition: width 0.3s ease;
+}
+.barra-tiempo.nivel-medio .barra-tiempo-texto { color: #8a6a2f; }
+.barra-tiempo.nivel-medio .barra-tiempo-pista { background-color: var(--ambar-claro); }
+.barra-tiempo.nivel-medio .barra-tiempo-relleno { background-color: var(--ambar); }
+.barra-tiempo.nivel-poco .barra-tiempo-texto { color: var(--rojo-descuento); }
+.barra-tiempo.nivel-poco .barra-tiempo-pista { background-color: #fbeceb; }
+.barra-tiempo.nivel-poco .barra-tiempo-relleno { background-color: var(--rojo-descuento); }
+.barra-tiempo.compacta { font-size: 0.72rem; }
+.barra-tiempo.compacta .barra-tiempo-pista { height: 5px; }
+
+/* ==========================================================
+   Carrusel de ofertas destacadas
+   ========================================================== */
+
+.carrusel-ofertas {
+    background-color: #ffffff;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    padding: 1.25rem;
+    box-shadow: var(--sombra-suave);
+    border-top: 3px solid var(--ambar);
+}
+.carrusel-ofertas-etiqueta {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #8a6a2f;
+    background-color: var(--ambar-claro);
+    border-radius: 999px;
+    padding: 0.2rem 0.6rem;
+}
+.btn-carrusel {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--borde);
+    background-color: #ffffff;
+    color: var(--verde-campo);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.btn-carrusel:hover {
+    background-color: var(--verde-campo);
+    border-color: var(--verde-campo);
+    color: #ffffff;
+}
+.btn-carrusel:focus-visible, .carrusel-pista:focus-visible {
+    outline: 2px solid var(--verde-secundario);
+    outline-offset: 2px;
+}
+.carrusel-ofertas.sin-desborde [data-carrusel-anterior],
+.carrusel-ofertas.sin-desborde [data-carrusel-siguiente],
+.carrusel-ofertas.sin-desborde [data-carrusel-pausa] {
+    display: none;
+}
+.carrusel-pista {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+    border-radius: 8px;
+}
+.carrusel-tarjeta {
+    flex: 0 0 calc((100% - 48px) / 4);
+    scroll-snap-align: start;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background-color: #ffffff;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.carrusel-tarjeta:hover {
+    box-shadow: var(--sombra-hover);
+    transform: translateY(-2px);
+}
+.carrusel-foto {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background-color: var(--verde-suave);
+    overflow: hidden;
+}
+.carrusel-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+.carrusel-tarjeta:hover .carrusel-foto img { transform: scale(1.04); }
+.carrusel-descuento {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: var(--rojo-descuento);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    padding: 0.2rem 0.5rem;
+}
+.carrusel-cuerpo {
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+.carrusel-cuerpo .btn { margin-top: auto !important; }
+.precio-oferta {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--rojo-descuento);
+    font-family: "Manrope", "Inter", sans-serif;
+}
+.precio-anterior {
+    color: var(--texto-secundario);
+    text-decoration: line-through;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 1199.98px) {
+    .carrusel-tarjeta { flex-basis: calc((100% - 32px) / 3); }
+}
+@media (max-width: 767.98px) {
+    .carrusel-tarjeta { flex-basis: calc((100% - 16px) / 2); }
+}
+@media (max-width: 575.98px) {
+    .carrusel-ofertas { padding: 1rem; }
+    .carrusel-tarjeta { flex-basis: 78%; }
+    .btn-carrusel { width: 36px; height: 36px; }
+}
+
+/* ==========================================================
+   Filtros, paginacion y estados de las publicaciones
+   ========================================================== */
+
+.filtros-avanzados summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--verde-campo);
+    list-style: none;
+}
+.filtros-avanzados summary::-webkit-details-marker { display: none; }
+.filtros-avanzados[open] summary .bi-chevron-down { transform: rotate(180deg); }
+.filtros-avanzados summary .bi-chevron-down { display: inline-block; transition: transform 0.2s ease; }
+
+.pagination .page-link {
+    color: var(--verde-campo);
+    border-color: var(--borde);
+}
+.pagination .page-item.active .page-link {
+    background-color: var(--verde-campo);
+    border-color: var(--verde-campo);
+    color: #ffffff;
+}
+
+.estado-publicacion {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid transparent;
+}
+.estado-publicacion.activa { background-color: var(--verde-suave); color: var(--verde-campo); border-color: #c9dfcf; }
+.estado-publicacion.pausada { background-color: #f1f3f2; color: var(--texto-secundario); border-color: var(--borde); }
+.estado-publicacion.vencida { background-color: #fbeceb; color: var(--rojo-descuento); border-color: #efc7c5; }
+.estado-publicacion.pendiente { background-color: var(--ambar-claro); color: #8a6a2f; border-color: #ead7b3; }
+.estado-publicacion.programada { background-color: #eef2f7; color: #4b5a6b; border-color: #dde3ea; }
+
+.aviso-vencida {
+    background-color: #fbeceb;
+    border: 1px solid #efc7c5;
+    color: var(--rojo-descuento);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+}
+.etiqueta-oferta { white-space: nowrap; }
+.barra-tiempo.compacta .barra-tiempo-texto { flex-wrap: wrap; row-gap: 0; }
