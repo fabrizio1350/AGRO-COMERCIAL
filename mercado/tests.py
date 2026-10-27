@@ -240,3 +240,24 @@ class PruebasFotosExtra(TestCase):
         with override_settings(MEDIA_ROOT=self.carpeta):
             guardar_fotos_extra(request, self.producto)
         self.assertEqual(self.producto.fotos.count(), 4)
+
+
+class PruebasSeguridad(TestCase):
+    def test_google_no_guarda_credenciales_desde_la_web(self):
+        from django.conf import settings
+        antes = getattr(settings, 'GOOGLE_CLIENT_SECRET', '')
+        self.client.post(reverse('login_google'), {
+            'guardar_credenciales_google': '1', 'google_client_id': 'id-falso', 'google_client_secret': 'secreto-falso',
+        })
+        self.assertEqual(getattr(settings, 'GOOGLE_CLIENT_SECRET', ''), antes)
+
+    def test_google_callback_rechaza_estado_desconocido(self):
+        respuesta = self.client.get(reverse('login_google_callback'), {'code': 'abc', 'state': 'PRODUCTOR'})
+        self.assertRedirects(respuesta, reverse('login'), fetch_redirect_response=False)
+
+    def test_culqi_con_clave_no_aprueba_sin_tarjeta(self):
+        from .views import procesar_cobro_culqi
+        with override_settings(CULQI_SECRET_KEY='sk_test_x'):
+            exito, codigo, _ = procesar_cobro_culqi(Decimal('10'), 'a@b.com', '')
+        self.assertFalse(exito)
+        self.assertIsNone(codigo)
