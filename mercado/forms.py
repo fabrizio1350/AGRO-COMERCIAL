@@ -1,7 +1,13 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import PerfilUsuario, Producto, OfertaNegociacion, Pedido, ResenaProducto
+from .models import (
+    PerfilUsuario, Producto, OfertaNegociacion, Pedido, ResenaProducto,
+    OPCIONES_LUGARES, LUGAR_POR_DEFECTO,
+)
+
+# Tamaño maximo de la foto que sube el vendedor (ya llega achicada desde el navegador)
+TAMANO_MAXIMO_FOTO = 8 * 1024 * 1024
 
 
 class RegistroUsuarioForm(UserCreationForm):
@@ -36,11 +42,11 @@ class RegistroUsuarioForm(UserCreationForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 987654321'})
     )
-    ubicacion = forms.CharField(
-        label="Ciudad / Región",
-        max_length=120,
+    ubicacion = forms.ChoiceField(
+        label="Distrito / Provincia (Arequipa)",
+        choices=[('', 'Elige tu distrito en Arequipa')] + OPCIONES_LUGARES,
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huancayo, Junín'})
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
     nombre_finca = forms.CharField(
         label="Nombre de Chacra, Granja o Huerta (Opcional)",
@@ -69,10 +75,17 @@ class RegistroUsuarioForm(UserCreationForm):
 
 
 class ProductoForm(forms.ModelForm):
+    origen = forms.ChoiceField(
+        label="Lugar de origen (Arequipa)",
+        choices=OPCIONES_LUGARES,
+        initial=LUGAR_POR_DEFECTO,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
     class Meta:
         model = Producto
         fields = [
-            'categoria', 'nombre', 'fecha_cosecha', 'origen', 'imagen_url',
+            'categoria', 'nombre', 'fecha_cosecha', 'origen', 'imagen',
             'descripcion', 'precio', 'en_oferta', 'precio_oferta',
             'acepta_ofertas', 'unidad', 'stock', 'minimo_compra', 'disponible'
         ]
@@ -80,8 +93,7 @@ class ProductoForm(forms.ModelForm):
             'categoria': forms.Select(attrs={'class': 'form-select'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Camote Morado, Papa Amarilla, Palta...'}),
             'fecha_cosecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
-            'origen': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Huaral, Huancayo, Arequipa...'}),
-            'imagen_url': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pega aquí el link de una imagen de internet (o déjalo vacío para usar imagen automática)'}),
+            'imagen': forms.FileInput(attrs={'class': 'd-none', 'accept': 'image/jpeg,image/png,image/webp'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe el producto que vas a vender...'}),
             'precio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.50', 'placeholder': 'Ej. 3.50'}),
             'en_oferta': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -92,6 +104,17 @@ class ProductoForm(forms.ModelForm):
             'minimo_compra': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'disponible': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['categoria'].empty_label = "Elige una categoría"
+        self.fields['categoria'].queryset = self.fields['categoria'].queryset.order_by('nombre')
+
+    def clean_imagen(self):
+        imagen = self.cleaned_data.get('imagen')
+        if imagen and hasattr(imagen, 'size') and imagen.size > TAMANO_MAXIMO_FOTO:
+            raise forms.ValidationError("La foto es muy pesada (máximo 8 MB).")
+        return imagen
 
     def clean(self):
         cleaned_data = super().clean()
@@ -121,13 +144,13 @@ class PasarelaPagoForm(forms.Form):
     direccion_entrega = forms.CharField(
         label="Dirección exacta de entrega o almacén",
         max_length=200,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Av. La Cultura 450 - Mercado Mayorista Puesto 12'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Av. Andrés Avelino Cáceres, Mercado Avelino Puesto 12'})
     )
-    ciudad_destino = forms.CharField(
-        label="Ciudad / Región de destino",
-        max_length=100,
-        initial="Lima Metropolitana",
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+    ciudad_destino = forms.ChoiceField(
+        label="Distrito de entrega (Arequipa)",
+        choices=OPCIONES_LUGARES,
+        initial=LUGAR_POR_DEFECTO,
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
     telefono_contacto = forms.CharField(
         label="Teléfono del receptor",
@@ -175,6 +198,13 @@ class PerfilForm(forms.ModelForm):
         widget=forms.EmailInput(attrs={'class': 'form-control'})
     )
 
+    ubicacion = forms.ChoiceField(
+        label="Distrito / Provincia (Arequipa)",
+        choices=[('', 'Elige tu distrito en Arequipa')] + OPCIONES_LUGARES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
     class Meta:
         model = PerfilUsuario
         fields = ['rol', 'ruc_dni', 'telefono', 'ubicacion', 'nombre_finca', 'cuenta_bancaria']
@@ -182,7 +212,6 @@ class PerfilForm(forms.ModelForm):
             'rol': forms.Select(attrs={'class': 'form-select'}),
             'ruc_dni': forms.TextInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
-            'ubicacion': forms.TextInput(attrs={'class': 'form-control'}),
             'nombre_finca': forms.TextInput(attrs={'class': 'form-control'}),
             'cuenta_bancaria': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. BCP Soles: 191-12345678-0-99'}),
         }
