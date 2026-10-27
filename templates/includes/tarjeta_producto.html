@@ -25,7 +25,15 @@ La foto lleva un nombre de transicion para que "vuele" hasta el detalle en Chrom
                 {% endif %}
                 <span class="small text-muted">/ {{ prod.unidad_corta }}</span>
             </div>
-            <span class="boton-circular" aria-hidden="true"><i class="bi bi-arrow-up-right"></i></span>
+            {% if rol_actual == 'COMPRADOR' %}
+                <form action="{% url 'agregar_al_carrito' prod.id %}" method="post" class="m-0" data-carrito-rapido>
+                    {% csrf_token %}
+                    <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
+                    <button type="submit" class="boton-circular boton-carrito" aria-label="Agregar {{ prod.minimo_compra }} {{ prod.nombre_unidad_minimo }} de {{ prod.nombre }} al carrito" title="Agregar al carrito"><i class="bi bi-bag-plus" aria-hidden="true"></i></button>
+                </form>
+            {% else %}
+                <span class="boton-circular" aria-hidden="true"><i class="bi bi-arrow-up-right"></i></span>
+            {% endif %}
         </div>
     </div>
 </article>
