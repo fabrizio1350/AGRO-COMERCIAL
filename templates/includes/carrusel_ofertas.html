@@ -1,0 +1,49 @@
+{% comment %}
+Carrusel de ofertas destacadas (se usa en Ofertas y en el Marketplace).
+Recibe 'ofertas_carrusel': solo ofertas vigentes que vienen del servidor.
+{% endcomment %}
+{% if ofertas_carrusel %}
+<section class="carrusel-ofertas mb-4 entrar" aria-roledescription="carrusel" aria-label="Ofertas destacadas del campo">
+    <div class="d-flex justify-content-between align-items-end mb-3 gap-2">
+        <div>
+            <span class="carrusel-ofertas-etiqueta"><i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Ofertas principales</span>
+            <h2 class="h5 fw-bold mb-0 mt-1">Ofertas destacadas del campo</h2>
+        </div>
+        <div class="d-flex gap-2 flex-shrink-0">
+            <button type="button" class="btn-carrusel" data-carrusel-pausa aria-label="Pausar el avance automático" title="Pausar">
+                <i class="bi bi-pause-fill" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="btn-carrusel" data-carrusel-anterior aria-label="Ofertas anteriores" title="Anterior">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="btn-carrusel" data-carrusel-siguiente aria-label="Más ofertas" title="Siguiente">
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="carrusel-pista" data-carrusel-pista tabindex="0">
+        {% for of in ofertas_carrusel %}
+        <article class="carrusel-tarjeta" aria-label="Oferta {{ forloop.counter }} de {{ ofertas_carrusel|length }}: {{ of.nombre }}">
+            <a href="{% url 'detalle_producto' of.id %}" class="carrusel-foto d-block" tabindex="-1">
+                <img src="{{ of.url_imagen }}" alt="{{ of.nombre }}" loading="lazy" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                <span class="carrusel-descuento">-{{ of.porcentaje_descuento }}%</span>
+            </a>
+            <div class="carrusel-cuerpo">
+                <div class="text-muted small text-truncate"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ of.origen }}</div>
+                <h3 class="h6 fw-bold mb-1 text-truncate">{{ of.nombre }}</h3>
+                <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                    <span class="precio-oferta">S/ {{ of.precio_oferta }}</span>
+                    <span class="precio-anterior">S/ {{ of.precio }}</span>
+                    <span class="text-muted small">/ {{ of.get_unidad_display }}</span>
+                </div>
+                <div class="small text-success fw-semibold mb-2">Ahorras S/ {{ of.ahorro }} por unidad</div>
+                <div class="small text-muted mb-2"><i class="bi bi-box-seam me-1" aria-hidden="true"></i>{{ of.stock }} {{ of.nombre_unidad_stock }} disponibles · mín. {{ of.minimo_compra }}</div>
+                {% include 'includes/barra_tiempo.html' with prod=of compacta=True %}
+                <a href="{% url 'detalle_producto' of.id %}" class="btn btn-success btn-sm w-100 mt-2">Ver oferta</a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
