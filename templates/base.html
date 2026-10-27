@@ -61,6 +61,14 @@
                         <i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>Ofertas
                     </a>
                     {% if user.is_authenticated %}
+                        <a href="{% url 'mensajes' %}" class="icono-cabecera d-none d-sm-inline-flex" aria-label="Mensajes{% if mensajes_sin_leer %}, {{ mensajes_sin_leer }} sin leer{% endif %}" title="Mensajes">
+                            <i class="bi bi-chat-dots" aria-hidden="true"></i>
+                            {% if mensajes_sin_leer %}<span class="contador-icono">{{ mensajes_sin_leer }}</span>{% endif %}
+                        </a>
+                        <a href="{% url 'notificaciones' %}" class="icono-cabecera" aria-label="Notificaciones{% if notificaciones_sin_leer %}, {{ notificaciones_sin_leer }} nuevas{% endif %}" title="Notificaciones">
+                            <i class="bi bi-bell" aria-hidden="true"></i>
+                            {% if notificaciones_sin_leer %}<span class="contador-icono">{{ notificaciones_sin_leer }}</span>{% endif %}
+                        </a>
                         {% if rol_actual == 'COMPRADOR' %}
                             <a href="{% url 'carrito' %}" class="icono-cabecera" aria-label="Mi carrito, {{ total_items_carrito }} productos" title="Mi carrito">
                                 <i class="bi bi-bag" aria-hidden="true"></i>
@@ -88,6 +96,11 @@
                                 {% else %}
                                     <li><a class="dropdown-item" href="{% url 'panel_comprador' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Panel del comprador</a></li>
                                     <li><a class="dropdown-item" href="{% url 'mis_pedidos' %}"><i class="bi bi-bag-check" aria-hidden="true"></i>Mis compras</a></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{% url 'mensajes' %}"><i class="bi bi-chat-dots" aria-hidden="true"></i>Mensajes{% if mensajes_sin_leer %} <span class="badge rounded-pill text-bg-danger ms-auto">{{ mensajes_sin_leer }}</span>{% endif %}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'mis_favoritos' %}"><i class="bi bi-heart" aria-hidden="true"></i>Favoritos</a></li>
+                                {% if rol_actual == 'PRODUCTOR' %}
+                                    <li><a class="dropdown-item" href="{% url 'perfil_productor' user.id %}"><i class="bi bi-shop" aria-hidden="true"></i>Mi página pública</a></li>
                                 {% endif %}
                                 <li><a class="dropdown-item" href="{% url 'perfil' %}"><i class="bi bi-person-gear" aria-hidden="true"></i>Mi perfil</a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -172,6 +185,9 @@
                     <a href="{% url 'mis_pedidos' %}"><i class="bi bi-bag-check" aria-hidden="true"></i>Mis compras</a>
                 {% endif %}
                 {% if user.is_authenticated %}
+                    <a href="{% url 'mensajes' %}"><i class="bi bi-chat-dots" aria-hidden="true"></i>Mensajes{% if mensajes_sin_leer %} ({{ mensajes_sin_leer }}){% endif %}</a>
+                    <a href="{% url 'notificaciones' %}"><i class="bi bi-bell" aria-hidden="true"></i>Notificaciones{% if notificaciones_sin_leer %} ({{ notificaciones_sin_leer }}){% endif %}</a>
+                    <a href="{% url 'mis_favoritos' %}"><i class="bi bi-heart" aria-hidden="true"></i>Favoritos</a>
                     <a href="{% url 'perfil' %}"><i class="bi bi-person-gear" aria-hidden="true"></i>Mi perfil</a>
                 {% endif %}
             </nav>
@@ -257,11 +273,11 @@
         <a href="{% url 'ventas_por_oferta' %}" data-ruta="/ofertas/"><i class="bi bi-lightning-charge" aria-hidden="true"></i><span>Ofertas</span></a>
         <a href="{% url 'catalogo' %}" data-ruta="/catalogo/"><i class="bi bi-grid" aria-hidden="true"></i><span>Productos</span></a>
         {% if rol_actual == 'PRODUCTOR' %}
-            <a href="{% url 'crear_producto' %}" data-ruta="/producto/nuevo/"><i class="bi bi-plus-circle" aria-hidden="true"></i><span>Publicar</span></a>
             <a href="{% url 'panel_productor' %}" data-ruta="/panel-productor/"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Panel</span></a>
+            <a href="{% url 'mensajes' %}" data-ruta="/mensajes/"><i class="bi bi-chat-dots" aria-hidden="true"></i><span>Mensajes</span>{% if mensajes_sin_leer %}<b class="contador-icono">{{ mensajes_sin_leer }}</b>{% endif %}</a>
         {% elif rol_actual == 'COMPRADOR' %}
-            <a href="{% url 'carrito' %}" data-ruta="/carrito/"><i class="bi bi-bag" aria-hidden="true"></i><span>Carrito</span>{% if total_items_carrito %}<b class="contador-icono">{{ total_items_carrito }}</b>{% endif %}</a>
-            <a href="{% url 'panel_comprador' %}" data-ruta="/panel-comprador/"><i class="bi bi-person" aria-hidden="true"></i><span>Mi panel</span></a>
+            <a href="{% url 'carrito' %}" data-ruta="/carrito/"><i class="bi bi-bag" aria-hidden="true"></i><span>Carrito</span><b class="contador-icono {% if not total_items_carrito %}d-none{% endif %}">{{ total_items_carrito }}</b></a>
+            <a href="{% url 'mensajes' %}" data-ruta="/mensajes/"><i class="bi bi-chat-dots" aria-hidden="true"></i><span>Mensajes</span>{% if mensajes_sin_leer %}<b class="contador-icono">{{ mensajes_sin_leer }}</b>{% endif %}</a>
         {% else %}
             <a href="{% url 'login' %}?modo=comprador" data-ruta="/login/"><i class="bi bi-person" aria-hidden="true"></i><span>Ingresar</span></a>
         {% endif %}
