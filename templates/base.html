@@ -189,16 +189,15 @@
         </div>
     </div>
 
-    <!-- Mensajes de alerta -->
-    <div class="container mt-3">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-secondary alert-dismissible fade show py-2 small entrar d-flex align-items-center gap-2" role="alert">
-                    <i class="bi bi-info-circle"></i>{{ message }}
-                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+    <!-- Avisos tipo toast (mensajes del servidor y del carrito) -->
+    <div class="zona-avisos" id="zonaAvisos" aria-live="polite" aria-atomic="false">
+        {% for message in messages %}
+            <div class="aviso aviso-{{ message.tags|default:'info' }}" role="status">
+                <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% elif message.tags == 'error' %}bi-x-circle-fill{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %}" aria-hidden="true"></i>
+                <span>{{ message }}</span>
+                <button type="button" class="aviso-cerrar" aria-label="Cerrar aviso"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+            </div>
+        {% endfor %}
     </div>
 
     <!-- Contenido principal: 'ancho' ocupa toda la pantalla (portada), 'content' va centrado -->
@@ -280,6 +279,7 @@
     <script src="{% static 'vendor/htmx.min.js' %}"></script>
     <script src="{% static 'js/animaciones.js' %}?v={{ version_estaticos }}"></script>
     <script src="{% static 'js/carrusel.js' %}?v={{ version_estaticos }}"></script>
+    <script src="{% static 'js/tienda.js' %}?v={{ version_estaticos }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
