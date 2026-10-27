@@ -1,0 +1,9 @@
+{% for m in mensajes_chat %}
+<div class="burbuja {% if m.autor_id == request.user.id %}mia{% else %}suya{% endif %}" data-id="{{ m.id }}">
+    <p>{{ m.texto|linebreaksbr }}</p>
+    <span class="hora">
+        <time datetime="{{ m.fecha|date:'c' }}">{{ m.fecha|date:"d/m H:i" }}</time>
+        {% if m.autor_id == request.user.id %}<i class="bi {% if m.leido %}bi-check2-all leido{% else %}bi-check2{% endif %}" aria-label="{% if m.leido %}Leído{% else %}Enviado{% endif %}"></i>{% endif %}
+    </span>
+</div>
+{% endfor %}
