@@ -112,7 +112,9 @@
                     </td>
                     <td class="fw-semibold">{{ prod.stock }} {{ prod.nombre_unidad_stock }}</td>
                     <td>
-                        {% if prod.disponible and prod.stock > 0 %}
+                        {% if prod.oferta_pendiente_pago %}
+                            <span class="badge bg-warning text-dark">Pendiente de pago</span>
+                        {% elif prod.disponible and prod.stock > 0 %}
                             <span class="badge bg-success">Activo</span>
                         {% else %}
                             <span class="badge bg-secondary">Pausado/Agotado</span>
@@ -120,6 +122,11 @@
                     </td>
                     <td class="text-end">
                         <div class="d-inline-flex gap-1">
+                            {% if prod.oferta_pendiente_pago %}
+                            <a href="{% url 'pagar_comision_oferta' prod.id %}" class="btn btn-success btn-sm">
+                                Pagar comisión
+                            </a>
+                            {% endif %}
                             <a href="{% url 'editar_producto' prod.id %}" class="btn btn-outline-secondary btn-sm">
                                 Editar
                             </a>
