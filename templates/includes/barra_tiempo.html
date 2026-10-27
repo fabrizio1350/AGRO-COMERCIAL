@@ -1,0 +1,18 @@
+{% comment %}
+Barra con el tiempo que le queda a la publicacion (o a la oferta si tiene una vigente).
+Se calcula con la fecha real de vencimiento guardada en el servidor.
+Uso: {% include 'includes/barra_tiempo.html' with prod=producto %}
+{% endcomment %}
+{% with limite=prod.fecha_limite porcentaje=prod.porcentaje_tiempo_restante %}
+{% if limite %}
+<div class="barra-tiempo nivel-{{ prod.nivel_tiempo_restante }}{% if compacta %} compacta{% endif %}">
+    <div class="d-flex justify-content-between align-items-center barra-tiempo-texto">
+        <span><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>{% if prod.oferta_activa and prod.oferta_fin %}Oferta:{% else %}Publicación:{% endif %} {{ prod.texto_tiempo_restante }}</span>
+        <time datetime="{{ limite|date:'c' }}" class="text-muted">Vence {{ limite|date:"d/m H:i" }}</time>
+    </div>
+    <div class="barra-tiempo-pista" role="progressbar" aria-label="Tiempo restante" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ porcentaje }}" aria-valuetext="{{ prod.texto_tiempo_restante }}">
+        <div class="barra-tiempo-relleno" style="width: {{ porcentaje }}%;"></div>
+    </div>
+</div>
+{% endif %}
+{% endwith %}
