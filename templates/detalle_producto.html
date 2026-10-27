@@ -28,7 +28,7 @@
             </div>
             <div class="border-top pt-2 mt-2 small d-flex justify-content-between align-items-center">
                 <span class="text-secondary"><i class="bi bi-telephone-fill text-success me-1"></i>Contacto directo:</span>
-                <strong class="text-dark">{{ producto.productor.perfil.telefono|default:"964 112 233" }}</strong>
+                <strong class="text-dark">{{ producto.productor.perfil.telefono|default:"No registrado" }}</strong>
             </div>
         </div>
     </div>
@@ -39,7 +39,7 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge bg-success-subtle">{{ producto.categoria.nombre|default:"Agrícola" }}</span>
-                    {% if producto.en_oferta and producto.precio_oferta %}
+                    {% if producto.oferta_activa %}
                         <span class="etiqueta-oferta small">
                             <i class="bi bi-tag-fill me-1"></i>Oferta -{{ producto.porcentaje_descuento }}%
                         </span>
@@ -56,10 +56,11 @@
             <!-- Caja de precio limpia y stock con su unidad clara -->
             <div class="p-3 rounded-3 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3" style="background-color: #faf7f0; border: 1px solid #e5dec9;">
                 <div>
-                    {% if producto.en_oferta and producto.precio_oferta %}
+                    {% if producto.oferta_activa %}
                         <span class="text-decoration-line-through text-muted small d-block">Antes: S/ {{ producto.precio }}</span>
                         <span class="fs-3 fw-bold text-danger">S/ {{ producto.precio_oferta }}</span>
                         <span class="text-muted small">/ {{ producto.get_unidad_display }}</span>
+                        <span class="d-block small text-success fw-semibold">Ahorras S/ {{ producto.ahorro }} por unidad{% if producto.oferta_fin %} · oferta válida hasta el {{ producto.oferta_fin|date:"d/m/Y H:i" }}{% endif %}</span>
                     {% else %}
                         <span class="text-muted small d-block">Precio por {{ producto.get_unidad_display }}</span>
                         <span class="fs-3 fw-bold text-success">S/ {{ producto.precio }}</span>
@@ -75,6 +76,17 @@
                     </div>
                 </div>
             </div>
+
+            {% if producto.esta_vencida %}
+                <div class="aviso-vencida small mb-3" role="status">
+                    <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Esta publicación venció el {{ producto.fecha_vencimiento|date:"d/m/Y H:i" }} y ya no está a la venta.
+                </div>
+            {% else %}
+                <div class="mb-4">{% include 'includes/barra_tiempo.html' with prod=producto %}</div>
+            {% endif %}
+            {% if producto.oferta_programada %}
+                <div class="small text-muted mb-3"><i class="bi bi-calendar-event me-1" aria-hidden="true"></i>Oferta programada: S/ {{ producto.precio_oferta }} desde el {{ producto.oferta_inicio|date:"d/m/Y" }}.</div>
+            {% endif %}
 
             <!-- ACCIONES ESTRICTAMENTE SEPARADAS SEGUN EL ROL -->
             {% if not user.is_authenticated %}
@@ -103,7 +115,7 @@
 
             {% elif rol_actual == 'COMPRADOR' %}
                 <!-- Vista exclusiva de Comprador (NUNCA puede editar el producto) -->
-                {% if producto.disponible and producto.stock > 0 %}
+                {% if producto.esta_publicado %}
                     <div class="mb-3">
                         <label class="form-label small fw-bold">1. Compra Directa (indica cuántos {{ producto.nombre_unidad_stock }} deseas)</label>
                         <form action="{% url 'agregar_al_carrito' producto.id %}" method="post">
@@ -153,7 +165,7 @@
                     </div>
                     {% endif %}
                 {% else %}
-                    <div class="alert alert-secondary mb-0">Producto agotado temporalmente.</div>
+                    <div class="alert alert-secondary mb-0">{% if producto.esta_vencida %}Esta publicación ya venció.{% else %}Producto agotado o pausado temporalmente.{% endif %}</div>
                 {% endif %}
             {% endif %}
         </div>
@@ -219,7 +231,7 @@
                 </div>
                 <div class="bg-white border rounded px-3 py-2 text-center flex-shrink-0">
                     <span class="text-muted small d-block">Llamar al vendedor:</span>
-                    <span class="fs-5 fw-bold text-success">{{ producto.productor.perfil.telefono|default:"964 112 233" }}</span>
+                    <span class="fs-5 fw-bold text-success">{{ producto.productor.perfil.telefono|default:"No registrado" }}</span>
                 </div>
             </div>
         </div>
