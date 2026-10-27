@@ -1,204 +1,143 @@
 {% extends 'base.html' %}
 
-{% block title %}Marketplace | AgroComercial{% endblock %}
+{% block title %}Productos | AgroComercial{% endblock %}
 
 {% block content %}
 {% include 'includes/carrusel_ofertas.html' %}
 
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+<div class="encabezado-seccion entrar">
     <div>
-        <h1 class="h4 fw-bold mb-1 titulo-seccion entrar"><i class="bi bi-shop"></i>Marketplace Agrícola</h1>
-        <p class="text-muted small mb-0">Explora los productos disponibles por categoría, región o precio.</p>
+        <span class="antetitulo"><i class="bi bi-grid-fill" aria-hidden="true"></i>Marketplace agrícola</span>
+        <h1 class="h2 fw-bold mb-0">Productos del campo</h1>
     </div>
-    <div class="mt-2 mt-md-0">
-        {% if user.is_authenticated and rol_actual == 'PRODUCTOR' %}
-            <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm">
-                <i class="bi bi-plus-circle me-1"></i>Publicar Producto
-            </a>
-        {% elif user.is_authenticated and rol_actual == 'COMPRADOR' %}
-            <a href="{% url 'carrito' %}" class="btn btn-outline-success btn-sm">
-                <i class="bi bi-cart3 me-1"></i>Mi Carrito ({{ total_items_carrito }})
-            </a>
-        {% endif %}
-    </div>
+    {% if rol_actual == 'PRODUCTOR' %}
+        <a href="{% url 'crear_producto' %}" class="btn btn-success"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Publicar producto</a>
+    {% endif %}
 </div>
 
-<!-- Barra de busqueda y filtros bien proporcionada y responsive -->
-<form method="get" action="{% url 'catalogo' %}" class="bg-white border p-3 mb-4 entrar entrar-2">
-    <div class="row g-2 align-items-end">
-        <div class="col-12 col-md-4">
-            <label class="form-label small fw-semibold mb-1">Buscar producto o región</label>
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" name="q" value="{{ busqueda }}" class="form-control form-control-sm" placeholder="Ej. Papa, Rocoto, Majes...">
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <label class="form-label small fw-semibold mb-1"><i class="bi bi-grid me-1"></i>Categoría</label>
-            <select name="categoria" class="form-select form-select-sm">
-                <option value="">Todas las categorías</option>
-                {% for cat in categorias %}
-                <option value="{{ cat.id }}" {% if categoria_seleccionada == cat.id|stringformat:"s" %}selected{% endif %}>
-                    {{ cat.nombre }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-6 col-md-2">
-            <label class="form-label small fw-semibold mb-1"><i class="bi bi-sort-down me-1"></i>Ordenar por</label>
-            <select name="orden" class="form-select form-select-sm">
-                <option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes</option>
-                <option value="precio_asc" {% if orden_seleccionado == 'precio_asc' %}selected{% endif %}>Menor precio</option>
-                <option value="precio_desc" {% if orden_seleccionado == 'precio_desc' %}selected{% endif %}>Mayor precio</option>
-                <option value="stock" {% if orden_seleccionado == 'stock' %}selected{% endif %}>Más cantidad</option>
-                <option value="vence" {% if orden_seleccionado == 'vence' %}selected{% endif %}>Vencen pronto</option>
-            </select>
-        </div>
-        <div class="col-12 col-md-3 d-flex gap-2">
-            <button type="submit" class="btn btn-success btn-sm flex-grow-1"><i class="bi bi-funnel me-1"></i>Filtrar</button>
-            <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary btn-sm flex-grow-1"><i class="bi bi-x-circle me-1"></i>Limpiar</a>
-        </div>
-    </div>
-    <details class="filtros-avanzados mt-3" {% if ubicacion_seleccionada or unidad_seleccionada or precio_min or precio_max or cantidad_min or solo_ofertas %}open{% endif %}>
-        <summary>Más filtros <i class="bi bi-chevron-down ms-1" aria-hidden="true"></i></summary>
-        <div class="row g-2 align-items-end mt-1">
-            <div class="col-12 col-md-3">
-                <label class="form-label small fw-semibold mb-1" for="filtroUbicacion">Ubicación</label>
-                <select name="ubicacion" id="filtroUbicacion" class="form-select form-select-sm">
-                    <option value="">Todo Arequipa</option>
-                    {% for valor, nombre in lugares %}
-                    <option value="{{ valor }}" {% if ubicacion_seleccionada == valor %}selected{% endif %}>{{ nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label small fw-semibold mb-1" for="filtroUnidad">Unidad</label>
-                <select name="unidad" id="filtroUnidad" class="form-select form-select-sm">
-                    <option value="">Todas</option>
-                    {% for valor, nombre in unidades %}
-                    <option value="{{ valor }}" {% if unidad_seleccionada == valor %}selected{% endif %}>{{ nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label small fw-semibold mb-1" for="filtroPrecioMin">Precio mín. (S/)</label>
-                <input type="number" min="0" step="0.10" name="precio_min" id="filtroPrecioMin" value="{{ precio_min }}" class="form-control form-control-sm">
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label small fw-semibold mb-1" for="filtroPrecioMax">Precio máx. (S/)</label>
-                <input type="number" min="0" step="0.10" name="precio_max" id="filtroPrecioMax" value="{{ precio_max }}" class="form-control form-control-sm">
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label small fw-semibold mb-1" for="filtroCantidad">Cantidad disponible mín.</label>
-                <input type="number" min="0" step="1" name="cantidad_min" id="filtroCantidad" value="{{ cantidad_min }}" class="form-control form-control-sm">
-            </div>
-            <div class="col-12 col-md-1">
-                <div class="form-check mb-1">
-                    <input class="form-check-input" type="checkbox" name="ofertas" value="1" id="filtroOfertas" {% if solo_ofertas == '1' %}checked{% endif %}>
-                    <label class="form-check-label small fw-semibold" for="filtroOfertas">En oferta</label>
-                </div>
-            </div>
-        </div>
-    </details>
-</form>
-
-<p class="text-muted small mb-3">{{ total_resultados }} producto{{ total_resultados|pluralize }} encontrado{{ total_resultados|pluralize }}</p>
-
-<!-- Listado limpio de productos -->
-<div class="row g-4">
-    {% for prod in productos %}
-    <div class="col-sm-6 col-lg-4 aparecer">
-        <div class="card h-100 border">
-            <div class="p-3 pb-0">
-                <a href="{% url 'detalle_producto' prod.id %}" class="img-zoom d-block">
-                    <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 175px;" loading="lazy" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
-                </a>
-            </div>
-            <div class="card-body d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ prod.categoria.nombre|default:"Agrícola" }} • {{ prod.origen }}</span>
-                    {% if prod.oferta_activa %}
-                        <span class="etiqueta-oferta small">
-                            <i class="bi bi-tag-fill me-1"></i>-{{ prod.porcentaje_descuento }}%
-                        </span>
-                    {% endif %}
-                </div>
-
-                <h5 class="h6 fw-bold mb-1">
-                    <a href="{% url 'detalle_producto' prod.id %}" class="text-dark text-decoration-none">
-                        {{ prod.nombre }}
-                    </a>
-                </h5>
-
-                <div class="mb-2">
-                    <span class="badge bg-light text-success border border-success-subtle fw-semibold">
-                        <i class="bi bi-box-seam me-1"></i>{{ prod.stock }} {{ prod.nombre_unidad_stock }} disponibles
-                    </span>
-                </div>
-
-                <p class="text-secondary small mb-2 flex-grow-1">
-                    {{ prod.descripcion|truncatewords:14 }}
-                </p>
-                <div class="text-muted small mb-2">
-                    <i class="bi bi-person me-1" aria-hidden="true"></i>{{ prod.productor.get_full_name|default:prod.productor.username }} · mín. {{ prod.minimo_compra }} {{ prod.nombre_unidad_minimo }}
-                </div>
-                {% include 'includes/barra_tiempo.html' with prod=prod compacta=True %}
-
-                <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
-                    <div>
-                        {% if prod.oferta_activa %}
-                            <span class="text-decoration-line-through text-muted small me-1">S/ {{ prod.precio }}</span>
-                            <span class="fs-5 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
-                        {% else %}
-                            <span class="fs-5 fw-bold text-success">S/ {{ prod.precio }}</span>
-                        {% endif %}
-                        <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
-                    </div>
-
-                    {% if user.is_authenticated and rol_actual == 'COMPRADOR' %}
-                        <div class="d-flex gap-1">
-                            <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-secondary btn-sm" aria-label="Ver producto"><i class="bi bi-eye"></i></a>
-                            <form action="{% url 'agregar_al_carrito' prod.id %}" method="post">
-                                {% csrf_token %}
-                                <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
-                                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-cart-plus me-1"></i>Carrito</button>
-                            </form>
-                        </div>
-                    {% else %}
-                        <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-success btn-sm">
-                            Ver Detalle <i class="bi bi-arrow-right"></i>
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="bg-white border p-5 text-center entrar">
-            <i class="bi bi-search fs-1 text-muted d-block mb-2"></i>
-            <h6 class="fw-bold text-secondary">No se encontraron productos con esos filtros</h6>
-            <a href="{% url 'catalogo' %}" class="btn btn-outline-success btn-sm mt-2">Ver todos</a>
-        </div>
-    </div>
+<!-- Fichas de categoria deslizables -->
+<div class="fichas-filtro mb-4 entrar entrar-2" role="list">
+    <a href="{% url 'catalogo' %}" class="ficha-filtro {% if not categoria_seleccionada %}activa{% endif %}" role="listitem">Todo</a>
+    {% for cat in categorias %}
+        <a href="{% url 'catalogo' %}?categoria={{ cat.id }}" class="ficha-filtro {% if categoria_seleccionada == cat.id|stringformat:'s' %}activa{% endif %}" role="listitem">{{ cat.nombre }}</a>
     {% endfor %}
 </div>
 
-{% if pagina.has_other_pages %}
-<nav class="mt-4" aria-label="Páginas del marketplace">
-    <ul class="pagination pagination-sm justify-content-center flex-wrap">
-        {% if pagina.has_previous %}
-        <li class="page-item"><a class="page-link" href="?{% if parametros_filtro %}{{ parametros_filtro }}&{% endif %}pagina={{ pagina.previous_page_number }}" aria-label="Página anterior">&laquo;</a></li>
-        {% endif %}
-        {% for numero in pagina.paginator.page_range %}
-        <li class="page-item {% if numero == pagina.number %}active{% endif %}">
-            <a class="page-link" href="?{% if parametros_filtro %}{{ parametros_filtro }}&{% endif %}pagina={{ numero }}" {% if numero == pagina.number %}aria-current="page"{% endif %}>{{ numero }}</a>
-        </li>
-        {% endfor %}
-        {% if pagina.has_next %}
-        <li class="page-item"><a class="page-link" href="?{% if parametros_filtro %}{{ parametros_filtro }}&{% endif %}pagina={{ pagina.next_page_number }}" aria-label="Página siguiente">&raquo;</a></li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
+<div class="row g-4">
+    <!-- Filtros: columna en PC, panel que sube desde abajo en celular -->
+    <div class="col-lg-3">
+        <button class="btn btn-outline-secondary w-100 d-lg-none mb-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#panelFiltros" aria-controls="panelFiltros">
+            <i class="bi bi-sliders me-1" aria-hidden="true"></i>Filtros y orden
+        </button>
+        <div class="offcanvas-lg offcanvas-bottom panel-filtros" tabindex="-1" id="panelFiltros" aria-labelledby="tituloFiltros">
+            <div class="offcanvas-header">
+                <h2 class="offcanvas-title h5 fw-bold" id="tituloFiltros">Filtros</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#panelFiltros" aria-label="Cerrar"></button>
+            </div>
+            <div class="offcanvas-body">
+                <form method="get" action="{% url 'catalogo' %}" class="filtros-lateral" id="formFiltros"
+                      hx-get="{% url 'catalogo' %}" hx-target="#resultados" hx-select="#resultados" hx-swap="outerHTML show:none"
+                      hx-push-url="true" hx-indicator="#resultados"
+                      hx-trigger="change[target.id != 'filtroTexto'], input changed delay:450ms from:#filtroTexto, submit">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="filtroTexto">Buscar</label>
+                        <input type="search" name="q" id="filtroTexto" value="{{ busqueda }}" class="form-control" placeholder="Papa, rocoto, Majes...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="filtroCategoria">Categoría</label>
+                        <select name="categoria" id="filtroCategoria" class="form-select">
+                            <option value="">Todas</option>
+                            {% for cat in categorias %}
+                            <option value="{{ cat.id }}" {% if categoria_seleccionada == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="filtroUbicacion">Ubicación</label>
+                        <select name="ubicacion" id="filtroUbicacion" class="form-select">
+                            <option value="">Todo Arequipa</option>
+                            {% for valor, nombre in lugares %}
+                            <option value="{{ valor }}" {% if ubicacion_seleccionada == valor %}selected{% endif %}>{{ nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <span class="form-label small fw-semibold d-block">Precio (S/)</span>
+                        <div class="d-flex gap-2">
+                            <label class="visually-hidden" for="filtroPrecioMin">Precio mínimo</label>
+                            <input type="number" min="0" step="0.10" name="precio_min" id="filtroPrecioMin" value="{{ precio_min }}" class="form-control" placeholder="Mín.">
+                            <label class="visually-hidden" for="filtroPrecioMax">Precio máximo</label>
+                            <input type="number" min="0" step="0.10" name="precio_max" id="filtroPrecioMax" value="{{ precio_max }}" class="form-control" placeholder="Máx.">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="filtroUnidad">Unidad de venta</label>
+                        <select name="unidad" id="filtroUnidad" class="form-select">
+                            <option value="">Todas</option>
+                            {% for valor, nombre in unidades %}
+                            <option value="{{ valor }}" {% if unidad_seleccionada == valor %}selected{% endif %}>{{ nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="filtroCantidad">Cantidad disponible mínima</label>
+                        <input type="number" min="0" step="1" name="cantidad_min" id="filtroCantidad" value="{{ cantidad_min }}" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="filtroOrden">Ordenar por</label>
+                        <select name="orden" id="filtroOrden" class="form-select">
+                            <option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes</option>
+                            <option value="precio_asc" {% if orden_seleccionado == 'precio_asc' %}selected{% endif %}>Menor precio</option>
+                            <option value="precio_desc" {% if orden_seleccionado == 'precio_desc' %}selected{% endif %}>Mayor precio</option>
+                            <option value="stock" {% if orden_seleccionado == 'stock' %}selected{% endif %}>Más cantidad</option>
+                            <option value="vence" {% if orden_seleccionado == 'vence' %}selected{% endif %}>Vencen pronto</option>
+                        </select>
+                    </div>
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" role="switch" name="ofertas" value="1" id="filtroOfertas" {% if solo_ofertas == '1' %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="filtroOfertas">Solo productos en oferta</label>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success" data-bs-dismiss="offcanvas" data-bs-target="#panelFiltros">Ver resultados</button>
+                        <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary">Limpiar filtros</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados (se reemplazan sin recargar la pagina al filtrar) -->
+    <div class="col-lg-9">
+        <div id="resultados" class="resultados">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <p class="text-muted small mb-0" aria-live="polite">{{ total_resultados }} producto{{ total_resultados|pluralize }} encontrado{{ total_resultados|pluralize }}</p>
+                <span class="cargando-texto small text-muted"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Actualizando...</span>
+            </div>
+
+            <div class="rejilla-esqueleto row g-3 g-lg-4" aria-hidden="true">
+                {% for i in "123456" %}
+                <div class="col-6 col-xl-4"><div class="esqueleto" style="aspect-ratio: 3 / 4;"></div></div>
+                {% endfor %}
+            </div>
+
+            <div class="row g-3 g-lg-4 rejilla-productos" data-escalonado>
+                {% for prod in productos %}
+                <div class="col-6 col-xl-4">
+                    {% include 'includes/tarjeta_producto.html' with prod=prod %}
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="estado-vacio">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <h2 class="h5 fw-bold">No encontramos productos con esos filtros</h2>
+                        <p class="text-muted">Prueba con otra categoría, otro distrito o un rango de precio más amplio.</p>
+                        <a href="{% url 'catalogo' %}" class="btn btn-success">Ver todos los productos</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+</div>
 {% endblock %}
