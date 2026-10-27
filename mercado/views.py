@@ -22,6 +22,7 @@ from .models import (
     ItemCarrito,
     Pedido,
     ResenaProducto,
+    PagoComision,
 )
 from .forms import (
     RegistroUsuarioForm,
@@ -1384,13 +1385,25 @@ def crear_producto(request):
         if form.is_valid():
             producto = form.save(commit=False)
             producto.productor = request.user
+            if producto.en_oferta:
+                # Si se publica como oferta, queda oculto hasta pagar la comision
+                producto.oferta_pendiente_pago = True
+                producto.disponible = False
+                producto.save()
+                messages.info(request, "Para publicar tu producto como oferta primero debes pagar la comisión de AgroComercial.")
+                return redirect('pagar_comision_oferta', producto_id=producto.id)
             producto.save()
             messages.success(request, f"El producto '{producto.nombre}' fue publicado exitosamente.")
             return redirect('panel_productor')
     else:
         form = ProductoForm()
 
-    return render(request, 'form_producto.html', {'form': form, 'accion': 'Publicar Nuevo Producto'})
+    return render(request, 'form_producto.html', {
+        'form': form,
+        'accion': 'Publicar Nuevo Producto',
+        'comision_porcentaje': settings.COMISION_OFERTA_PORCENTAJE,
+        'comision_minima': settings.COMISION_OFERTA_MINIMA,
+    })
 
 
 @login_required
@@ -1401,10 +1414,20 @@ def editar_producto(request, producto_id):
         return redirect('panel_comprador')
 
     producto = get_object_or_404(Producto, id=producto_id, productor=request.user)
+    estaba_en_oferta = producto.en_oferta and not producto.oferta_pendiente_pago
     if request.method == 'POST':
         form = ProductoForm(request.POST, instance=producto)
         if form.is_valid():
-            form.save()
+            producto = form.save(commit=False)
+            if producto.en_oferta and not estaba_en_oferta:
+                # Pasar un producto a oferta tambien cobra la comision antes de publicarse
+                producto.oferta_pendiente_pago = True
+                producto.disponible = False
+                producto.save()
+                messages.info(request, "Para publicar tu producto como oferta primero debes pagar la comisión de AgroComercial.")
+                return redirect('pagar_comision_oferta', producto_id=producto.id)
+            producto.oferta_pendiente_pago = False
+            producto.save()
             messages.success(request, f"El producto '{producto.nombre}' fue actualizado.")
             return redirect('panel_productor')
     else:
@@ -1413,8 +1436,47 @@ def editar_producto(request, producto_id):
     return render(request, 'form_producto.html', {
         'form': form,
         'producto': producto,
-        'accion': 'Editar mi Producto Agrícola'
+        'accion': 'Editar mi Producto Agrícola',
+        'comision_porcentaje': settings.COMISION_OFERTA_PORCENTAJE,
+        'comision_minima': settings.COMISION_OFERTA_MINIMA,
     })
+
+
+@login_required
+def pagar_comision_oferta(request, producto_id):
+    """Apartado de pago (simulado) de la comision por publicar un producto en oferta."""
+    producto = get_object_or_404(Producto, id=producto_id, productor=request.user)
+    if not producto.oferta_pendiente_pago:
+        messages.info(request, f"El producto '{producto.nombre}' no tiene comisiones pendientes.")
+        return redirect('panel_productor')
+
+    monto = producto.monto_comision_oferta()
+    if request.method == 'POST':
+        metodo = request.POST.get('metodo_pago', 'YAPE_PLIN')
+        if metodo not in dict(PagoComision.METODOS):
+            metodo = 'YAPE_PLIN'
+        # Pago simulado: no se cobra dinero real, solo se registra la operacion
+        pago = PagoComision.objects.create(
+            producto=producto,
+            productor=request.user,
+            porcentaje=Decimal(str(settings.COMISION_OFERTA_PORCENTAJE)),
+            monto=monto,
+            metodo_pago=metodo,
+            codigo_transaccion=f"COM-{uuid.uuid4().hex[:10].upper()}",
+        )
+        producto.oferta_pendiente_pago = False
+        producto.disponible = True
+        producto.save()
+        messages.success(request, f"Pago de comisión S/ {pago.monto} recibido (código {pago.codigo_transaccion}). ¡Tu oferta '{producto.nombre}' ya está publicada!")
+        return redirect('detalle_producto', producto_id=producto.id)
+
+    contexto = {
+        'producto': producto,
+        'monto': monto,
+        'porcentaje': settings.COMISION_OFERTA_PORCENTAJE,
+        'minimo': settings.COMISION_OFERTA_MINIMA,
+    }
+    return render(request, 'pagar_comision.html', contexto)
 
 
 @login_required
