@@ -69,6 +69,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'mercado.context_processors.datos_globales_usuario',
+                'mercado.context_processors.datos_del_sitio',
             ],
         },
     },
@@ -130,6 +131,17 @@ LOGOUT_REDIRECT_URL = 'inicio'
 # Porcentaje sobre el valor del lote en oferta (precio de oferta x stock) y monto minimo en soles
 COMISION_OFERTA_PORCENTAJE = float(os.environ.get('COMISION_OFERTA_PORCENTAJE', '3'))
 COMISION_OFERTA_MINIMA = float(os.environ.get('COMISION_OFERTA_MINIMA', '2.00'))
+
+# Version de los archivos css/js: cambia sola cuando se modifican, asi el navegador no usa los viejos
+def _version_estaticos():
+    archivos = list((BASE_DIR / 'static' / 'css').glob('*.css')) + list((BASE_DIR / 'static' / 'js').glob('*.js'))
+    return str(int(max((a.stat().st_mtime for a in archivos), default=0)))
+
+
+VERSION_ESTATICOS = _version_estaticos()
+
+# Correo de contacto que se muestra en la pagina de ayuda (opcional)
+CORREO_CONTACTO = os.environ.get('CORREO_CONTACTO', '')
 
 # Dias que dura una publicacion antes de vencer (y el maximo que puede elegir el vendedor)
 PUBLICACION_DIAS_VIGENCIA = int(os.environ.get('PUBLICACION_DIAS_VIGENCIA', '30'))
