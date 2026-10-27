@@ -1,0 +1,31 @@
+{% comment %}
+Tarjeta de producto de la tienda. Uso: {% include 'includes/tarjeta_producto.html' with prod=producto %}
+La foto lleva un nombre de transicion para que "vuele" hasta el detalle en Chrome/Edge.
+{% endcomment %}
+<article class="tarjeta-producto">
+    <div class="foto">
+        <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" loading="lazy" style="view-transition-name: foto-producto-{{ prod.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+        <div class="chip-foto">
+            {% if prod.oferta_activa %}<span class="chip chip-descuento">-{{ prod.porcentaje_descuento }}%</span>{% endif %}
+            {% if prod.tipo_cultivo == 'ORGANICO' %}<span class="chip"><i class="bi bi-leaf" aria-hidden="true"></i>Orgánico</span>{% endif %}
+        </div>
+    </div>
+    <div class="cuerpo">
+        <div class="meta text-truncate">{{ prod.categoria.nombre|default:"Agrícola" }} · {{ prod.origen|cut:", Arequipa" }}</div>
+        <h3><a href="{% url 'detalle_producto' prod.id %}">{{ prod.nombre }}</a></h3>
+        <div class="small text-muted mb-2 text-truncate vendedor"><i class="bi bi-person me-1" aria-hidden="true"></i>{{ prod.productor.get_full_name|default:prod.productor.username }} · mín. {{ prod.minimo_compra }} {{ prod.nombre_unidad_minimo }}</div>
+        {% include 'includes/barra_tiempo.html' with prod=prod compacta=True %}
+        <div class="pie">
+            <div>
+                {% if prod.oferta_activa %}
+                    <span class="precio-anterior d-block">S/ {{ prod.precio }}</span>
+                    <span class="precio en-oferta">S/ {{ prod.precio_oferta }}</span>
+                {% else %}
+                    <span class="precio">S/ {{ prod.precio }}</span>
+                {% endif %}
+                <span class="small text-muted">/ {{ prod.unidad_corta }}</span>
+            </div>
+            <span class="boton-circular" aria-hidden="true"><i class="bi bi-arrow-up-right"></i></span>
+        </div>
+    </div>
+</article>
