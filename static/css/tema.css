@@ -1610,6 +1610,281 @@ main {
     }
 }
 
+/* Favoritos: corazon sobre la foto */
+.form-favorito {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    z-index: 3;
+    margin: 0;
+}
+.boton-favorito {
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.92);
+    color: var(--texto);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(17, 24, 39, 0.15);
+    transition: transform 0.2s var(--curva), color 0.2s ease;
+}
+.boton-favorito:hover { transform: scale(1.08); }
+.boton-favorito.activo { color: var(--rojo-descuento); }
+.boton-favorito.latido { animation: latido 0.45s var(--curva); }
+@keyframes latido {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+/* Galeria del detalle */
+.miniaturas {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+}
+.miniatura {
+    flex: 0 0 72px;
+    height: 72px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    overflow: hidden;
+    background: none;
+    transition: border-color 0.2s ease;
+}
+.miniatura img { width: 100%; height: 100%; object-fit: cover; }
+.miniatura.activa { border-color: var(--verde-campo); }
+.foto-extra {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+}
+.foto-extra img { width: 84px; height: 84px; object-fit: cover; border-radius: 12px; }
+
+/* Chat comprador - vendedor */
+.chat {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: minmax(0, 1fr);
+    height: min(72vh, 720px);
+    min-height: 460px;
+    background-color: #ffffff;
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    overflow: hidden;
+}
+.chat-lista {
+    border-right: 1px solid var(--borde);
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+.chat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem;
+    border-radius: 14px;
+    color: var(--texto);
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+.chat-item img { width: 46px; height: 46px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+.chat-item:hover { background-color: var(--arena); color: var(--texto); }
+.chat-item.activo { background-color: var(--verde-suave); }
+.min-w-0 { min-width: 0; }
+.chat-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background-color: var(--arena);
+}
+.chat-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--borde);
+}
+.chat-producto {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 240px;
+    padding: 0.35rem 0.6rem 0.35rem 0.35rem;
+    border: 1px solid var(--borde);
+    border-radius: 14px;
+    color: var(--texto);
+    text-decoration: none;
+    min-width: 0;
+}
+.chat-producto img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.chat-producto span { min-width: 0; }
+.chat-producto small.d-block { max-width: 170px; }
+.chat-burbujas {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.burbuja {
+    max-width: min(75%, 520px);
+    padding: 0.55rem 0.8rem 0.35rem;
+    border-radius: 16px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.08);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+.burbuja.mia {
+    align-self: flex-end;
+    background-color: #dcfce7;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 4px;
+}
+.burbuja p { margin: 0; overflow-wrap: anywhere; }
+.burbuja .hora {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    color: var(--texto-secundario);
+}
+.burbuja .leido { color: #0ea5e9; }
+.burbuja.nueva { animation: entrarBurbuja 0.3s var(--curva); }
+@keyframes entrarBurbuja {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+}
+.chat-vacio {
+    margin: auto;
+    max-width: 340px;
+    text-align: center;
+    color: var(--texto-secundario);
+}
+.chat-solicitud {
+    background-color: #fffbeb;
+    border-top: 1px solid #fde68a;
+    padding: 0.6rem 1rem;
+}
+.chat-solicitud summary {
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.estado-solicitud { font-weight: 600; }
+.estado-pendiente { color: #b45309; }
+.estado-aceptada, .estado-pagada { color: var(--verde-campo); }
+.estado-rechazada, .estado-cancelada { color: var(--rojo-descuento); }
+.chat-escribir {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    padding: 0.75rem;
+    background-color: #ffffff;
+    border-top: 1px solid var(--borde);
+}
+.chat-escribir textarea {
+    flex: 1;
+    resize: none;
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    padding: 0.55rem 0.9rem;
+    max-height: 140px;
+}
+.chat-escribir textarea:focus { outline: 2px solid var(--verde-vivo); outline-offset: 1px; }
+.chat-escribir .btn { width: 44px; height: 44px; padding: 0; border-radius: 50%; }
+.chat-sin-seleccion {
+    margin: auto;
+    text-align: center;
+    color: var(--texto-secundario);
+}
+.chat-sin-seleccion .bi { font-size: 3rem; color: var(--verde-vivo); }
+@media (max-width: 991.98px) {
+    .chat { grid-template-columns: 1fr; height: calc(100vh - 300px); height: calc(100dvh - 300px); min-height: 380px; }
+    .encabezado-chat.con-chat { display: none; }
+    .chat.con-chat { height: calc(100vh - 240px); height: calc(100dvh - 240px); }
+    .chat.con-chat .chat-lista { display: none; }
+    .chat:not(.con-chat) .chat-panel { display: none; }
+    .chat-lista { border-right: 0; }
+    .burbuja { max-width: 85%; }
+}
+
+/* Notificaciones */
+.lista-avisos {
+    background-color: #ffffff;
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    overflow: hidden;
+}
+.fila-aviso {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1.1rem;
+    color: var(--texto);
+    text-decoration: none;
+    border-bottom: 1px solid var(--borde);
+    transition: background-color 0.2s ease;
+}
+.fila-aviso:last-child { border-bottom: 0; }
+.fila-aviso:hover { background-color: var(--arena); color: var(--texto); }
+.fila-aviso.nueva { background-color: var(--verde-suave); }
+.fila-aviso .icono {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background-color: #ffffff;
+    border: 1px solid var(--borde);
+    color: var(--verde-campo);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.punto-nuevo { width: 10px; height: 10px; border-radius: 50%; background-color: var(--ambar); flex-shrink: 0; }
+
+/* Perfil publico del productor */
+.portada-productor {
+    background: var(--verde-degradado);
+    color: #ffffff;
+    border-radius: 24px;
+    padding: 1.75rem;
+}
+.avatar-grande { width: 84px; height: 84px; font-size: 2rem; }
+.cifras-productor {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+.cifras-productor div {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 0.75rem 1rem;
+}
+.cifras-productor strong { display: block; font-size: 1.4rem; }
+.cifras-productor span { font-size: 0.85rem; opacity: 0.8; }
+@media (max-width: 575.98px) {
+    .cifras-productor { grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+    .cifras-productor div { padding: 0.6rem; }
+    .cifras-productor strong { font-size: 1.1rem; }
+    .portada-productor { padding: 1.25rem; }
+}
+
 /* Menos movimiento: sin cinta, sin flotar, sin brillos ni transiciones de pagina */
 @media (prefers-reduced-motion: reduce) {
     @view-transition { navigation: none; }
@@ -1623,5 +1898,8 @@ main {
     }
     .linea-pasos span {
         transform: none;
+    }
+    .burbuja.nueva, .boton-favorito.latido {
+        animation: none !important;
     }
 }
