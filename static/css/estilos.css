@@ -4,23 +4,25 @@
    ========================================================== */
 
 :root {
-    /* Paleta del proyecto: verdes de campo, dorado de cosecha y rojo solo para descuentos */
-    --verde-bosque: #173b2c;
-    --verde-campo: #1f4d3a;
-    --verde-oscuro: #173b2c;
-    --verde-secundario: #3d7657;
-    --verde-suave: #eaf3ec;
-    --ambar: #c59a50;
-    --ambar-claro: #f8f0e1;
-    --rojo-descuento: #c84b4b;
-    --arena: #f7f9f7;
-    --borde: #e0e7e2;
-    --texto: #202c26;
-    --texto-secundario: #68766e;
-    --sombra-suave: 0 1px 3px rgba(32, 44, 38, 0.05);
-    --sombra-hover: 0 10px 24px rgba(32, 44, 38, 0.10);
-    --radio: 12px;
-    --transicion: 0.25s ease;
+    /* Paleta "Cosecha vibrante": verde esmeralda, naranja mandarina y amarillo maiz */
+    --verde-bosque: #064e3b;
+    --verde-campo: #15803d;
+    --verde-oscuro: #166534;
+    --verde-secundario: #16a34a;
+    --verde-vivo: #22c55e;
+    --verde-suave: #ecfdf3;
+    --ambar: #f97316;
+    --ambar-claro: #fff1e6;
+    --amarillo: #facc15;
+    --rojo-descuento: #e11d48;
+    --arena: #f7faf8;
+    --borde: #e5ebe7;
+    --texto: #111827;
+    --texto-secundario: #5b6670;
+    --sombra-suave: 0 1px 2px rgba(17, 24, 39, 0.04), 0 2px 8px rgba(17, 24, 39, 0.04);
+    --sombra-hover: 0 18px 40px -12px rgba(21, 128, 61, 0.28);
+    --radio: 16px;
+    --transicion: 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html {
@@ -43,7 +45,7 @@ main {
 }
 
 h1, h2, h3, h4, h5, h6 {
-    font-family: "Manrope", "Inter", system-ui, sans-serif;
+    font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
     letter-spacing: -0.01em;
 }
 
@@ -953,7 +955,7 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1.1rem;
     border-radius: 8px;
     padding: 0.3rem 0.7rem;
-    font-family: "Manrope", "Inter", sans-serif;
+    font-family: "Plus Jakarta Sans", "Inter", sans-serif;
 }
 .carrusel-info {
     display: flex;
@@ -986,7 +988,7 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 2rem;
     font-weight: 800;
     color: var(--rojo-descuento);
-    font-family: "Manrope", "Inter", sans-serif;
+    font-family: "Plus Jakarta Sans", "Inter", sans-serif;
     line-height: 1.1;
 }
 .precio-anterior {
