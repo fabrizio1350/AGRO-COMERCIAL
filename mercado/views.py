@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.utils import timezone
 from django.core.mail import send_mail
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -764,6 +765,10 @@ def ventas_por_oferta(request):
         productos_remate = productos_remate.order_by('-descuento_calc')
 
     hay_filtros = any([busqueda, categoria_id, ubicacion, unidad, precio_min, precio_max, descuento_min, cantidad_min])
+    limite_24h = timezone.now() + timedelta(hours=24)
+    ultimas_horas = Producto.objects.ofertas_activas().filter(
+        Q(oferta_fin__lte=limite_24h) | Q(fecha_vencimiento__lte=limite_24h)
+    ).order_by('oferta_fin')[:10]
 
     mis_ofertas_enviadas = []
     ofertas_recibidas_vendedor = []
@@ -790,6 +795,7 @@ def ventas_por_oferta(request):
         'cantidad_min': cantidad_min,
         'orden_seleccionado': orden,
         'hay_filtros': hay_filtros,
+        'ultimas_horas': ultimas_horas,
     }
     return render(request, 'ofertas.html', contexto)
 
@@ -897,6 +903,8 @@ def responder_oferta(request, oferta_id):
 
 @login_required
 def agregar_al_carrito(request, producto_id):
+    if request.method != 'POST':
+        return redirect('detalle_producto', producto_id=producto_id)
     perfil = obtener_o_crear_perfil(request.user)
     if perfil.rol != 'COMPRADOR':
         messages.warning(request, "Estás en una cuenta de Vendedor. Cambia a cuenta de Comprador para realizar compras.")
@@ -925,6 +933,15 @@ def agregar_al_carrito(request, producto_id):
     if not creado:
         item.cantidad = min(producto.stock, item.cantidad + cantidad)
         item.save()
+
+    # Desde la tarjeta del catalogo se agrega sin recargar: se responde con el total del carrito
+    if request.headers.get('X-Carrito-Rapido') == '1':
+        total = sum(i.cantidad for i in ItemCarrito.objects.filter(comprador=request.user))
+        return JsonResponse({
+            'ok': True,
+            'total_carrito': total,
+            'mensaje': f"{producto.nombre}: {item.cantidad} {producto.nombre_unidad_stock()} en tu carrito",
+        })
 
     ir_a_pagar = request.POST.get('comprar_ahora') == '1'
     if ir_a_pagar:
