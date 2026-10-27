@@ -9,155 +9,185 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-    <link href="{% static 'css/estilos.css' %}?v=20261027b" rel="stylesheet">
-    <meta name="theme-color" content="#1f3f29">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="{% static 'vendor/swiper-bundle.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/estilos.css' %}?v={{ version_estaticos }}" rel="stylesheet">
+    <link href="{% static 'css/tema.css' %}?v={{ version_estaticos }}" rel="stylesheet">
+    <meta name="theme-color" content="#15803d">
+    <meta name="description" content="AgroComercial: marketplace agrícola de Arequipa que conecta productores con compradores.">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Barra superior discreta en tono arena para alternar entre cuenta de Comprador y Vendedor -->
-    <div class="barra-cambio-rol py-1">
-        <div class="container-fluid px-3 px-lg-5 d-flex flex-wrap justify-content-between align-items-center">
-            <div>
-                {% if user.is_authenticated %}
-                    {% if rol_actual == 'PRODUCTOR' %}
-                        <span><i class="bi bi-person-check me-1"></i>Cuenta activa: <strong>Vendedor / Productor<span class="d-none d-sm-inline"> — {{ user.email|default:user.username }}</span></strong></span>
+    <a href="#contenido" class="saltar-contenido">Saltar al contenido</a>
+
+    <!-- Cabecera: barra superior, fila con logo/buscador/acciones y fila de navegacion -->
+    <header class="cabecera" id="cabecera">
+        <div class="barra-superior">
+            <div class="container-xxl d-flex justify-content-between align-items-center gap-2">
+                <span class="text-truncate"><i class="bi bi-flower2 me-1" aria-hidden="true"></i>Conectamos el campo con nuevas oportunidades de negocio<span class="d-none d-md-inline"> · Arequipa, Perú</span></span>
+                <div class="d-flex align-items-center gap-3 flex-shrink-0">
+                    {% if user.is_authenticated %}
+                        <span class="d-none d-lg-inline">Cuenta: <strong>{% if rol_actual == 'PRODUCTOR' %}Vendedor{% else %}Comprador{% endif %}</strong></span>
+                        <form action="{% url 'cambiar_modo' %}" method="post" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="nuevo_rol" value="{% if rol_actual == 'PRODUCTOR' %}COMPRADOR{% else %}PRODUCTOR{% endif %}">
+                            <button type="submit" class="btn-enlace-superior">
+                                <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>Cambiar a {% if rol_actual == 'PRODUCTOR' %}Comprador{% else %}Vendedor{% endif %}
+                            </button>
+                        </form>
                     {% else %}
-                        <span><i class="bi bi-person-check me-1"></i>Cuenta activa: <strong>Comprador<span class="d-none d-sm-inline"> — {{ user.email|default:user.username }}</span></strong></span>
+                        <a href="{% url 'login' %}?modo=vendedor" class="d-none d-sm-inline"><i class="bi bi-shop-window me-1" aria-hidden="true"></i>Soy productor</a>
                     {% endif %}
-                {% else %}
-                    <span class="d-none d-sm-inline"><i class="bi bi-flower2 me-1 text-success"></i>Plataforma de comercialización agrícola directa del campo</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="cabecera-principal">
+            <div class="container-xxl d-flex align-items-center gap-2 gap-lg-4">
+                <a class="logo-marca d-inline-flex align-items-center gap-2 text-decoration-none" href="{% url 'inicio' %}">
+                    <span class="logo-icono"><i class="bi bi-flower1" aria-hidden="true"></i></span>
+                    <span class="logo-texto">Agro<span>Comercial</span></span>
+                </a>
+
+                <form class="buscador d-none d-md-flex flex-grow-1" action="{% url 'catalogo' %}" method="get" role="search">
+                    <label for="buscadorGlobal" class="visually-hidden">Buscar productos</label>
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input type="search" id="buscadorGlobal" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Busca papa, palta, quinua, rocoto..." autocomplete="off">
+                    <button type="submit" class="btn btn-success">Buscar</button>
+                </form>
+
+                <div class="acciones-cabecera d-flex align-items-center gap-1 gap-sm-2 ms-auto">
+                    <a href="{% url 'ventas_por_oferta' %}" class="btn btn-ofertas d-none d-lg-inline-flex">
+                        <i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>Ofertas
+                    </a>
+                    {% if user.is_authenticated %}
+                        {% if rol_actual == 'COMPRADOR' %}
+                            <a href="{% url 'carrito' %}" class="icono-cabecera" aria-label="Mi carrito, {{ total_items_carrito }} productos" title="Mi carrito">
+                                <i class="bi bi-bag" aria-hidden="true"></i>
+                                <span class="contador-icono {% if not total_items_carrito %}d-none{% endif %}" id="contadorCarrito">{{ total_items_carrito }}</span>
+                            </a>
+                        {% else %}
+                            <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm d-none d-sm-inline-flex align-items-center gap-1">
+                                <i class="bi bi-plus-lg" aria-hidden="true"></i>Publicar
+                            </a>
+                        {% endif %}
+                        <div class="dropdown">
+                            <button class="avatar-boton" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de mi cuenta">
+                                <span class="avatar-inicial">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
+                                <i class="bi bi-chevron-down d-none d-sm-inline" aria-hidden="true"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end menu-cuenta">
+                                <li class="px-3 py-2 small">
+                                    <strong class="d-block text-truncate">{{ user.get_full_name|default:user.username }}</strong>
+                                    <span class="text-muted text-truncate d-block">{{ user.email }}</span>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% if rol_actual == 'PRODUCTOR' %}
+                                    <li><a class="dropdown-item" href="{% url 'panel_productor' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Panel del vendedor</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'crear_producto' %}"><i class="bi bi-plus-circle" aria-hidden="true"></i>Publicar producto</a></li>
+                                {% else %}
+                                    <li><a class="dropdown-item" href="{% url 'panel_comprador' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Panel del comprador</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'mis_pedidos' %}"><i class="bi bi-bag-check" aria-hidden="true"></i>Mis compras</a></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{% url 'perfil' %}"><i class="bi bi-person-gear" aria-hidden="true"></i>Mi perfil</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form action="{% url 'logout' %}" method="post" class="m-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Cerrar sesión</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'login' %}?modo=comprador" class="btn btn-link enlace-ingresar d-none d-sm-inline-flex">Ingresar</a>
+                        <a href="{% url 'registro' %}" class="btn btn-success btn-sm">Crear cuenta</a>
+                    {% endif %}
+                    <button class="icono-cabecera d-xl-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuNavegacion" aria-controls="menuNavegacion" aria-label="Abrir menú">
+                        <i class="bi bi-list" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form class="buscador buscador-movil d-flex d-md-none" action="{% url 'catalogo' %}" method="get" role="search">
+                <label for="buscadorMovil" class="visually-hidden">Buscar productos</label>
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" id="buscadorMovil" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Buscar productos del campo...">
+            </form>
+        </div>
+
+        <nav class="cabecera-nav d-none d-xl-block" aria-label="Navegación principal">
+            <div class="container-xxl d-flex align-items-center gap-1">
+                <a class="enlace-nav" href="{% url 'inicio' %}">Inicio</a>
+                <a class="enlace-nav" href="{% url 'catalogo' %}">Productos</a>
+                <a class="enlace-nav" href="{% url 'ventas_por_oferta' %}">
+                    Ofertas
+                    {% if rol_actual == 'PRODUCTOR' and ofertas_pendientes_vendedor > 0 %}
+                        <span class="contador-icono en-linea">{{ ofertas_pendientes_vendedor }}</span>
+                    {% elif rol_actual == 'COMPRADOR' and ofertas_listas_comprador > 0 %}
+                        <span class="contador-icono en-linea">{{ ofertas_listas_comprador }}</span>
+                    {% endif %}
+                </a>
+                <div class="dropdown">
+                    <button class="enlace-nav dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Categorías</button>
+                    <ul class="dropdown-menu menu-categorias">
+                        {% for cat in categorias_menu %}
+                            <li><a class="dropdown-item" href="{% url 'catalogo' %}?categoria={{ cat.id }}">{{ cat.nombre }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <a class="enlace-nav" href="{% url 'productores' %}">Productores</a>
+                <a class="enlace-nav" href="{% url 'inicio' %}#como-funciona">Cómo funciona</a>
+                {% if rol_actual == 'PRODUCTOR' %}
+                    <a class="enlace-nav ms-auto" href="{% url 'panel_productor' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Panel del vendedor</a>
+                {% elif rol_actual == 'COMPRADOR' %}
+                    <a class="enlace-nav ms-auto" href="{% url 'panel_comprador' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Mi panel</a>
+                    <a class="enlace-nav" href="{% url 'mis_pedidos' %}"><i class="bi bi-bag-check" aria-hidden="true"></i>Mis compras</a>
                 {% endif %}
             </div>
-            <div>
+        </nav>
+    </header>
+
+    <!-- Menu lateral para celular y tablet -->
+    <div class="offcanvas offcanvas-end menu-movil" tabindex="-1" id="menuNavegacion" aria-labelledby="tituloMenu">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title fw-bold d-flex align-items-center gap-2" id="tituloMenu">
+                <span class="logo-icono"><i class="bi bi-flower1" aria-hidden="true"></i></span>AgroComercial
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column">
+            <nav class="d-grid gap-1 menu-movil-enlaces" aria-label="Menú">
+                <a href="{% url 'inicio' %}"><i class="bi bi-house-door" aria-hidden="true"></i>Inicio</a>
+                <a href="{% url 'catalogo' %}"><i class="bi bi-grid" aria-hidden="true"></i>Productos</a>
+                <a href="{% url 'ventas_por_oferta' %}"><i class="bi bi-lightning-charge" aria-hidden="true"></i>Ofertas</a>
+                <a href="{% url 'productores' %}"><i class="bi bi-people" aria-hidden="true"></i>Productores</a>
+                <a href="{% url 'inicio' %}#como-funciona"><i class="bi bi-signpost-split" aria-hidden="true"></i>Cómo funciona</a>
+                {% if rol_actual == 'PRODUCTOR' %}
+                    <a href="{% url 'panel_productor' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Panel del vendedor</a>
+                    <a href="{% url 'crear_producto' %}"><i class="bi bi-plus-circle" aria-hidden="true"></i>Publicar producto</a>
+                {% elif rol_actual == 'COMPRADOR' %}
+                    <a href="{% url 'panel_comprador' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Mi panel</a>
+                    <a href="{% url 'carrito' %}"><i class="bi bi-bag" aria-hidden="true"></i>Mi carrito ({{ total_items_carrito }})</a>
+                    <a href="{% url 'mis_pedidos' %}"><i class="bi bi-bag-check" aria-hidden="true"></i>Mis compras</a>
+                {% endif %}
                 {% if user.is_authenticated %}
-                    <form action="{% url 'cambiar_modo' %}" method="post" class="d-inline">
+                    <a href="{% url 'perfil' %}"><i class="bi bi-person-gear" aria-hidden="true"></i>Mi perfil</a>
+                {% endif %}
+            </nav>
+            <div class="mt-auto pt-3 d-grid gap-2">
+                {% if user.is_authenticated %}
+                    <form action="{% url 'logout' %}" method="post" class="d-grid m-0">
                         {% csrf_token %}
-                        {% if rol_actual == 'PRODUCTOR' %}
-                            <input type="hidden" name="nuevo_rol" value="COMPRADOR">
-                            <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold text-success">
-                                <i class="bi bi-arrow-left-right me-1"></i>Cambiar a cuenta Comprador
-                            </button>
-                        {% else %}
-                            <input type="hidden" name="nuevo_rol" value="PRODUCTOR">
-                            <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold text-success">
-                                <i class="bi bi-arrow-left-right me-1"></i>Cambiar a cuenta Vendedor
-                            </button>
-                        {% endif %}
+                        <button type="submit" class="btn btn-light"><i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>Cerrar sesión</button>
                     </form>
                 {% else %}
-                    <a href="{% url 'login' %}?modo=comprador" class="text-dark text-decoration-none me-3"><i class="bi bi-basket me-1"></i>Acceso Comprador</a>
-                    <a href="{% url 'login' %}?modo=vendedor" class="text-dark text-decoration-none"><i class="bi bi-shop-window me-1"></i>Acceso Vendedor</a>
+                    <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-light">Ingresar</a>
+                    <a href="{% url 'registro' %}" class="btn btn-warning">Crear cuenta</a>
                 {% endif %}
             </div>
         </div>
     </div>
-
-    <!-- Barra de navegacion: en PC es horizontal y en telefono se abre como menu lateral -->
-    <nav class="navbar navbar-expand-xl navbar-dark header-fijo {% if rol_actual == 'COMPRADOR' %}navbar-comprador{% else %}navbar-principal{% endif %} py-2">
-        <div class="container-fluid px-3 px-xxl-5">
-            <a class="navbar-brand logo-marca fw-bold d-inline-flex align-items-center gap-2 me-3" href="{% url 'inicio' %}">
-                <span class="logo-icono"><i class="bi bi-flower1"></i></span>
-                <span>AgroComercial</span>
-                {% if rol_actual == 'PRODUCTOR' %}
-                    <span class="insignia-rol-vendedor d-none d-sm-inline d-xl-none">Vendedor</span>
-                {% elif rol_actual == 'COMPRADOR' %}
-                    <span class="insignia-rol-comprador d-none d-sm-inline d-xl-none">Comprador</span>
-                {% endif %}
-            </a>
-
-            <div class="d-flex align-items-center gap-2 d-xl-none">
-                {% if user.is_authenticated and rol_actual == 'COMPRADOR' %}
-                    <!-- Acceso rapido al carrito en telefono -->
-                    <a href="{% url 'carrito' %}" class="btn btn-outline-light btn-sm position-relative" aria-label="Mi carrito">
-                        <i class="bi bi-cart3"></i>
-                        {% if total_items_carrito %}
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill contador-carrito">{{ total_items_carrito }}</span>
-                        {% endif %}
-                    </a>
-                {% endif %}
-                <button class="navbar-toggler border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuNavegacion" aria-controls="menuNavegacion" aria-label="Abrir menú">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-            </div>
-
-            <div class="offcanvas offcanvas-end menu-movil" tabindex="-1" id="menuNavegacion" aria-labelledby="tituloMenu">
-                <div class="offcanvas-header">
-                    <h5 class="offcanvas-title fw-bold d-flex align-items-center gap-2" id="tituloMenu">
-                        <span class="logo-icono"><i class="bi bi-flower1"></i></span>AgroComercial
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
-                </div>
-                <div class="offcanvas-body align-items-xl-center">
-                    <ul class="navbar-nav me-auto mb-3 mb-xl-0 align-items-xl-center gap-1">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inicio' %}"><i class="bi bi-house-door"></i>Inicio</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'catalogo' %}"><i class="bi bi-shop"></i>Marketplace</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'ventas_por_oferta' %}">
-                                <i class="bi bi-tags"></i>
-                                <span>Ventas por Oferta</span>
-                                {% if rol_actual == 'PRODUCTOR' and ofertas_pendientes_vendedor > 0 %}
-                                    <span class="badge rounded-pill contador-carrito latido">{{ ofertas_pendientes_vendedor }}</span>
-                                {% elif rol_actual == 'COMPRADOR' and ofertas_listas_comprador > 0 %}
-                                    <span class="badge rounded-pill contador-carrito latido">{{ ofertas_listas_comprador }}</span>
-                                {% endif %}
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'productores' %}"><i class="bi bi-people"></i>Productores</a>
-                        </li>
-
-                        {% if user.is_authenticated and rol_actual == 'PRODUCTOR' %}
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="{% url 'panel_productor' %}"><i class="bi bi-speedometer2"></i>Panel Vendedor</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="{% url 'crear_producto' %}"><i class="bi bi-plus-circle"></i>Publicar Producto</a>
-                            </li>
-                        {% elif user.is_authenticated and rol_actual == 'COMPRADOR' %}
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="{% url 'panel_comprador' %}"><i class="bi bi-speedometer2"></i>Panel Comprador</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'carrito' %}">
-                                    <i class="bi bi-cart3"></i>Mi Carrito
-                                    <span class="badge rounded-pill contador-carrito">{{ total_items_carrito }}</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'mis_pedidos' %}"><i class="bi bi-bag-check"></i>Mis Compras</a>
-                            </li>
-                        {% endif %}
-                    </ul>
-
-                    <div class="d-flex flex-column flex-xl-row align-items-stretch align-items-xl-center gap-2 flex-shrink-0">
-                        {% if user.is_authenticated %}
-                            <a href="{% url 'perfil' %}" class="btn btn-outline-light btn-sm text-nowrap" title="Configuración de usuario">
-                                <i class="bi bi-person-circle"></i><span class="ms-1 d-xl-none">Mi Perfil</span>
-                            </a>
-                            <form action="{% url 'logout' %}" method="post" class="d-grid d-xl-inline m-0">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-light btn-sm text-nowrap" title="Cerrar sesión">
-                                    <i class="bi bi-box-arrow-right"></i><span class="ms-1 d-xl-none">Salir</span>
-                                </button>
-                            </form>
-                        {% else %}
-                            <a href="{% url 'login' %}?modo=comprador" class="btn btn-outline-light btn-sm text-nowrap">
-                                <i class="bi bi-box-arrow-in-right me-1"></i>Ingresar
-                            </a>
-                            <a href="{% url 'registro' %}" class="btn btn-warning btn-sm text-nowrap">
-                                <i class="bi bi-person-plus me-1"></i>Crear Cuenta
-                            </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
 
     <!-- Mensajes de alerta -->
     <div class="container mt-3">
@@ -171,44 +201,72 @@
         {% endif %}
     </div>
 
-    <!-- Contenido principal -->
-    <main class="container my-4">
-        {% block content %}{% endblock %}
+    <!-- Contenido principal: 'ancho' ocupa toda la pantalla (portada), 'content' va centrado -->
+    <main id="contenido">
+        {% block ancho %}{% endblock %}
+        <div class="container my-4">
+            {% block content %}{% endblock %}
+        </div>
     </main>
 
     <!-- Pie de pagina -->
-    <footer class="pie-pagina pt-4 pb-3 mt-auto">
-        <div class="container">
-            <div class="row g-4 small">
-                <div class="col-12 col-md-5">
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="logo-icono"><i class="bi bi-flower1"></i></span>
-                        <strong class="text-white fs-6">AgroComercial</strong>
-                    </div>
-                    <p class="mb-0">Plataforma web de comercialización agrícola directa del campo a tu mesa, sin intermediarios.</p>
+    <footer class="pie-pagina mt-auto">
+        <div class="container-xxl">
+            <div class="row g-4 pie-columnas">
+                <div class="col-12 col-lg-4">
+                    <a class="logo-marca d-inline-flex align-items-center gap-2 text-decoration-none mb-3" href="{% url 'inicio' %}">
+                        <span class="logo-icono"><i class="bi bi-flower1" aria-hidden="true"></i></span>
+                        <span class="logo-texto text-white">Agro<span>Comercial</span></span>
+                    </a>
+                    <p class="mb-3">Marketplace agrícola que conecta a productores de Arequipa con comerciantes, restaurantes y distribuidores, sin intermediarios.</p>
+                    <span class="etiqueta-proyecto"><i class="bi bi-mortarboard me-1" aria-hidden="true"></i>Proyecto de Innovación · versión de prueba</span>
                 </div>
-                <div class="col-6 col-md-3">
-                    <h6 class="text-white fw-semibold mb-2">Explorar</h6>
-                    <ul class="list-unstyled mb-0 d-grid gap-1">
-                        <li><a href="{% url 'inicio' %}"><i class="bi bi-house-door me-1"></i>Inicio</a></li>
-                        <li><a href="{% url 'catalogo' %}"><i class="bi bi-shop me-1"></i>Marketplace</a></li>
-                        <li><a href="{% url 'ventas_por_oferta' %}"><i class="bi bi-tags me-1"></i>Ofertas</a></li>
-                        <li><a href="{% url 'productores' %}"><i class="bi bi-people me-1"></i>Productores</a></li>
+                <div class="col-6 col-lg-2">
+                    <h6>Explorar</h6>
+                    <ul class="list-unstyled d-grid gap-2 mb-0">
+                        <li><a href="{% url 'catalogo' %}">Productos</a></li>
+                        <li><a href="{% url 'ventas_por_oferta' %}">Ofertas</a></li>
+                        <li><a href="{% url 'productores' %}">Productores</a></li>
+                        <li><a href="{% url 'inicio' %}#como-funciona">Cómo funciona</a></li>
                     </ul>
                 </div>
-                <div class="col-6 col-md-4">
-                    <h6 class="text-white fw-semibold mb-2">Compra segura</h6>
-                    <ul class="list-unstyled mb-0 d-grid gap-1">
-                        <li><i class="bi bi-truck me-1"></i>Envíos a tu ciudad</li>
-                        <li><i class="bi bi-shield-check me-1"></i>Pagos protegidos</li>
-                        <li><i class="bi bi-geo-alt me-1"></i>Productores de Arequipa</li>
+                <div class="col-6 col-lg-2">
+                    <h6>Ayuda</h6>
+                    <ul class="list-unstyled d-grid gap-2 mb-0">
+                        <li><a href="{% url 'informacion' %}#preguntas">Preguntas frecuentes</a></li>
+                        <li><a href="{% url 'informacion' %}#terminos">Términos y condiciones</a></li>
+                        <li><a href="{% url 'informacion' %}#privacidad">Privacidad</a></li>
+                        <li><a href="{% url 'informacion' %}#contacto">Contacto</a></li>
                     </ul>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <h6>¿Eres productor?</h6>
+                    <p class="mb-3">Publica tu cosecha, crea ofertas con fecha límite y recibe pedidos de compradores de toda la región.</p>
+                    <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-warning btn-sm">Empezar a vender <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
                 </div>
             </div>
-            <hr class="border-light opacity-25 my-3">
-            <div class="text-center small opacity-75">&copy; {% now "Y" %} AgroComercial — Proyecto de Innovación</div>
+            <div class="pie-final">
+                <span>&copy; {% now "Y" %} AgroComercial</span>
+                <span>Hecho en Arequipa, Perú</span>
+            </div>
         </div>
     </footer>
+
+    <!-- Barra inferior tipo app (solo celular) -->
+    <nav class="barra-inferior d-md-none" aria-label="Accesos rápidos">
+        <a href="{% url 'inicio' %}" data-ruta="/"><i class="bi bi-house-door" aria-hidden="true"></i><span>Inicio</span></a>
+        <a href="{% url 'ventas_por_oferta' %}" data-ruta="/ofertas/"><i class="bi bi-lightning-charge" aria-hidden="true"></i><span>Ofertas</span></a>
+        <a href="{% url 'catalogo' %}" data-ruta="/catalogo/"><i class="bi bi-grid" aria-hidden="true"></i><span>Productos</span></a>
+        {% if rol_actual == 'PRODUCTOR' %}
+            <a href="{% url 'crear_producto' %}" data-ruta="/producto/nuevo/"><i class="bi bi-plus-circle" aria-hidden="true"></i><span>Publicar</span></a>
+            <a href="{% url 'panel_productor' %}" data-ruta="/panel-productor/"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Panel</span></a>
+        {% elif rol_actual == 'COMPRADOR' %}
+            <a href="{% url 'carrito' %}" data-ruta="/carrito/"><i class="bi bi-bag" aria-hidden="true"></i><span>Carrito</span>{% if total_items_carrito %}<b class="contador-icono">{{ total_items_carrito }}</b>{% endif %}</a>
+            <a href="{% url 'panel_comprador' %}" data-ruta="/panel-comprador/"><i class="bi bi-person" aria-hidden="true"></i><span>Mi panel</span></a>
+        {% else %}
+            <a href="{% url 'login' %}?modo=comprador" data-ruta="/login/"><i class="bi bi-person" aria-hidden="true"></i><span>Ingresar</span></a>
+        {% endif %}
+    </nav>
 
     <!-- Boton flotante para volver arriba -->
     <button type="button" id="btnSubir" class="btn-subir" aria-label="Volver arriba">
@@ -216,8 +274,12 @@
     </button>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{% static 'js/animaciones.js' %}?v=20261027b"></script>
-    <script src="{% static 'js/carrusel.js' %}?v=20261027b"></script>
+    <script src="{% static 'vendor/gsap.min.js' %}"></script>
+    <script src="{% static 'vendor/ScrollTrigger.min.js' %}"></script>
+    <script src="{% static 'vendor/swiper-bundle.min.js' %}"></script>
+    <script src="{% static 'vendor/htmx.min.js' %}"></script>
+    <script src="{% static 'js/animaciones.js' %}?v={{ version_estaticos }}"></script>
+    <script src="{% static 'js/carrusel.js' %}?v={{ version_estaticos }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
