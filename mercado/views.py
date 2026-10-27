@@ -13,7 +13,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Q
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.core.paginator import Paginator
+from django.db.models import Q, F, Case, When, DecimalField, ExpressionWrapper
 from .models import (
     PerfilUsuario,
     Categoria,
@@ -26,6 +28,7 @@ from .models import (
     CATEGORIAS_AGRICOLAS,
     LUGARES_AREQUIPA,
     LUGAR_POR_DEFECTO,
+    OPCIONES_LUGARES,
 )
 from .forms import (
     RegistroUsuarioForm,
@@ -253,6 +256,37 @@ def asegurar_datos_iniciales():
             mensaje="Hola Mateo, te compro 50 kg inmediatos si me dejas a S/ 2.90 el kilo.",
             estado="PENDIENTE"
         )
+
+
+def ofertas_destacadas(limite=10):
+    """Ofertas vigentes para el carrusel: primero las de mayor descuento."""
+    return (
+        Producto.objects.ofertas_activas()
+        .select_related('categoria', 'productor')
+        .annotate(descuento_calc=ExpressionWrapper(
+            (F('precio') - F('precio_oferta')) * 100 / F('precio'),
+            output_field=DecimalField(max_digits=8, decimal_places=2),
+        ))
+        .order_by('-descuento_calc', 'oferta_fin')[:limite]
+    )
+
+
+def con_precio_vigente(productos):
+    """Agrega 'precio_vigente' (oferta si esta activa, si no el normal) para filtrar y ordenar en la base."""
+    ids_oferta = Producto.objects.ofertas_activas().values('id')
+    return productos.annotate(precio_vigente=Case(
+        When(id__in=ids_oferta, then=F('precio_oferta')),
+        default=F('precio'),
+        output_field=DecimalField(max_digits=8, decimal_places=2),
+    ))
+
+
+def leer_decimal(texto):
+    try:
+        valor = Decimal(texto)
+        return valor if valor >= 0 else None
+    except Exception:
+        return None
 
 
 def obtener_o_crear_perfil(usuario):
@@ -552,12 +586,12 @@ def inicio(request):
         return redirect('login')
 
     categorias = Categoria.objects.all()[:8]
-    productos_destacados = Producto.objects.filter(disponible=True, stock__gt=0)[:6]
-    productos_en_oferta = Producto.objects.filter(disponible=True, en_oferta=True, stock__gt=0)
-    total_productos = Producto.objects.filter(disponible=True).count()
+    productos_destacados = Producto.objects.publicados()[:6]
+    productos_en_oferta = ofertas_destacadas()
+    total_productos = Producto.objects.publicados().count()
     total_productores = PerfilUsuario.objects.filter(rol='PRODUCTOR').count()
     total_pedidos = Pedido.objects.count()
-    total_ofertas = productos_en_oferta.count()
+    total_ofertas = Producto.objects.ofertas_activas().count()
 
     contexto = {
         'categorias': categorias,
@@ -572,9 +606,9 @@ def inicio(request):
 
 
 def catalogo(request):
-    """Marketplace Agricola completo con buscador, filtros combinados y ordenamiento."""
+    """Marketplace Agricola completo con buscador, filtros combinados, ordenamiento y paginas."""
     asegurar_datos_iniciales()
-    productos = Producto.objects.filter(disponible=True)
+    productos = con_precio_vigente(Producto.objects.publicados().select_related('categoria', 'productor'))
     categorias = Categoria.objects.all()
 
     busqueda = request.GET.get('q', '').strip()
@@ -582,8 +616,11 @@ def catalogo(request):
     productor_id = request.GET.get('productor', '').strip()
     unidad = request.GET.get('unidad', '').strip()
     tipo_cultivo = request.GET.get('cultivo', '').strip()
+    ubicacion = request.GET.get('ubicacion', '').strip()
     solo_ofertas = request.GET.get('ofertas', '').strip()
+    precio_min = request.GET.get('precio_min', '').strip()
     precio_max = request.GET.get('precio_max', '').strip()
+    cantidad_min = request.GET.get('cantidad_min', '').strip()
     orden = request.GET.get('orden', 'recientes').strip()
 
     if busqueda:
@@ -601,50 +638,82 @@ def catalogo(request):
         productos = productos.filter(unidad=unidad)
     if tipo_cultivo:
         productos = productos.filter(tipo_cultivo=tipo_cultivo)
+    if ubicacion in LUGARES_AREQUIPA:
+        productos = productos.filter(origen=ubicacion)
     if solo_ofertas == '1':
-        productos = productos.filter(en_oferta=True)
-    if precio_max:
-        try:
-            val_max = Decimal(precio_max)
-            productos = productos.filter(Q(precio__lte=val_max) | Q(en_oferta=True, precio_oferta__lte=val_max))
-        except Exception:
-            pass
+        productos = productos.filter(id__in=Producto.objects.ofertas_activas().values('id'))
+    valor_min = leer_decimal(precio_min)
+    if valor_min is not None:
+        productos = productos.filter(precio_vigente__gte=valor_min)
+    valor_max = leer_decimal(precio_max)
+    if valor_max is not None:
+        productos = productos.filter(precio_vigente__lte=valor_max)
+    if cantidad_min.isdigit():
+        productos = productos.filter(stock__gte=int(cantidad_min))
 
     if orden == 'precio_asc':
-        productos = productos.order_by('precio')
+        productos = productos.order_by('precio_vigente')
     elif orden == 'precio_desc':
-        productos = productos.order_by('-precio')
+        productos = productos.order_by('-precio_vigente')
     elif orden == 'stock':
         productos = productos.order_by('-stock')
+    elif orden == 'vence':
+        productos = productos.order_by('fecha_vencimiento')
     else:
+        orden = 'recientes'
         productos = productos.order_by('-fecha_publicacion')
 
+    pagina = Paginator(productos, 12).get_page(request.GET.get('pagina'))
+    # Para que los links de pagina conserven los filtros
+    parametros = request.GET.copy()
+    parametros.pop('pagina', None)
+
     contexto = {
-        'productos': productos,
+        'productos': pagina,
+        'pagina': pagina,
+        'parametros_filtro': parametros.urlencode(),
+        'total_resultados': pagina.paginator.count,
+        'ofertas_carrusel': ofertas_destacadas(),
         'categorias': categorias,
         'unidades': Producto.UNIDADES,
         'tipos_cultivo': Producto.TIPOS_CULTIVO,
+        'lugares': OPCIONES_LUGARES,
         'busqueda': busqueda,
         'categoria_seleccionada': categoria_id,
         'productor_seleccionado': productor_id,
         'unidad_seleccionada': unidad,
         'cultivo_seleccionado': tipo_cultivo,
+        'ubicacion_seleccionada': ubicacion,
         'solo_ofertas': solo_ofertas,
+        'precio_min': precio_min,
         'precio_max': precio_max,
+        'cantidad_min': cantidad_min,
         'orden_seleccionado': orden,
     }
     return render(request, 'catalogo.html', contexto)
 
 
 def ventas_por_oferta(request):
-    """Apartado de Ventas por Oferta con buscador y filtro para proponer ofertas."""
+    """Pagina de ofertas: carrusel destacado, ofertas vigentes con filtros y propuestas de precio."""
     asegurar_datos_iniciales()
     busqueda = request.GET.get('q', '').strip()
     categoria_id = request.GET.get('categoria', '').strip()
+    ubicacion = request.GET.get('ubicacion', '').strip()
+    unidad = request.GET.get('unidad', '').strip()
+    precio_min = request.GET.get('precio_min', '').strip()
+    precio_max = request.GET.get('precio_max', '').strip()
+    descuento_min = request.GET.get('descuento_min', '').strip()
+    cantidad_min = request.GET.get('cantidad_min', '').strip()
+    orden = request.GET.get('orden', 'descuento').strip()
     categorias = Categoria.objects.all()
 
-    productos_remate = Producto.objects.filter(disponible=True, en_oferta=True, stock__gt=0)
-    productos_negociables = Producto.objects.filter(disponible=True, acepta_ofertas=True, stock__gt=0)
+    productos_remate = Producto.objects.ofertas_activas().select_related('categoria', 'productor').annotate(
+        descuento_calc=ExpressionWrapper(
+            (F('precio') - F('precio_oferta')) * 100 / F('precio'),
+            output_field=DecimalField(max_digits=8, decimal_places=2),
+        )
+    )
+    productos_negociables = Producto.objects.publicados().filter(acepta_ofertas=True).select_related('categoria')
 
     if busqueda:
         filtro_q = Q(nombre__icontains=busqueda) | Q(origen__icontains=busqueda) | Q(descripcion__icontains=busqueda)
@@ -653,6 +722,37 @@ def ventas_por_oferta(request):
     if categoria_id.isdigit():
         productos_remate = productos_remate.filter(categoria_id=int(categoria_id))
         productos_negociables = productos_negociables.filter(categoria_id=int(categoria_id))
+    if ubicacion in LUGARES_AREQUIPA:
+        productos_remate = productos_remate.filter(origen=ubicacion)
+        productos_negociables = productos_negociables.filter(origen=ubicacion)
+    if unidad:
+        productos_remate = productos_remate.filter(unidad=unidad)
+        productos_negociables = productos_negociables.filter(unidad=unidad)
+    valor_min = leer_decimal(precio_min)
+    if valor_min is not None:
+        productos_remate = productos_remate.filter(precio_oferta__gte=valor_min)
+    valor_max = leer_decimal(precio_max)
+    if valor_max is not None:
+        productos_remate = productos_remate.filter(precio_oferta__lte=valor_max)
+    if descuento_min.isdigit():
+        productos_remate = productos_remate.filter(descuento_calc__gte=int(descuento_min))
+    if cantidad_min.isdigit():
+        productos_remate = productos_remate.filter(stock__gte=int(cantidad_min))
+        productos_negociables = productos_negociables.filter(stock__gte=int(cantidad_min))
+
+    if orden == 'precio_asc':
+        productos_remate = productos_remate.order_by('precio_oferta')
+    elif orden == 'precio_desc':
+        productos_remate = productos_remate.order_by('-precio_oferta')
+    elif orden == 'vence':
+        productos_remate = productos_remate.order_by(F('oferta_fin').asc(nulls_last=True), 'fecha_vencimiento')
+    elif orden == 'recientes':
+        productos_remate = productos_remate.order_by('-oferta_inicio', '-fecha_publicacion')
+    else:
+        orden = 'descuento'
+        productos_remate = productos_remate.order_by('-descuento_calc')
+
+    hay_filtros = any([busqueda, categoria_id, ubicacion, unidad, precio_min, precio_max, descuento_min, cantidad_min])
 
     mis_ofertas_enviadas = []
     ofertas_recibidas_vendedor = []
@@ -666,8 +766,19 @@ def ventas_por_oferta(request):
         'mis_ofertas_enviadas': mis_ofertas_enviadas,
         'ofertas_recibidas_vendedor': ofertas_recibidas_vendedor,
         'categorias': categorias,
+        'ofertas_carrusel': ofertas_destacadas(),
+        'unidades': Producto.UNIDADES,
+        'lugares': OPCIONES_LUGARES,
         'busqueda': busqueda,
         'categoria_id': categoria_id,
+        'ubicacion_seleccionada': ubicacion,
+        'unidad_seleccionada': unidad,
+        'precio_min': precio_min,
+        'precio_max': precio_max,
+        'descuento_min': descuento_min,
+        'cantidad_min': cantidad_min,
+        'orden_seleccionado': orden,
+        'hay_filtros': hay_filtros,
     }
     return render(request, 'ofertas.html', contexto)
 
@@ -676,9 +787,8 @@ def detalle_producto(request, producto_id):
     """Apartado completo de descripcion del producto, ficha tecnica, compras, ofertas y resenas."""
     asegurar_datos_iniciales()
     producto = get_object_or_404(Producto, id=producto_id)
-    relacionados = Producto.objects.filter(
+    relacionados = Producto.objects.publicados().filter(
         categoria=producto.categoria,
-        disponible=True
     ).exclude(id=producto.id)[:3]
     resenas = producto.resenas.select_related('autor').all()
 
@@ -697,6 +807,10 @@ def detalle_producto(request, producto_id):
             perfil_usr = obtener_o_crear_perfil(request.user)
             if perfil_usr.rol != 'COMPRADOR':
                 messages.warning(request, "Solo las cuentas de Comprador pueden enviar ofertas de compra.")
+                return redirect('detalle_producto', producto_id=producto.id)
+
+            if not producto.esta_publicado():
+                messages.error(request, "Esta publicación ya no está disponible para recibir ofertas.")
                 return redirect('detalle_producto', producto_id=producto.id)
 
             oferta_form = OfertaNegociacionForm(request.POST)
@@ -778,7 +892,13 @@ def agregar_al_carrito(request, producto_id):
         return redirect('detalle_producto', producto_id=producto_id)
 
     producto = get_object_or_404(Producto, id=producto_id)
-    cantidad = int(request.POST.get('cantidad', producto.minimo_compra or 1))
+    if not producto.esta_publicado():
+        messages.error(request, f"La publicación '{producto.nombre}' ya venció o no está disponible.")
+        return redirect('detalle_producto', producto_id=producto.id)
+    try:
+        cantidad = int(request.POST.get('cantidad', producto.minimo_compra or 1))
+    except ValueError:
+        cantidad = producto.minimo_compra or 1
     if cantidad < 1:
         cantidad = 1
     if cantidad > producto.stock:
@@ -871,6 +991,13 @@ def pasarela_pago(request):
         return redirect('panel_productor')
 
     items = ItemCarrito.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')
+    # Quitar del carrito lo que vencio o se pauso mientras estaba guardado
+    no_disponibles = [i for i in items if not i.producto.esta_publicado()]
+    if no_disponibles:
+        nombres = ", ".join(i.producto.nombre for i in no_disponibles)
+        ItemCarrito.objects.filter(id__in=[i.id for i in no_disponibles]).delete()
+        messages.warning(request, f"Quitamos de tu carrito productos que ya no están disponibles: {nombres}.")
+        items = ItemCarrito.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')
     if not items.exists():
         messages.warning(request, "Tu carrito está vacío. Agrega productos antes de ir a pagar.")
         return redirect('catalogo')
@@ -1055,9 +1182,8 @@ def registro_vista(request):
             )
             login(request, usuario)
             messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Cuenta creada con contraseña encriptada.")
-            if form.cleaned_data['rol'] == 'PRODUCTOR':
-                return redirect('panel_productor')
-            return redirect('panel_comprador')
+            # Lo primero que ve el usuario nuevo son las ofertas vigentes
+            return redirect('ventas_por_oferta')
     else:
         form = RegistroUsuarioForm(initial={'rol': rol_inicial})
 
@@ -1097,9 +1223,10 @@ def login_vista(request):
 
             login(request, usuario)
             messages.success(request, f"Sesión iniciada con {usuario.email or usuario.username} ({perfil.get_rol_display()}).")
-            if perfil.rol == 'PRODUCTOR':
-                return redirect('panel_productor')
-            return redirect('panel_comprador')
+            siguiente = request.POST.get('next') or request.GET.get('next', '')
+            if siguiente and url_has_allowed_host_and_scheme(siguiente, allowed_hosts={request.get_host()}):
+                return redirect(siguiente)
+            return redirect('ventas_por_oferta')
         else:
             messages.error(request, "Correo/usuario o contraseña incorrectos. Verifica tus datos.")
 
@@ -1269,9 +1396,7 @@ def login_google_callback(request):
 
     login(request, usuario)
     messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Ingresaste con tu cuenta oficial de Google ({usuario.email}).")
-    if rol_elegido == 'PRODUCTOR':
-        return redirect('panel_productor')
-    return redirect('panel_comprador')
+    return redirect('ventas_por_oferta')
 
 
 @login_required
@@ -1324,7 +1449,7 @@ def panel_comprador(request):
     compras_recientes = Pedido.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')[:5]
     mis_ofertas = OfertaNegociacion.objects.filter(comprador=request.user).select_related('producto')[:5]
     items_carrito = ItemCarrito.objects.filter(comprador=request.user).select_related('producto')
-    productos_recomendados = Producto.objects.filter(disponible=True, en_oferta=True)[:3]
+    productos_recomendados = Producto.objects.ofertas_activas()[:3]
 
     total_invertido = sum(c.total for c in Pedido.objects.filter(comprador=request.user).exclude(estado='CANCELADO'))
 
@@ -1358,6 +1483,9 @@ def panel_productor(request):
     contexto = {
         'perfil': perfil,
         'mis_productos': mis_productos,
+        'total_activos': mis_productos.publicados().count(),
+        'total_ofertas_activas': mis_productos.ofertas_activas().count(),
+        'total_vencidas': mis_productos.filter(fecha_vencimiento__lte=timezone.now()).count(),
         'pedidos_recibidos': pedidos_recibidos,
         'ofertas_recibidas': ofertas_recibidas,
         'ingresos_estimados': ingresos_estimados,
@@ -1407,7 +1535,11 @@ def editar_producto(request, producto_id):
         return redirect('panel_comprador')
 
     producto = get_object_or_404(Producto, id=producto_id, productor=request.user)
-    estaba_en_oferta = producto.en_oferta and not producto.oferta_pendiente_pago
+    # Solo se cobra de nuevo si la oferta anterior ya termino o nunca se pago
+    estaba_en_oferta = (
+        producto.en_oferta and not producto.oferta_pendiente_pago
+        and (producto.oferta_fin is None or producto.oferta_fin > timezone.now())
+    )
     if request.method == 'POST':
         form = ProductoForm(request.POST, request.FILES, instance=producto)
         if form.is_valid():
@@ -1484,6 +1616,33 @@ def eliminar_producto(request, producto_id):
         nombre = producto.nombre
         producto.delete()
         messages.info(request, f"El producto '{nombre}' fue eliminado.")
+    return redirect('panel_productor')
+
+
+@login_required
+def renovar_producto(request, producto_id):
+    """Vuelve a publicar un producto por PUBLICACION_DIAS_VIGENCIA dias desde hoy."""
+    producto = get_object_or_404(Producto, id=producto_id, productor=request.user)
+    if request.method == 'POST':
+        dias = settings.PUBLICACION_DIAS_VIGENCIA
+        producto.fecha_vencimiento = timezone.now() + timedelta(days=dias)
+        producto.save(update_fields=['fecha_vencimiento'])
+        messages.success(request, f"'{producto.nombre}' quedó publicado {dias} días más.")
+    return redirect('panel_productor')
+
+
+@login_required
+def pausar_producto(request, producto_id):
+    """Pausa o vuelve a activar una publicacion sin borrarla."""
+    producto = get_object_or_404(Producto, id=producto_id, productor=request.user)
+    if request.method == 'POST':
+        if producto.oferta_pendiente_pago:
+            messages.warning(request, "Primero paga la comisión de la oferta para poder activarla.")
+            return redirect('pagar_comision_oferta', producto_id=producto.id)
+        producto.disponible = not producto.disponible
+        producto.save(update_fields=['disponible'])
+        estado = "activada" if producto.disponible else "pausada"
+        messages.info(request, f"La publicación '{producto.nombre}' fue {estado}.")
     return redirect('panel_productor')
 
 
