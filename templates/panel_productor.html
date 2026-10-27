@@ -64,6 +64,32 @@
     </div>
 </div>
 
+<!-- Grafico simple de ventas por semana -->
+<section class="grafico-ventas mb-4" aria-labelledby="tituloGrafico">
+    <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-3">
+        <h2 class="h5 fw-bold mb-0" id="tituloGrafico">Ventas por semana (S/)</h2>
+        <span class="small text-muted">Últimas 8 semanas · pedidos confirmados, en camino o entregados</span>
+    </div>
+    {% if hay_ventas_semanas %}
+    <div class="barras" aria-hidden="true">
+        {% for semana in ventas_semanas %}
+        <div class="barra-columna">
+            <span class="barra-valor">S/ {{ semana.total|floatformat:0 }}</span>
+            <span class="barra" style="height: {{ semana.alto }}%;"></span>
+            <span class="barra-fecha">{{ semana.desde|date:"d/m" }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <table class="visually-hidden">
+        <caption>Ventas por semana</caption>
+        <tr><th scope="col">Semana desde</th><th scope="col">Ventas (S/)</th></tr>
+        {% for semana in ventas_semanas %}<tr><td>{{ semana.desde|date:"d/m/Y" }}</td><td>{{ semana.total }}</td></tr>{% endfor %}
+    </table>
+    {% else %}
+    <p class="text-muted small mb-0"><i class="bi bi-bar-chart me-1" aria-hidden="true"></i>Aún no hay ventas en las últimas 8 semanas. Cuando recibas pedidos verás aquí cómo van tus ventas.</p>
+    {% endif %}
+</section>
+
 <!-- Seccion 1: Mis Productos Publicados -->
 <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
