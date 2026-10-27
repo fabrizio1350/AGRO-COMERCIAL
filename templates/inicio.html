@@ -3,31 +3,38 @@
 {% block title %}Inicio | AgroComercial{% endblock %}
 
 {% block content %}
-<!-- Portada principal con Carrusel de Ofertas del Dia a la derecha -->
-<div class="bg-white border p-4 p-md-5 mb-5" style="background: linear-gradient(135deg, #ffffff 0%, #f9f6ee 100%);">
+<!-- Portada principal con foto del campo de fondo y Carrusel de Ofertas del Dia a la derecha -->
+<div class="portada p-4 p-md-5 mb-5 shadow-sm">
     <div class="row align-items-center g-4">
         <div class="col-lg-6">
-            <span class="badge bg-success-subtle mb-2 px-3 py-1">Comercio Directo del Campo</span>
-            <h1 class="h2 fw-bold mb-3" style="color: #1f3f29;">
+            <span class="badge bg-success-subtle mb-3 px-3 py-2 entrar">
+                <i class="bi bi-flower1 me-1"></i>Comercio Directo del Campo
+            </span>
+            <h1 class="h2 fw-bold mb-3 entrar entrar-2">
                 Productos agrícolas frescos a precios directos del productor
             </h1>
-            <p class="text-secondary mb-4">
+            <p class="texto-portada mb-4 entrar entrar-3">
                 Encuentra cosechas del día con descuentos directos para apoyar tu economía familiar o abastecer tu negocio sin intermediarios.
             </p>
-            <div class="d-flex flex-wrap gap-2">
-                <a href="{% url 'ventas_por_oferta' %}" class="btn btn-success px-4 py-2">
-                    Ver Ofertas del Día
+            <div class="d-flex flex-wrap gap-2 mb-4 acciones-portada entrar entrar-4">
+                <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning px-4 py-2">
+                    <i class="bi bi-lightning-charge-fill me-1"></i>Ver Ofertas del Día
                 </a>
-                <a href="{% url 'catalogo' %}" class="btn btn-outline-success px-4 py-2">
-                    Explorar Marketplace
+                <a href="{% url 'catalogo' %}" class="btn btn-outline-light px-4 py-2">
+                    <i class="bi bi-shop me-1"></i>Explorar Marketplace
                 </a>
+            </div>
+            <div class="d-flex flex-wrap gap-3 entrar entrar-4">
+                <span class="dato-portada"><i class="bi bi-truck"></i>Del campo a tu ciudad</span>
+                <span class="dato-portada"><i class="bi bi-shield-check"></i>Pago seguro</span>
+                <span class="dato-portada"><i class="bi bi-patch-check"></i>Productores verificados</span>
             </div>
         </div>
 
         <!-- Carrusel automatico de Ofertas del Dia -->
         <div class="col-lg-6">
             {% if productos_en_oferta %}
-            <div id="carruselOfertasDia" class="carousel slide border rounded-3 overflow-hidden bg-white shadow-sm" data-bs-ride="carousel" data-bs-interval="3500">
+            <div id="carruselOfertasDia" class="carousel slide carousel-fade border rounded-4 overflow-hidden bg-white shadow entrar entrar-3" data-bs-ride="carousel" data-bs-interval="3500">
                 <div class="carousel-inner">
                     {% for of in productos_en_oferta %}
                     <div class="carousel-item {% if forloop.first %}active{% endif %}">
@@ -40,7 +47,9 @@
                                     <i class="bi bi-tag-fill me-1"></i>Ahorra {{ of.porcentaje_descuento }}%
                                 </span>
                             </div>
-                            <img src="{{ of.url_imagen }}" alt="{{ of.nombre }}" class="img-referencia mb-3" style="height: 190px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                            <div class="img-zoom mb-3">
+                                <img src="{{ of.url_imagen }}" alt="{{ of.nombre }}" class="img-referencia" style="height: 190px;" loading="lazy" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                            </div>
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h5 class="h6 fw-bold mb-0">{{ of.nombre }}</h5>
@@ -54,7 +63,7 @@
                             </div>
                             <div class="mt-3">
                                 <a href="{% url 'detalle_producto' of.id %}" class="btn btn-sm btn-success w-100 py-2">
-                                    Ver esta Oferta
+                                    <i class="bi bi-eye me-1"></i>Ver esta Oferta
                                 </a>
                             </div>
                         </div>
@@ -69,27 +78,27 @@
                 </button>
             </div>
             {% else %}
-            <img src="/static/imagenes/banner_agro.jpg" alt="Campo agrícola" class="img-referencia" style="height: 250px;">
+            <img src="/static/imagenes/finca_productor.jpg" alt="Finca de un productor agrícola" class="img-referencia shadow entrar entrar-3" style="height: 280px;">
             {% endif %}
         </div>
     </div>
 </div>
 
 <!-- Categorias Agricolas -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h5 fw-bold mb-0">Categorías Agrícolas</h2>
+<div class="d-flex justify-content-between align-items-center mb-3 aparecer">
+    <h2 class="h5 fw-bold mb-0 titulo-seccion"><i class="bi bi-grid"></i>Categorías Agrícolas</h2>
     <a href="{% url 'catalogo' %}" class="text-success text-decoration-none small fw-semibold">
-        Ver catálogo completo &rarr;
+        Ver todo <i class="bi bi-arrow-right"></i>
     </a>
 </div>
 <div class="row g-3 mb-5">
     {% for cat in categorias %}
-    <div class="col-6 col-lg-3">
-        <a href="{% url 'catalogo' %}?categoria={{ cat.id }}" class="text-decoration-none text-dark">
-            <div class="card h-100 border p-2 text-center">
-                <img src="{{ cat.url_imagen }}" alt="{{ cat.nombre }}" class="img-referencia mb-2" style="height: 110px;">
-                <h6 class="fw-bold mb-1">{{ cat.nombre }}</h6>
-                <span class="text-success small">Explorar &rarr;</span>
+    <div class="col-6 col-lg-3 aparecer">
+        <a href="{% url 'catalogo' %}?categoria={{ cat.id }}" class="tarjeta-categoria text-decoration-none">
+            <img src="{{ cat.url_imagen }}" alt="{{ cat.nombre }}" loading="lazy" onerror="this.onerror=null;this.src='/static/imagenes/banner_agro.jpg';">
+            <div class="texto-categoria">
+                <h6 class="fw-bold mb-0">{{ cat.nombre }}</h6>
+                <span class="small">Explorar <i class="bi bi-arrow-right flecha-categoria"></i></span>
             </div>
         </a>
     </div>
@@ -97,20 +106,22 @@
 </div>
 
 <!-- Productos Destacados -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h5 fw-bold mb-0">Productos Disponibles en el Campo</h2>
-    <a href="{% url 'catalogo' %}" class="btn btn-sm btn-outline-success">Filtrar en Marketplace</a>
+<div class="d-flex justify-content-between align-items-center mb-3 gap-2 aparecer">
+    <h2 class="h5 fw-bold mb-0 titulo-seccion"><i class="bi bi-basket"></i>Productos Disponibles en el Campo</h2>
+    <a href="{% url 'catalogo' %}" class="btn btn-sm btn-outline-success text-nowrap"><i class="bi bi-funnel me-1"></i><span class="d-none d-sm-inline">Filtrar en </span>Marketplace</a>
 </div>
 <div class="row g-4 mb-4">
     {% for prod in productos_destacados %}
-    <div class="col-md-6 col-lg-4">
+    <div class="col-sm-6 col-lg-4 aparecer">
         <div class="card h-100 border">
             <div class="p-3 pb-0">
-                <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 175px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                <div class="img-zoom">
+                    <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 175px;" loading="lazy" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                </div>
             </div>
             <div class="card-body d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted small">{{ prod.categoria.nombre }} • {{ prod.origen }}</span>
+                    <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ prod.categoria.nombre }} • {{ prod.origen }}</span>
                     {% if prod.en_oferta and prod.precio_oferta %}
                         <span class="etiqueta-oferta small">
                             <i class="bi bi-tag-fill me-1"></i>-{{ prod.porcentaje_descuento }}%
@@ -131,7 +142,7 @@
                         <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
                     </div>
                     <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-success btn-sm">
-                        Ver Producto
+                        Ver <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
             </div>
