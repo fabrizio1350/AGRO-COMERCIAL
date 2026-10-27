@@ -1885,6 +1885,103 @@ main {
     .portada-productor { padding: 1.25rem; }
 }
 
+/* Ingreso y registro: foto del campo a la izquierda y formulario a la derecha */
+.acceso {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 1080px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    border: 1px solid var(--borde);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -40px rgba(5, 46, 34, 0.45);
+}
+@media (min-width: 992px) {
+    .acceso { grid-template-columns: 5fr 6fr; min-height: 600px; }
+}
+.acceso-imagen {
+    position: relative;
+    align-items: flex-end;
+    padding: 2.5rem;
+    color: #ffffff;
+    background: linear-gradient(180deg, rgba(6, 78, 59, 0.1) 0%, rgba(6, 78, 59, 0.92) 75%), url('/static/imagenes/finca_productor.jpg') center / cover;
+}
+.acceso-imagen h2 { font-size: 2rem; font-weight: 800; margin: 0.5rem 0 0.75rem; }
+.acceso-imagen p { opacity: 0.85; }
+.acceso-imagen ul { list-style: none; padding: 0; margin: 1.25rem 0 0; display: grid; gap: 0.55rem; }
+.acceso-imagen li { display: flex; align-items: center; gap: 0.55rem; font-weight: 500; }
+.acceso-imagen li .bi { color: var(--amarillo); }
+.acceso-formulario {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.25rem;
+}
+.tarjeta-acceso { width: 100%; max-width: 520px; }
+@media (max-width: 575.98px) {
+    .acceso { border-radius: 20px; }
+    .acceso-formulario { padding: 1.5rem 1rem; }
+}
+
+/* Grafico de ventas del panel del vendedor: barras de un solo color */
+.grafico-ventas {
+    background-color: #ffffff;
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    padding: 1.25rem 1.25rem 1rem;
+}
+.barras {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    height: 200px;
+    align-items: end;
+    border-bottom: 1px solid var(--borde);
+}
+.barra-columna {
+    position: relative;
+    height: 100%;
+    padding-top: 1.6rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    outline: none;
+}
+.barra {
+    width: min(70%, 44px);
+    min-height: 2px;
+    background-color: var(--verde-campo);
+    border-radius: 4px 4px 0 0;
+    transition: background-color 0.2s ease;
+}
+.barra-columna:hover .barra, .barra-columna:focus .barra { background-color: var(--verde-oscuro); }
+.barra-valor {
+    position: absolute;
+    top: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--texto);
+    background-color: #ffffff;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    padding: 0.1rem 0.4rem;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+.barra-columna:hover .barra-valor, .barra-columna:focus .barra-valor { opacity: 1; }
+.barra-fecha {
+    position: absolute;
+    bottom: -1.5rem;
+    font-size: 0.72rem;
+    color: var(--texto-secundario);
+}
+.grafico-ventas .barras { margin-bottom: 1.75rem; }
+
 /* Menos movimiento: sin cinta, sin flotar, sin brillos ni transiciones de pagina */
 @media (prefers-reduced-motion: reduce) {
     @view-transition { navigation: none; }
