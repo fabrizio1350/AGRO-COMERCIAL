@@ -15,7 +15,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.paginator import Paginator
-from django.db.models import Q, F, Case, When, DecimalField, ExpressionWrapper
+from django.db.models import Q, F, Case, When, Count, DecimalField, ExpressionWrapper
 from .models import (
     PerfilUsuario,
     Categoria,
@@ -581,28 +581,39 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
 
 
 def inicio(request):
+    """Portada publica: hero, categorias, ofertas, productos, como funciona y productores."""
     asegurar_datos_iniciales()
-    if not request.user.is_authenticated:
-        return redirect('login')
-
-    categorias = Categoria.objects.all()[:8]
-    productos_destacados = Producto.objects.publicados()[:6]
-    productos_en_oferta = ofertas_destacadas()
-    total_productos = Producto.objects.publicados().count()
-    total_productores = PerfilUsuario.objects.filter(rol='PRODUCTOR').count()
-    total_pedidos = Pedido.objects.count()
-    total_ofertas = Producto.objects.ofertas_activas().count()
+    publicados = Producto.objects.publicados()
+    ofertas = ofertas_destacadas()
+    productores = (
+        PerfilUsuario.objects.filter(rol='PRODUCTOR')
+        .select_related('usuario')
+        .annotate(total_publicados=Count(
+            'usuario__productos',
+            filter=Q(usuario__productos__in=publicados),
+        ))
+        .filter(total_publicados__gt=0)
+        .order_by('-total_publicados')[:6]
+    )
 
     contexto = {
-        'categorias': categorias,
-        'productos_destacados': productos_destacados,
-        'productos_en_oferta': productos_en_oferta,
-        'total_productos': total_productos,
-        'total_productores': total_productores,
-        'total_pedidos': total_pedidos,
-        'total_ofertas': total_ofertas,
+        'categorias': Categoria.objects.order_by('nombre'),
+        'productos_destacados': publicados.select_related('categoria', 'productor')[:8],
+        'ofertas_carrusel': ofertas,
+        'mejor_oferta': ofertas[0] if ofertas else None,
+        'productores_destacados': productores,
+        # Cifras reales sacadas de la base de datos
+        'total_productos': publicados.count(),
+        'total_ofertas': Producto.objects.ofertas_activas().count(),
+        'total_productores': PerfilUsuario.objects.filter(rol='PRODUCTOR').count(),
+        'total_distritos': publicados.values('origen').distinct().count(),
     }
     return render(request, 'inicio.html', contexto)
+
+
+def informacion(request):
+    """Preguntas frecuentes, terminos, privacidad y contacto."""
+    return render(request, 'informacion.html')
 
 
 def catalogo(request):
