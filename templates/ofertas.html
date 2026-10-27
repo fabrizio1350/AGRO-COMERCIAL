@@ -5,16 +5,31 @@
 {% block content %}
 {% include 'includes/carrusel_ofertas.html' %}
 
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+<div class="encabezado-seccion entrar">
     <div>
-        <h1 class="h4 fw-bold mb-1">Ventas por Oferta y Descuentos</h1>
+        <span class="antetitulo"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>Ofertas vigentes</span>
+        <h1 class="h2 fw-bold mb-1">Ofertas y descuentos del campo</h1>
         {% if rol_actual == 'PRODUCTOR' %}
-            <p class="text-muted small mb-0">Revisa y responde las ofertas de compra enviadas por los compradores sobre tus productos.</p>
+            <p class="text-muted mb-0">Responde las propuestas de precio que te envían los compradores.</p>
         {% else %}
-            <p class="text-muted small mb-0">Aprovecha productos con descuento directo o filtra el catálogo para proponer un precio por cantidad al vendedor.</p>
+            <p class="text-muted mb-0">Compra con descuento directo o propone un precio por volumen al productor.</p>
         {% endif %}
     </div>
 </div>
+
+{% if ultimas_horas %}
+<section class="ultimas-horas mb-4 entrar entrar-2" aria-labelledby="tituloUltimas">
+    <h2 class="h6 fw-bold mb-2" id="tituloUltimas"><i class="bi bi-alarm me-1" aria-hidden="true"></i>Últimas horas: vencen en menos de 24 h</h2>
+    <div class="fichas-filtro">
+        {% for prod in ultimas_horas %}
+        <a href="{% url 'detalle_producto' prod.id %}" class="ficha-ultima">
+            <img src="{{ prod.url_imagen }}" alt="" loading="lazy">
+            <span><strong>{{ prod.nombre }}</strong><small>S/ {{ prod.precio_oferta }} · {{ prod.texto_tiempo_restante }}</small></span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 
 {% if rol_actual == 'PRODUCTOR' %}
     <!-- VISTA EXCLUSIVA PARA EL VENDEDOR -->
@@ -218,49 +233,10 @@
     <div class="tab-content">
         <!-- Pestaña 1: Descuentos directos -->
         <div class="tab-pane fade {% if request.GET.tab != 'proponer' and request.GET.tab != 'mis-ofertas' %}show active{% endif %}" id="tab-descuentos" role="tabpanel">
-            <div class="row g-4">
+            <div class="row g-3 g-lg-4" data-escalonado>
                 {% for prod in productos_remate %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 border">
-                        <div class="p-3 pb-0">
-                            <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 170px;" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
-                        </div>
-                        <div class="card-body d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">{{ prod.categoria.nombre }} • {{ prod.origen }}</span>
-                                <span class="etiqueta-oferta small">
-                                    <i class="bi bi-tag-fill me-1"></i>-{{ prod.porcentaje_descuento }}%
-                                </span>
-                            </div>
-                            <h5 class="h6 fw-bold mb-1">{{ prod.nombre }}</h5>
-                            <div class="mb-2">
-                                <span class="badge bg-light text-success border border-success-subtle fw-semibold">
-                                    <i class="bi bi-box-seam me-1"></i>{{ prod.stock }} {{ prod.nombre_unidad_stock }} disponibles
-                                </span>
-                            </div>
-                            <p class="text-secondary small flex-grow-1 mb-2">{{ prod.descripcion|truncatewords:14 }}</p>
-                            <div class="small text-success fw-semibold mb-2">Ahorras S/ {{ prod.ahorro }} por unidad · mín. {{ prod.minimo_compra }} {{ prod.nombre_unidad_minimo }}</div>
-                            {% include 'includes/barra_tiempo.html' with prod=prod compacta=True %}
-
-                            <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
-                                <div>
-                                    <span class="text-decoration-line-through text-muted small me-1">S/ {{ prod.precio }}</span>
-                                    <span class="fs-5 fw-bold text-danger">S/ {{ prod.precio_oferta }}</span>
-                                    <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
-                                </div>
-                                <div class="d-flex gap-1">
-                                    <a href="{% url 'detalle_producto' prod.id %}" class="btn btn-outline-secondary btn-sm">Detalle</a>
-                                    {% if user.is_authenticated %}
-                                    <form action="{% url 'agregar_al_carrito' prod.id %}" method="post">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
-                                        <button type="submit" class="btn btn-success btn-sm">Comprar</button>
-                                    </form>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-6 col-lg-4">
+                    {% include 'includes/tarjeta_producto.html' with prod=prod %}
                 </div>
                 {% empty %}
                 <div class="col-12">
