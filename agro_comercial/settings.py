@@ -121,6 +121,13 @@ LOGIN_REDIRECT_URL = 'inicio'
 LOGOUT_REDIRECT_URL = 'inicio'
 
 # ==============================================================================
+# COMISION DE AGROCOMERCIAL POR PUBLICAR UN PRODUCTO EN OFERTA (PAGO SIMULADO)
+# ==============================================================================
+# Porcentaje sobre el valor del lote en oferta (precio de oferta x stock) y monto minimo en soles
+COMISION_OFERTA_PORCENTAJE = float(os.environ.get('COMISION_OFERTA_PORCENTAJE', '3'))
+COMISION_OFERTA_MINIMA = float(os.environ.get('COMISION_OFERTA_MINIMA', '2.00'))
+
+# ==============================================================================
 # CREDENCIALES DE GOOGLE OAUTH, PASARELA CULQI Y CORREO GMAIL (DESDE .env)
 # ==============================================================================
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
