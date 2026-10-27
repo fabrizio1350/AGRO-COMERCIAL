@@ -82,6 +82,24 @@ class Categoria(models.Model):
     class Meta:
         verbose_name_plural = "Categorías"
 
+    def foto_propia(self):
+        """Foto real de la categoria (fija o subida por un vendedor); None si no tiene."""
+        url = self.url_imagen()
+        return None if url.endswith('banner_agro.jpg') else url
+
+    def icono(self):
+        """Icono de Bootstrap Icons para las categorias que aun no tienen foto."""
+        nombre_low = self.nombre.lower()
+        iconos = [
+            ('aj', 'bi-fire'), ('flor', 'bi-flower2'), ('forraje', 'bi-tree'), ('seco', 'bi-sun'),
+            ('hierba', 'bi-flower3'), ('huevo', 'bi-egg'), ('lácteo', 'bi-cup-straw'), ('lacteo', 'bi-cup-straw'),
+            ('legumbre', 'bi-record-circle'), ('semilla', 'bi-grip-horizontal'),
+        ]
+        for clave, icono in iconos:
+            if clave in nombre_low:
+                return icono
+        return 'bi-basket'
+
     def url_imagen(self):
         nombre_low = self.nombre.lower()
         if 'tub' in nombre_low or 'papa' in nombre_low:
@@ -315,6 +333,10 @@ class Producto(models.Model):
         }
         singular, plural = unidades_cortas.get(self.unidad, ('unidad', 'unidades'))
         return singular if self.stock == 1 else plural
+
+    def unidad_corta(self):
+        """Unidad en singular para mostrar junto al precio (ej. 'S/ 3.20 / kg')."""
+        return {'KG': 'kg', 'SACO': 'saco', 'CAJA': 'caja', 'ARROBA': 'arroba', 'TONELADA': 'tonelada'}.get(self.unidad, 'unidad')
 
     def nombre_unidad_minimo(self):
         """Devuelve la unidad según la cantidad mínima de compra."""
