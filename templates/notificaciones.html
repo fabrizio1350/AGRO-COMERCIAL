@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Notificaciones | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="encabezado-seccion entrar">
+    <div>
+        <span class="antetitulo"><i class="bi bi-bell-fill" aria-hidden="true"></i>Tu actividad</span>
+        <h1 class="h2 fw-bold mb-0">Notificaciones</h1>
+    </div>
+</div>
+
+<div class="lista-avisos" data-escalonado>
+    {% for n in notificaciones %}
+        <a href="{% url 'abrir_notificacion' n.id %}" class="fila-aviso {% if not n.leida %}nueva{% endif %}">
+            <span class="icono"><i class="bi {{ n.icono }}" aria-hidden="true"></i></span>
+            <span class="flex-grow-1">
+                <span class="d-block">{{ n.texto }}</span>
+                <small class="text-muted">{{ n.fecha|timesince }} atrás</small>
+            </span>
+            {% if not n.leida %}<span class="punto-nuevo" aria-label="Nueva"></span>{% endif %}
+        </a>
+    {% empty %}
+        <div class="estado-vacio">
+            <i class="bi bi-bell-slash" aria-hidden="true"></i>
+            <h2 class="h5 fw-bold">No tienes notificaciones</h2>
+            <p class="text-muted">Aquí verás mensajes nuevos, respuestas a tus solicitudes de compra, pedidos y publicaciones por vencer.</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
