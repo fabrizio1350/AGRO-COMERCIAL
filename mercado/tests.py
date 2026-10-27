@@ -1,11 +1,14 @@
 from datetime import timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
+import shutil
+import tempfile
 from django.urls import reverse
 from django.utils import timezone
 from .forms import ProductoForm
-from .models import Categoria, PerfilUsuario, Producto
+from .models import Categoria, PerfilUsuario, Producto, Conversacion, Mensaje, Notificacion, Favorito, OfertaNegociacion
 
 
 class PruebasOfertasYVencimiento(TestCase):
@@ -131,3 +134,109 @@ class PruebasOfertasYVencimiento(TestCase):
         self.assertIn(prod, Producto.objects.ofertas_activas())
         respuesta = self.client.get(reverse('ventas_por_oferta'))
         self.assertContains(respuesta, 'Palta')
+
+
+class PruebasChatYFavoritos(TestCase):
+    def setUp(self):
+        self.vendedor = User.objects.create_user('vendedor', password='clave12345', first_name='Ana')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        self.comprador = User.objects.create_user('comprador', password='clave12345', first_name='Luis')
+        PerfilUsuario.objects.create(usuario=self.comprador, rol='COMPRADOR')
+        self.intruso = User.objects.create_user('intruso', password='clave12345')
+        PerfilUsuario.objects.create(usuario=self.intruso, rol='COMPRADOR')
+        self.producto = Producto.objects.create(
+            productor=self.vendedor, nombre='Papa', descripcion='Papa amarilla',
+            precio=Decimal('3.00'), stock=500, origen='Chiguata, Arequipa',
+        )
+
+    def abrir_chat(self):
+        self.client.login(username='comprador', password='clave12345')
+        self.client.post(reverse('iniciar_chat', args=[self.producto.id]), {'texto': 'Hola, ¿hay 100 kg?'})
+        return Conversacion.objects.get(producto=self.producto, comprador=self.comprador)
+
+    def test_comprador_abre_chat_y_vendedor_recibe_aviso(self):
+        chat = self.abrir_chat()
+        self.assertEqual(chat.vendedor, self.vendedor)
+        self.assertEqual(chat.mensajes.count(), 1)
+        self.assertTrue(Notificacion.objects.filter(usuario=self.vendedor, leida=False).exists())
+        # Volver a abrir el chat no crea otra conversacion
+        self.client.post(reverse('iniciar_chat', args=[self.producto.id]))
+        self.assertEqual(Conversacion.objects.count(), 1)
+
+    def test_vendedor_responde_y_recibe_solo_nuevos(self):
+        chat = self.abrir_chat()
+        primero = chat.mensajes.first()
+        self.client.login(username='vendedor', password='clave12345')
+        respuesta = self.client.post(reverse('enviar_mensaje', args=[chat.id]),
+                                     {'texto': 'Sí, hay stock', 'despues': primero.id}, HTTP_HX_REQUEST='true')
+        self.assertContains(respuesta, 'Sí, hay stock')
+        self.assertNotContains(respuesta, 'Hola, ¿hay 100 kg?')
+        primero.refresh_from_db()
+        self.assertTrue(primero.leido)
+
+    def test_otro_usuario_no_puede_leer_ni_escribir(self):
+        chat = self.abrir_chat()
+        self.client.login(username='intruso', password='clave12345')
+        self.assertEqual(self.client.get(reverse('conversacion', args=[chat.id])).status_code, 403)
+        self.assertEqual(self.client.get(reverse('mensajes_nuevos', args=[chat.id])).status_code, 403)
+        self.assertEqual(self.client.post(reverse('enviar_mensaje', args=[chat.id]), {'texto': 'hola'}).status_code, 403)
+        self.assertEqual(Mensaje.objects.count(), 1)
+
+    def test_solicitud_desde_chat_y_cancelar(self):
+        chat = self.abrir_chat()
+        self.client.post(reverse('solicitud_desde_chat', args=[chat.id]),
+                         {'cantidad': 100, 'precio_unitario_ofrecido': '2.80', 'mensaje': ''})
+        solicitud = OfertaNegociacion.objects.get(producto=self.producto, comprador=self.comprador)
+        self.assertEqual(solicitud.estado, 'PENDIENTE')
+        self.assertIn('solicitud de compra', chat.mensajes.last().texto)
+        self.client.post(reverse('responder_oferta', args=[solicitud.id]), {'decision': 'CANCELAR'})
+        solicitud.refresh_from_db()
+        self.assertEqual(solicitud.estado, 'CANCELADA')
+
+    def test_favorito_se_agrega_y_quita(self):
+        self.client.login(username='comprador', password='clave12345')
+        url = reverse('alternar_favorito', args=[self.producto.id])
+        datos = self.client.post(url, HTTP_X_RAPIDO='1').json()
+        self.assertTrue(datos['favorito'])
+        self.assertContains(self.client.get(reverse('mis_favoritos')), 'Papa')
+        datos = self.client.post(url, HTTP_X_RAPIDO='1').json()
+        self.assertFalse(datos['favorito'])
+        self.assertFalse(Favorito.objects.exists())
+
+    def test_perfil_publico_del_productor(self):
+        respuesta = self.client.get(reverse('perfil_productor', args=[self.vendedor.id]))
+        self.assertContains(respuesta, 'Papa')
+        self.assertEqual(self.client.get(reverse('perfil_productor', args=[self.intruso.id])).status_code, 404)
+
+    def test_aviso_de_publicacion_por_vencer_una_sola_vez(self):
+        self.producto.fecha_vencimiento = timezone.now() + timedelta(days=1)
+        self.producto.save()
+        self.client.login(username='vendedor', password='clave12345')
+        self.client.get(reverse('catalogo'))
+        self.client.get(reverse('catalogo'))
+        self.assertEqual(Notificacion.objects.filter(usuario=self.vendedor, icono='bi-hourglass-split').count(), 1)
+
+
+class PruebasFotosExtra(TestCase):
+    def setUp(self):
+        self.carpeta = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.carpeta, ignore_errors=True)
+        self.vendedor = User.objects.create_user('vendedor', password='clave12345')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        self.producto = Producto.objects.create(
+            productor=self.vendedor, nombre='Palta', descripcion='Palta Hass',
+            precio=Decimal('6.00'), stock=80, origen='Cayma, Arequipa',
+        )
+
+    def test_maximo_cuatro_fotos_extra(self):
+        from .views import guardar_fotos_extra
+        from django.test import RequestFactory
+        from django.contrib.messages.storage.fallback import FallbackStorage
+        fotos = [SimpleUploadedFile(f'f{i}.jpg', b'x' * 10, content_type='image/jpeg') for i in range(6)]
+        fotos.append(SimpleUploadedFile('virus.exe', b'x', content_type='application/octet-stream'))
+        request = RequestFactory().post('/', {'fotos_extra': fotos})
+        request.session = {}
+        request._messages = FallbackStorage(request)
+        with override_settings(MEDIA_ROOT=self.carpeta):
+            guardar_fotos_extra(request, self.producto)
+        self.assertEqual(self.producto.fotos.count(), 4)
