@@ -131,6 +131,10 @@ LOGOUT_REDIRECT_URL = 'inicio'
 COMISION_OFERTA_PORCENTAJE = float(os.environ.get('COMISION_OFERTA_PORCENTAJE', '3'))
 COMISION_OFERTA_MINIMA = float(os.environ.get('COMISION_OFERTA_MINIMA', '2.00'))
 
+# Dias que dura una publicacion antes de vencer (y el maximo que puede elegir el vendedor)
+PUBLICACION_DIAS_VIGENCIA = int(os.environ.get('PUBLICACION_DIAS_VIGENCIA', '30'))
+PUBLICACION_DIAS_MAXIMO = int(os.environ.get('PUBLICACION_DIAS_MAXIMO', '90'))
+
 # ==============================================================================
 # CREDENCIALES DE GOOGLE OAUTH, PASARELA CULQI Y CORREO GMAIL (DESDE .env)
 # ==============================================================================
