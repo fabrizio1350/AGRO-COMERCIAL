@@ -4,24 +4,34 @@
    ========================================================== */
 
 :root {
-    /* Paleta "Cosecha vibrante": verde esmeralda, naranja mandarina y amarillo maiz */
-    --verde-bosque: #064e3b;
-    --verde-campo: #15803d;
-    --verde-oscuro: #166534;
-    --verde-secundario: #16a34a;
-    --verde-vivo: #22c55e;
-    --verde-suave: #ecfdf3;
-    --ambar: #f97316;
-    --ambar-claro: #fff1e6;
-    --amarillo: #facc15;
-    --rojo-descuento: #e11d48;
-    --arena: #f7faf8;
-    --borde: #e5ebe7;
+    /* Paleta "Campo andino": verde hoja sobrio, terracota y mostaza (sin tonos neon) */
+    --verde-bosque: #1e3a2b;
+    --verde-campo: #2e6b45;
+    --verde-oscuro: #24553a;
+    --verde-secundario: #3a7a52;
+    --verde-vivo: #6f9f7a;
+    --verde-suave: #edf3ee;
+    --ambar: #b8642b;
+    --ambar-claro: #f8ede4;
+    --amarillo: #d8a73e;
+    --rojo-descuento: #a8423a;
+    --arena: #f6f5f1;
+    --borde: #e3e1da;
     --texto: #111827;
     --texto-secundario: #5b6670;
     --sombra-suave: 0 1px 2px rgba(17, 24, 39, 0.04), 0 2px 8px rgba(17, 24, 39, 0.04);
-    --sombra-hover: 0 18px 40px -12px rgba(21, 128, 61, 0.28);
+    --sombra-hover: 0 18px 40px -12px rgba(46, 107, 69, 0.28);
     --radio: 16px;
+    /* Colores de Bootstrap alineados con la paleta */
+    --bs-success: #2e6b45;
+    --bs-success-rgb: 46, 107, 69;
+    --bs-warning: #d8a73e;
+    --bs-warning-rgb: 216, 167, 62;
+    --bs-danger: #a8423a;
+    --bs-danger-rgb: 168, 66, 58;
+    --bs-success-text-emphasis: #24553a;
+    --bs-success-bg-subtle: #e3eee5;
+    --bs-success-border-subtle: #cfe2d3;
     --transicion: 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -240,7 +250,7 @@ h1, h2, h3, h4, h5, h6 {
 .insignia-rol-comprador {
     background-color: var(--ambar-claro);
     color: #78350f;
-    border: 1px solid #f59e0b;
+    border: 1px solid #c49432;
     font-size: 0.72rem;
     padding: 0.2rem 0.55rem;
     border-radius: 5px;
@@ -248,7 +258,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .insignia-rol-vendedor {
-    background-color: #dcfce7;
+    background-color: #e3eee5;
     color: #14532d;
     border: 1px solid #86efac;
     font-size: 0.72rem;
@@ -357,7 +367,7 @@ h1, h2, h3, h4, h5, h6 {
     color: rgba(255, 255, 255, 0.9);
 }
 .dato-portada i {
-    color: #f7c873;
+    color: #e2c07e;
     font-size: 1.1rem;
 }
 
