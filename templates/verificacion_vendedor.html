@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block title %}Verifica tu cuenta de vendedor | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="verificacion mx-auto">
+    <div class="mb-4">
+        <span class="antetitulo"><i class="bi bi-patch-check" aria-hidden="true"></i>Cuenta de vendedor</span>
+        <h1 class="h3 fw-bold mb-1">Verifica que eres productor</h1>
+        <p class="text-muted mb-0">Los compradores solo ven productos de vendedores verificados. Te toma unos 3 minutos y lo haces una sola vez.</p>
+    </div>
+
+    <ol class="pasos-verificacion" aria-label="Estado de tu verificación">
+        <li class="{% if perfil.estado_verificacion != 'SIN_ENVIAR' and perfil.estado_verificacion != 'RECHAZADO' or perfil.es_demo %}hecho{% else %}actual{% endif %}">
+            <span class="numero">1</span><span>Envías tus datos</span>
+        </li>
+        <li class="{% if perfil.estado_verificacion == 'PENDIENTE' %}actual{% elif perfil.estado_verificacion == 'VERIFICADO' or perfil.es_demo %}hecho{% endif %}">
+            <span class="numero">2</span><span>Una persona los revisa</span>
+        </li>
+        <li class="{% if perfil.estado_verificacion == 'VERIFICADO' or perfil.es_demo %}hecho{% endif %}">
+            <span class="numero">3</span><span>Tus productos se publican</span>
+        </li>
+    </ol>
+
+    {% if perfil.es_demo %}
+        <div class="estado-verificacion estado-ok">
+            <i class="bi bi-robot" aria-hidden="true"></i>
+            <div><strong>Cuenta de prueba.</strong> Las cuentas Demo no necesitan verificación y siempre se muestran con la etiqueta "Demo".</div>
+        </div>
+    {% elif perfil.estado_verificacion == 'VERIFICADO' %}
+        <div class="estado-verificacion estado-ok">
+            <i class="bi bi-patch-check-fill" aria-hidden="true"></i>
+            <div>
+                <strong>Tu cuenta está verificada{% if perfil.fecha_verificacion %} desde el {{ perfil.fecha_verificacion|date:"d/m/Y" }}{% endif %}.</strong>
+                {% if verificacion.comprobado_texto %}<div class="small">Comprobamos: {{ verificacion.comprobado_texto }}.</div>{% endif %}
+                {% if not perfil.organico_verificado %}<div class="small mt-1">¿Tienes certificado orgánico? Escríbenos para agregarlo y poder vender como "Orgánico".</div>{% endif %}
+            </div>
+        </div>
+        <a href="{% url 'panel_productor' %}" class="btn btn-success mt-3">Ir a mi panel</a>
+    {% elif perfil.estado_verificacion == 'PENDIENTE' and not editar %}
+        <div class="estado-verificacion estado-espera">
+            <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+            <div>
+                <strong>Estamos revisando tus datos.</strong>
+                <div class="small">Enviado el {{ verificacion.fecha_envio|date:"d/m/Y H:i" }}. Normalmente toma 1 o 2 días hábiles y te avisaremos en Notificaciones. Mientras tanto ya puedes preparar tus productos: se mostrarán apenas te aprobemos.</div>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <a href="{% url 'crear_producto' %}" class="btn btn-success">Preparar un producto</a>
+            <a href="?editar=1" class="btn btn-outline-secondary">Corregir mis datos</a>
+        </div>
+    {% endif %}
+
+    {% if editar %}
+        {% if perfil.estado_verificacion == 'RECHAZADO' %}
+        <div class="estado-verificacion estado-error mb-3">
+            <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            <div>
+                <strong>Necesitamos que corrijas algo.</strong>
+                {% if verificacion.motivo_rechazo %}<div class="small">{{ verificacion.motivo_rechazo }}</div>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="form-verificacion" novalidate>
+            {% csrf_token %}
+            {% if form.errors %}
+            <div class="alert alert-danger small" role="alert">Revisa los campos marcados en rojo.</div>
+            {% endif %}
+
+            <section class="bloque-verificacion">
+                <h2><span class="numero">1</span>¿Quién eres?</h2>
+                <fieldset class="mb-3">
+                    <legend class="form-label small fw-semibold">{{ form.tipo.label }}</legend>
+                    <div class="opciones-tipo">
+                        {% for opcion in form.tipo %}
+                        <label class="opcion-tipo">
+                            {{ opcion.tag }}
+                            <span>
+                                <strong>{{ opcion.choice_label }}</strong>
+                                <small class="d-block text-muted">{% if opcion.data.value == 'PERSONA' %}Vendo lo que produzco en mi chacra{% else %}Vendo a nombre de un grupo con RUC{% endif %}</small>
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+
+                <div class="row g-3">
+                    <div class="col-sm-6 solo-persona">
+                        <label for="{{ form.dni.id_for_label }}" class="form-label small fw-semibold">{{ form.dni.label }}</label>
+                        {{ form.dni }}
+                        {% if form.dni.errors %}<div class="text-danger small mt-1">{{ form.dni.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-sm-6 solo-organizacion">
+                        <label for="{{ form.ruc.id_for_label }}" class="form-label small fw-semibold">{{ form.ruc.label }}</label>
+                        {{ form.ruc }}
+                        {% if form.ruc.errors %}<div class="text-danger small mt-1">{{ form.ruc.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-sm-6 solo-organizacion">
+                        <label for="{{ form.nombre_organizacion.id_for_label }}" class="form-label small fw-semibold">{{ form.nombre_organizacion.label }}</label>
+                        {{ form.nombre_organizacion }}
+                        {% if form.nombre_organizacion.errors %}<div class="text-danger small mt-1">{{ form.nombre_organizacion.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="{{ form.celular.id_for_label }}" class="form-label small fw-semibold">{{ form.celular.label }}</label>
+                        {{ form.celular }}
+                        {% if form.celular.errors %}<div class="text-danger small mt-1">{{ form.celular.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="{{ form.distrito.id_for_label }}" class="form-label small fw-semibold">{{ form.distrito.label }}</label>
+                        {{ form.distrito }}
+                    </div>
+                </div>
+            </section>
+
+            <section class="bloque-verificacion">
+                <h2><span class="numero">2</span>Dos fotos desde tu celular</h2>
+                <p class="small text-muted">Puedes tomarlas en el momento o elegirlas de tu galería. Solo las ve el equipo de AgroComercial; nunca se publican.</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.foto_documento.id_for_label }}" class="form-label small fw-semibold">
+                            <span class="solo-persona">{{ form.foto_documento.label }}</span>
+                            <span class="solo-organizacion">Foto del DNI del representante</span>
+                        </label>
+                        {{ form.foto_documento }}
+                        {% if verificacion.foto_documento %}<div class="small text-success mt-1"><i class="bi bi-check-circle" aria-hidden="true"></i> Ya enviada. Sube otra solo si quieres cambiarla.</div>{% endif %}
+                        {% if form.foto_documento.errors %}<div class="text-danger small mt-1">{{ form.foto_documento.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.foto_chacra.id_for_label }}" class="form-label small fw-semibold">{{ form.foto_chacra.label }}</label>
+                        {{ form.foto_chacra }}
+                        <div class="form-text">Que se vea tu cara y tu cultivo, ganado o cosecha.</div>
+                        {% if verificacion.foto_chacra %}<div class="small text-success mt-1"><i class="bi bi-check-circle" aria-hidden="true"></i> Ya enviada.</div>{% endif %}
+                        {% if form.foto_chacra.errors %}<div class="text-danger small mt-1">{{ form.foto_chacra.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-12 solo-organizacion">
+                        <label for="{{ form.documento_organizacion.id_for_label }}" class="form-label small fw-semibold">{{ form.documento_organizacion.label }}</label>
+                        {{ form.documento_organizacion }}
+                        {% if verificacion.documento_organizacion %}<div class="small text-success mt-1"><i class="bi bi-check-circle" aria-hidden="true"></i> Ya enviado.</div>{% endif %}
+                        {% if form.documento_organizacion.errors %}<div class="text-danger small mt-1">{{ form.documento_organizacion.errors|striptags }}</div>{% endif %}
+                    </div>
+                </div>
+            </section>
+
+            <section class="bloque-verificacion">
+                <h2><span class="numero">3</span>Confirma y envía</h2>
+                <div class="form-check mb-1 solo-persona">
+                    {{ form.inscrito_padron }}
+                    <label class="form-check-label" for="{{ form.inscrito_padron.id_for_label }}">{{ form.inscrito_padron.label }}</label>
+                </div>
+                <p class="small text-muted ms-4 solo-persona mb-2">Lo comprobamos con tu DNI en <a href="https://consultapadron.midagri.gob.pe/" target="_blank" rel="noopener">consultapadron.midagri.gob.pe</a>. ¿No estás inscrito? Es gratis en tu agencia agraria.</p>
+                {% if form.inscrito_padron.errors %}<div class="text-danger small mb-2 ms-4">{{ form.inscrito_padron.errors|striptags }}</div>{% endif %}
+
+                <details class="mb-3" {% if form.certificado_organico.errors or form.certificadora.errors or verificacion.certificado_organico %}open{% endif %}>
+                    <summary class="small fw-semibold">¿Vendes productos orgánicos? (opcional)</summary>
+                    <p class="small text-muted mt-2">Para usar la palabra "Orgánico" la ley pide un certificado vigente (SENASA). Sin él puedes vender igual como cultivo tradicional.</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.certificado_organico.id_for_label }}" class="form-label small fw-semibold">{{ form.certificado_organico.label }}</label>
+                            {{ form.certificado_organico }}
+                            {% if verificacion.certificado_organico %}<div class="small text-success mt-1"><i class="bi bi-check-circle" aria-hidden="true"></i> Ya enviado.</div>{% endif %}
+                            {% if form.certificado_organico.errors %}<div class="text-danger small mt-1">{{ form.certificado_organico.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.certificadora.id_for_label }}" class="form-label small fw-semibold">{{ form.certificadora.label }}</label>
+                            {{ form.certificadora }}
+                            {% if form.certificadora.errors %}<div class="text-danger small mt-1">{{ form.certificadora.errors|striptags }}</div>{% endif %}
+                        </div>
+                    </div>
+                </details>
+
+                <div class="form-check">
+                    {{ form.acepta_tratamiento_datos }}
+                    <label class="form-check-label small" for="{{ form.acepta_tratamiento_datos.id_for_label }}">{{ form.acepta_tratamiento_datos.label }} (Ley 29733). Puedes pedir que los borremos cuando quieras.</label>
+                </div>
+                {% if form.acepta_tratamiento_datos.errors %}<div class="text-danger small mt-1 ms-4">{{ form.acepta_tratamiento_datos.errors|striptags }}</div>{% endif %}
+            </section>
+
+            <div class="d-grid d-sm-flex gap-2">
+                <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-send me-1" aria-hidden="true"></i>Enviar para revisión</button>
+                <a href="{% url 'panel_productor' %}" class="btn btn-link text-muted">Lo hago después</a>
+            </div>
+        </form>
+    {% endif %}
+</div>
+
+<script>
+// Muestra solo los campos de persona u organizacion segun la opcion elegida
+(function () {
+    var formulario = document.querySelector('.form-verificacion');
+    if (!formulario) return;
+    function actualizar() {
+        var elegido = formulario.querySelector('input[name="tipo"]:checked');
+        formulario.dataset.tipo = elegido ? elegido.value : 'PERSONA';
+    }
+    formulario.addEventListener('change', function (e) { if (e.target.name === 'tipo') actualizar(); });
+    actualizar();
+})();
+</script>
+{% endblock %}
