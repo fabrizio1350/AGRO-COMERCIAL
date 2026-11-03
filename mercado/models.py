@@ -70,6 +70,7 @@ class PerfilUsuario(models.Model):
     nombre_finca = models.CharField(max_length=120, blank=True, help_text="Finca, asociación o empresa comercial")
     ruc_dni = models.CharField(max_length=20, blank=True, help_text="DNI o RUC")
     cuenta_bancaria = models.CharField(max_length=120, blank=True, help_text="Número de cuenta en soles (solo vendedores)")
+    es_demo = models.BooleanField(default=False, help_text="Cuenta de prueba (bot): se muestra con la etiqueta Demo")
 
     def __str__(self):
         return f"{self.usuario.username} ({self.get_rol_display()})"
