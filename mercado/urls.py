@@ -20,7 +20,6 @@ urlpatterns = [
     path('login/google/', views.login_google, name='login_google'),
     path('login/google/callback/', views.login_google_callback, name='login_google_callback'),
     path('logout/', views.logout_vista, name='logout'),
-    path('cambiar-modo/', views.cambiar_modo_vista, name='cambiar_modo'),
     path('panel-comprador/', views.panel_comprador, name='panel_comprador'),
     path('panel-productor/', views.panel_productor, name='panel_productor'),
     path('producto/nuevo/', views.crear_producto, name='crear_producto'),
