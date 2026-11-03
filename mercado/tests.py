@@ -14,7 +14,7 @@ from .models import Categoria, PerfilUsuario, Producto, Conversacion, Mensaje, N
 class PruebasOfertasYVencimiento(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('vendedor', password='clave12345', first_name='Ana')
-        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
         self.categoria = Categoria.objects.create(nombre='Frutas de Estación')
 
     def crear(self, **datos):
@@ -139,7 +139,7 @@ class PruebasOfertasYVencimiento(TestCase):
 class PruebasChatYFavoritos(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('vendedor', password='clave12345', first_name='Ana')
-        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
         self.comprador = User.objects.create_user('comprador', password='clave12345', first_name='Luis')
         PerfilUsuario.objects.create(usuario=self.comprador, rol='COMPRADOR')
         self.intruso = User.objects.create_user('intruso', password='clave12345')
@@ -222,7 +222,7 @@ class PruebasFotosExtra(TestCase):
         self.carpeta = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.carpeta, ignore_errors=True)
         self.vendedor = User.objects.create_user('vendedor', password='clave12345')
-        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
         self.producto = Producto.objects.create(
             productor=self.vendedor, nombre='Palta', descripcion='Palta Hass',
             precio=Decimal('6.00'), stock=80, origen='Cayma, Arequipa',
@@ -281,9 +281,9 @@ class PruebasDatosDemo(TestCase):
 class PruebasCuentasSeparadas(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('vendedor', password='clave12345')
-        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
         self.otro = User.objects.create_user('otro_vendedor', password='clave12345')
-        PerfilUsuario.objects.create(usuario=self.otro, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=self.otro, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
         self.producto = Producto.objects.create(
             productor=self.otro, nombre='Ajo', descripcion='Ajo morado',
             precio=Decimal('8.00'), stock=100, origen='Yarabamba, Arequipa',
@@ -300,3 +300,145 @@ class PruebasCuentasSeparadas(TestCase):
         self.client.post(reverse('alternar_favorito', args=[self.producto.id]))
         self.assertFalse(Conversacion.objects.exists())
         self.assertFalse(Favorito.objects.exists())
+
+
+JPG_MINIMO = b'\xff\xd8\xff\xe0' + b'0' * 64
+
+
+class PruebasVerificacionVendedor(TestCase):
+    def setUp(self):
+        from .models import almacen_privado
+        self.almacen = almacen_privado
+        self.carpeta = tempfile.mkdtemp()
+        self.ubicacion_original = almacen_privado._location
+        self._usar_carpeta(self.carpeta)
+        self.vendedor = User.objects.create_user('nuevo_vendedor', password='clave12345', first_name='Rosa')
+        self.perfil = PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        self.producto = Producto.objects.create(
+            productor=self.vendedor, nombre='Cebolla', descripcion='Cebolla roja',
+            precio=Decimal('2.00'), stock=500, origen='Majes, Arequipa',
+        )
+        self.admin = User.objects.create_superuser('jefe', 'jefe@example.com', 'clave12345')
+
+    def tearDown(self):
+        self._usar_carpeta(self.ubicacion_original)
+        shutil.rmtree(self.carpeta, ignore_errors=True)
+
+    def _usar_carpeta(self, ruta):
+        self.almacen._location = ruta
+        for propiedad in ('base_location', 'location'):
+            self.almacen.__dict__.pop(propiedad, None)
+
+    def _datos(self, **cambios):
+        datos = {
+            'tipo': 'PERSONA', 'dni': '45678912', 'celular': '987654321',
+            'distrito': 'Cayma, Arequipa', 'inscrito_padron': 'on', 'acepta_tratamiento_datos': 'on',
+            'foto_documento': SimpleUploadedFile('dni.jpg', JPG_MINIMO, content_type='image/jpeg'),
+            'foto_chacra': SimpleUploadedFile('chacra.jpg', JPG_MINIMO, content_type='image/jpeg'),
+        }
+        datos.update(cambios)
+        return datos
+
+    def test_ruc_valido(self):
+        from .models import ruc_valido
+        self.assertTrue(ruc_valido('20601106699'))
+        self.assertFalse(ruc_valido('20601106690'))
+        self.assertFalse(ruc_valido('12345678901'))
+
+    def test_producto_de_vendedor_sin_verificar_esta_oculto(self):
+        self.assertNotIn(self.producto, Producto.objects.publicados())
+        self.assertEqual(self.client.get(reverse('detalle_producto', args=[self.producto.id])).status_code, 404)
+        # El propio vendedor si puede verlo
+        self.client.login(username='nuevo_vendedor', password='clave12345')
+        self.assertContains(self.client.get(reverse('detalle_producto', args=[self.producto.id])), 'Solo tú ves este producto')
+
+    def test_registro_de_vendedor_lleva_a_verificacion(self):
+        respuesta = self.client.post(reverse('registro'), {
+            'username': 'otro_productor', 'first_name': 'Luis', 'last_name': 'Mamani', 'email': 'luis@example.com',
+            'rol': 'PRODUCTOR', 'password1': 'ClaveSegura123', 'password2': 'ClaveSegura123',
+            'ubicacion': 'Cayma, Arequipa',
+        })
+        self.assertRedirects(respuesta, reverse('verificacion_vendedor'))
+
+    def test_envio_queda_pendiente_y_avisa_al_admin(self):
+        self.client.login(username='nuevo_vendedor', password='clave12345')
+        respuesta = self.client.post(reverse('verificacion_vendedor'), self._datos())
+        self.assertRedirects(respuesta, reverse('verificacion_vendedor'))
+        self.perfil.refresh_from_db()
+        self.assertEqual(self.perfil.estado_verificacion, 'PENDIENTE')
+        self.assertTrue(Notificacion.objects.filter(usuario=self.admin).exists())
+        # Sigue oculto hasta que lo aprueben
+        self.assertNotIn(self.producto, Producto.objects.publicados())
+
+    def test_reglas_del_formulario(self):
+        self.client.login(username='nuevo_vendedor', password='clave12345')
+        sin_padron = self._datos()
+        sin_padron.pop('inscrito_padron')
+        self.assertContains(self.client.post(reverse('verificacion_vendedor'), sin_padron), 'Padrón de Productores Agrarios')
+        falso = self._datos(foto_chacra=SimpleUploadedFile('chacra.jpg', b'no soy una foto', content_type='image/jpeg'))
+        self.assertContains(self.client.post(reverse('verificacion_vendedor'), falso), 'No pudimos abrir ese archivo')
+        organizacion = self._datos(tipo='ORGANIZACION', ruc='20601106690', nombre_organizacion='Asociación Majes')
+        self.assertContains(self.client.post(reverse('verificacion_vendedor'), organizacion), 'Ese RUC no es válido')
+        self.perfil.refresh_from_db()
+        self.assertEqual(self.perfil.estado_verificacion, 'SIN_ENVIAR')
+
+    def test_admin_aprueba_y_el_producto_se_publica(self):
+        from .models import VerificacionVendedor
+        self.client.login(username='nuevo_vendedor', password='clave12345')
+        self.client.post(reverse('verificacion_vendedor'), self._datos())
+        verificacion = VerificacionVendedor.objects.get(usuario=self.vendedor)
+        self.client.login(username='jefe', password='clave12345')
+        url = reverse('admin:mercado_verificacionvendedor_changelist')
+        # Sin marcar lo comprobado no se aprueba
+        self.client.post(url, {'action': 'aprobar', '_selected_action': [verificacion.id]})
+        self.perfil.refresh_from_db()
+        self.assertEqual(self.perfil.estado_verificacion, 'PENDIENTE')
+        VerificacionVendedor.objects.filter(id=verificacion.id).update(revisado_identidad=True, revisado_padron=True, revisado_chacra=True)
+        self.client.post(url, {'action': 'aprobar', '_selected_action': [verificacion.id]})
+        self.perfil.refresh_from_db()
+        self.assertEqual(self.perfil.estado_verificacion, 'VERIFICADO')
+        self.assertFalse(self.perfil.organico_verificado)
+        self.assertIn(self.producto, Producto.objects.publicados())
+        self.assertTrue(Notificacion.objects.filter(usuario=self.vendedor, texto__icontains='verificada').exists())
+        self.client.logout()
+        self.assertContains(self.client.get(reverse('perfil_productor', args=[self.vendedor.id])), 'Verificado')
+
+    def test_documentos_solo_los_ve_el_personal(self):
+        from .models import VerificacionVendedor
+        self.client.login(username='nuevo_vendedor', password='clave12345')
+        self.client.post(reverse('verificacion_vendedor'), self._datos())
+        verificacion = VerificacionVendedor.objects.get(usuario=self.vendedor)
+        url = reverse('archivo_verificacion', args=[verificacion.id, 'foto_documento'])
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.client.logout()
+        self.assertNotEqual(self.client.get(url).status_code, 200)
+        self.client.login(username='jefe', password='clave12345')
+        respuesta = self.client.get(url)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(b''.join(respuesta.streaming_content), JPG_MINIMO)
+        self.assertEqual(self.client.get(reverse('archivo_verificacion', args=[verificacion.id, 'usuario'])).status_code, 404)
+        # El archivo no queda dentro de la carpeta publica media
+        self.assertTrue(verificacion.foto_documento.path.startswith(self.carpeta))
+
+    def test_organico_solo_con_certificado(self):
+        self.perfil.estado_verificacion = 'VERIFICADO'
+        self.perfil.save()
+        categoria = Categoria.objects.create(nombre='Hortalizas')
+        hoy = timezone.localdate()
+        datos = {
+            'categoria': categoria.id, 'nombre': 'Cebolla', 'tipo_cultivo': 'ORGANICO', 'fecha_cosecha': hoy.isoformat(),
+            'origen': 'Cayma, Arequipa', 'descripcion': 'x', 'precio': '2', 'unidad': 'KG',
+            'stock': '10', 'minimo_compra': '1', 'disponible': 'on',
+            'vence_el': (hoy + timedelta(days=20)).isoformat(),
+        }
+        self.client.login(username='nuevo_vendedor', password='clave12345')
+        respuesta = self.client.post(reverse('editar_producto', args=[self.producto.id]), datos)
+        self.assertContains(respuesta, 'primero sube tu certificado orgánico')
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.tipo_cultivo, 'TRADICIONAL')
+        # Con certificado revisado si se permite
+        self.perfil.organico_verificado = True
+        self.perfil.save()
+        self.client.post(reverse('editar_producto', args=[self.producto.id]), datos)
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.tipo_cultivo, 'ORGANICO')
