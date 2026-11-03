@@ -2025,3 +2025,60 @@ main {
         max-width: min(1520px, calc(100vw - 64px));
     }
 }
+
+/* ---------- Verificacion de vendedores ---------- */
+.verificacion { max-width: 860px; }
+.pasos-verificacion {
+    list-style: none; padding: 0; margin: 0 0 1.5rem;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
+}
+.pasos-verificacion li {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.6rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 12px;
+    background: #fff; font-size: 0.85rem; color: #6b7280;
+}
+.pasos-verificacion .numero,
+.bloque-verificacion h2 .numero {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    display: inline-grid; place-items: center;
+    background: #f3f4f6; color: #374151; font-weight: 700; font-size: 0.8rem;
+}
+.pasos-verificacion li.actual { border-color: #16a34a; color: #14532d; font-weight: 600; }
+.pasos-verificacion li.actual .numero { background: #16a34a; color: #fff; }
+.pasos-verificacion li.hecho { color: #15803d; }
+.pasos-verificacion li.hecho .numero { background: #dcfce7; color: #15803d; }
+@media (max-width: 575.98px) {
+    .pasos-verificacion { grid-template-columns: 1fr; }
+}
+.bloque-verificacion {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+    padding: 1.25rem; margin-bottom: 1rem;
+}
+.bloque-verificacion h2 {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem;
+}
+.bloque-verificacion .numero { background: #16a34a; color: #fff; }
+.opciones-tipo { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.5rem; }
+.opcion-tipo {
+    display: flex; gap: 0.6rem; align-items: flex-start; cursor: pointer;
+    border: 1px solid #e5e7eb; border-radius: 12px; padding: 0.75rem;
+}
+.opcion-tipo:has(input:checked) { border-color: #16a34a; background: #f0fdf4; }
+.opcion-tipo input { margin-top: 0.2rem; }
+.form-verificacion[data-tipo="PERSONA"] .solo-organizacion,
+.form-verificacion[data-tipo="ORGANIZACION"] .solo-persona { display: none !important; }
+.estado-verificacion {
+    display: flex; gap: 0.75rem; align-items: flex-start;
+    padding: 1rem 1.25rem; border-radius: 14px; border: 1px solid;
+}
+.estado-verificacion > i { font-size: 1.4rem; line-height: 1; }
+.estado-ok { background: #f0fdf4; border-color: #bbf7d0; color: #14532d; }
+.estado-espera { background: #fffbeb; border-color: #fde68a; color: #78350f; }
+.estado-error { background: #fef2f2; border-color: #fecaca; color: #7f1d1d; }
+.etiqueta-verificado {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.05rem 0.5rem; border-radius: 999px;
+    background-color: #dcfce7; color: #15803d;
+    font-size: 0.72rem; font-weight: 700; vertical-align: middle;
+}
