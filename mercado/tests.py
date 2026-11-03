@@ -261,3 +261,18 @@ class PruebasSeguridad(TestCase):
             exito, codigo, _ = procesar_cobro_culqi(Decimal('10'), 'a@b.com', '')
         self.assertFalse(exito)
         self.assertIsNone(codigo)
+
+
+class PruebasDatosDemo(TestCase):
+    def test_comando_crea_bots_demo_sin_duplicar_y_los_borra(self):
+        from django.core.management import call_command
+        from io import StringIO
+        call_command('crear_datos_demo', stdout=StringIO())
+        call_command('crear_datos_demo', stdout=StringIO())
+        bots = PerfilUsuario.objects.filter(es_demo=True, usuario__username__startswith='demo_')
+        self.assertEqual(bots.count(), 7)
+        self.assertEqual(Producto.objects.filter(productor__perfil__es_demo=True).count(), 8)
+        self.assertFalse(any(p.usuario.has_usable_password() for p in bots))
+        self.assertContains(self.client.get(reverse('catalogo')), 'Demo')
+        call_command('crear_datos_demo', '--borrar', stdout=StringIO())
+        self.assertFalse(PerfilUsuario.objects.filter(usuario__username__startswith='demo_').exists())
