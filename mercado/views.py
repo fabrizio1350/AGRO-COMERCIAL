@@ -1441,44 +1441,15 @@ def login_google_callback(request):
             usuario.last_name = apellido_google
             usuario.save()
         perfil = obtener_o_crear_perfil(usuario)
-        perfil.rol = rol_elegido
-        perfil.save()
+        if perfil.rol != rol_elegido:
+            # Cada cuenta es solo de comprador o solo de vendedor: no se cambia al ingresar
+            tipo = "vendedor" if perfil.rol == 'PRODUCTOR' else "comprador"
+            messages.error(request, f"Tu cuenta de Google ({usuario.email}) está registrada como {tipo}. Ingresa por la pestaña de {tipo}.")
+            return redirect(f"{reverse('login')}?modo={'vendedor' if perfil.rol == 'PRODUCTOR' else 'comprador'}")
 
     login(request, usuario)
     messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Ingresaste con tu cuenta oficial de Google ({usuario.email}).")
     return redirect('ventas_por_oferta')
-
-
-@login_required
-def cambiar_modo_vista(request):
-    """
-    Si el usuario entro con su propia cuenta de Google, cambia su propio perfil entre
-    Vendedor (PRODUCTOR) y Comprador (COMPRADOR) conservando su mismo Gmail.
-    """
-    asegurar_datos_iniciales()
-    if request.method == 'POST':
-        nuevo_rol = request.POST.get('nuevo_rol')
-        if nuevo_rol in ['PRODUCTOR', 'COMPRADOR']:
-            # Si usa las cuentas de demostracion clasicas, alterna entre ellas
-            if request.user.username in ['productor_mantaro', 'comprador_lima']:
-                target_user = 'productor_mantaro' if nuevo_rol == 'PRODUCTOR' else 'comprador_lima'
-                u_demo = User.objects.filter(username=target_user).first()
-                if u_demo:
-                    login(request, u_demo)
-                    if nuevo_rol == 'PRODUCTOR':
-                        return redirect('panel_productor')
-                    return redirect('panel_comprador')
-            else:
-                # Si entro con su cuenta de Google autentica, mantiene su mismo correo y cambia su vista/rol
-                perfil = obtener_o_crear_perfil(request.user)
-                perfil.rol = nuevo_rol
-                perfil.save()
-                nombre_modo = "Vendedor / Productor" if nuevo_rol == 'PRODUCTOR' else "Comprador"
-                messages.info(request, f"Cambiaste tu vista a {nombre_modo} con tu cuenta ({request.user.email}).")
-                if nuevo_rol == 'PRODUCTOR':
-                    return redirect('panel_productor')
-                return redirect('panel_comprador')
-    return redirect('inicio')
 
 
 def logout_vista(request):
@@ -1817,7 +1788,7 @@ def guardar_fotos_extra(request, producto):
 
 @login_required
 def alternar_favorito(request, producto_id):
-    if request.method != 'POST':
+    if request.method != 'POST' or obtener_o_crear_perfil(request.user).rol != 'COMPRADOR':
         return redirect('detalle_producto', producto_id=producto_id)
     producto = get_object_or_404(Producto, id=producto_id)
     favorito, creado = Favorito.objects.get_or_create(usuario=request.user, producto=producto)
@@ -1871,6 +1842,9 @@ def iniciar_chat(request, producto_id):
     if producto.productor == request.user:
         messages.info(request, "Este producto es tuyo: los compradores te escribirán desde aquí.")
         return redirect('mensajes')
+    if obtener_o_crear_perfil(request.user).rol != 'COMPRADOR':
+        messages.warning(request, "Solo las cuentas de comprador pueden escribir a los productores.")
+        return redirect('detalle_producto', producto_id=producto.id)
     conversacion, _ = Conversacion.objects.get_or_create(
         producto=producto, comprador=request.user, defaults={'vendedor': producto.productor}
     )
