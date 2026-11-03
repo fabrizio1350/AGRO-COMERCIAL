@@ -35,7 +35,7 @@
                 <div class="flex-grow-1">
                     <div class="text-muted small">Vendido por el productor:</div>
                     <a href="{% url 'perfil_productor' producto.productor.id %}" class="fw-bold text-reset">{{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}</a>
-                    {% if producto.productor.perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% endif %}
+                    {% if producto.productor.perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% elif producto.productor.perfil.vendedor_verificado %}{% include 'includes/etiqueta_verificado.html' with p=producto.productor.perfil %}{% endif %}
                     <div class="text-muted small">{{ producto.productor.perfil.nombre_finca|default:producto.origen }}</div>
                 </div>
             </div>
@@ -123,8 +123,13 @@
                 {% if producto.productor == user %}
                     <div class="p-3 rounded-3 border bg-light d-flex justify-content-between align-items-center">
                         <div>
+                            {% if producto.vendedor_habilitado %}
                             <strong class="d-block">Este es tu producto publicado</strong>
                             <span class="text-muted small">Puedes modificar su precio, stock o estado de oferta.</span>
+                            {% else %}
+                            <strong class="d-block">Solo tú ves este producto por ahora</strong>
+                            <span class="text-muted small">Se mostrará a los compradores cuando tu cuenta esté verificada. <a href="{% url 'verificacion_vendedor' %}">Ver mi verificación</a></span>
+                            {% endif %}
                         </div>
                         <a href="{% url 'editar_producto' producto.id %}" class="btn btn-success btn-sm px-3">
                             <i class="bi bi-pencil-square me-1"></i>Editar mi Producto
