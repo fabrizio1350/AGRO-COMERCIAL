@@ -276,3 +276,27 @@ class PruebasDatosDemo(TestCase):
         self.assertContains(self.client.get(reverse('catalogo')), 'Demo')
         call_command('crear_datos_demo', '--borrar', stdout=StringIO())
         self.assertFalse(PerfilUsuario.objects.filter(usuario__username__startswith='demo_').exists())
+
+
+class PruebasCuentasSeparadas(TestCase):
+    def setUp(self):
+        self.vendedor = User.objects.create_user('vendedor', password='clave12345')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        self.otro = User.objects.create_user('otro_vendedor', password='clave12345')
+        PerfilUsuario.objects.create(usuario=self.otro, rol='PRODUCTOR')
+        self.producto = Producto.objects.create(
+            productor=self.otro, nombre='Ajo', descripcion='Ajo morado',
+            precio=Decimal('8.00'), stock=100, origen='Yarabamba, Arequipa',
+        )
+
+    def test_ya_no_existe_el_cambio_de_modo(self):
+        self.client.login(username='vendedor', password='clave12345')
+        self.assertEqual(self.client.post('/cambiar-modo/', {'nuevo_rol': 'COMPRADOR'}).status_code, 404)
+        self.assertEqual(PerfilUsuario.objects.get(usuario=self.vendedor).rol, 'PRODUCTOR')
+
+    def test_vendedor_no_chatea_ni_guarda_favoritos(self):
+        self.client.login(username='vendedor', password='clave12345')
+        self.client.post(reverse('iniciar_chat', args=[self.producto.id]), {'texto': 'hola'})
+        self.client.post(reverse('alternar_favorito', args=[self.producto.id]))
+        self.assertFalse(Conversacion.objects.exists())
+        self.assertFalse(Favorito.objects.exists())
