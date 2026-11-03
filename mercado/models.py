@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import FileExtensionValidator
 from datetime import timedelta
 from django.db import models
@@ -71,6 +72,22 @@ class PerfilUsuario(models.Model):
     ruc_dni = models.CharField(max_length=20, blank=True, help_text="DNI o RUC")
     cuenta_bancaria = models.CharField(max_length=120, blank=True, help_text="Número de cuenta en soles (solo vendedores)")
     es_demo = models.BooleanField(default=False, help_text="Cuenta de prueba (bot): se muestra con la etiqueta Demo")
+    ESTADOS_VERIFICACION = [
+        ('SIN_ENVIAR', 'Sin enviar'),
+        ('PENDIENTE', 'En revisión'),
+        ('VERIFICADO', 'Verificado'),
+        ('RECHAZADO', 'Rechazado'),
+    ]
+    estado_verificacion = models.CharField(max_length=12, choices=ESTADOS_VERIFICACION, default='SIN_ENVIAR')
+    fecha_verificacion = models.DateTimeField(null=True, blank=True)
+    organico_verificado = models.BooleanField(default=False, help_text="Tiene certificado orgánico revisado por el administrador")
+
+    def vendedor_verificado(self):
+        return self.estado_verificacion == 'VERIFICADO'
+
+    def puede_vender_publicamente(self):
+        # Las cuentas Demo se muestran (con su etiqueta) para la version de prueba
+        return self.vendedor_verificado() or self.es_demo
 
     def __str__(self):
         return f"{self.usuario.username} ({self.get_rol_display()})"
@@ -128,10 +145,12 @@ def fecha_vencimiento_por_defecto():
 
 class ProductoQuerySet(models.QuerySet):
     def publicados(self):
-        """Productos que se pueden ver y comprar: activos, con stock y sin vencer."""
+        """Productos que se pueden ver y comprar: activos, con stock, sin vencer y de un vendedor verificado."""
         ahora = timezone.now()
         return self.filter(disponible=True, stock__gt=0).filter(
             Q(fecha_vencimiento__isnull=True) | Q(fecha_vencimiento__gt=ahora)
+        ).filter(
+            Q(productor__perfil__estado_verificacion='VERIFICADO') | Q(productor__perfil__es_demo=True)
         )
 
     def ofertas_activas(self):
@@ -211,8 +230,12 @@ class Producto(models.Model):
     def esta_vencida(self):
         return bool(self.fecha_vencimiento and self.fecha_vencimiento <= timezone.now())
 
+    def vendedor_habilitado(self):
+        perfil = getattr(self.productor, 'perfil', None)
+        return bool(perfil and perfil.puede_vender_publicamente())
+
     def esta_publicado(self):
-        return self.disponible and self.stock > 0 and not self.esta_vencida()
+        return self.disponible and self.stock > 0 and not self.esta_vencida() and self.vendedor_habilitado()
 
     def oferta_activa(self):
         """True si el precio de oferta rige ahora mismo (mismas reglas que ofertas_activas())."""
@@ -575,3 +598,83 @@ class Notificacion(models.Model):
     @classmethod
     def avisar(cls, usuario, texto, enlace='', icono='bi-bell'):
         return cls.objects.create(usuario=usuario, texto=texto[:200], enlace=enlace, icono=icono)
+
+
+# Los documentos de verificacion NO van a la carpeta media (que es publica): solo los ve el administrador
+almacen_privado = FileSystemStorage(location=settings.BASE_DIR / 'privado', base_url=None)
+EXTENSIONES_DOCUMENTO = ['jpg', 'jpeg', 'png', 'webp', 'pdf']
+
+
+class VerificacionVendedor(models.Model):
+    """Datos y documentos que el vendedor envia una sola vez para que el administrador lo verifique."""
+    TIPOS = [
+        ('PERSONA', 'Productor individual'),
+        ('ORGANIZACION', 'Asociación, cooperativa o empresa'),
+    ]
+    usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='verificacion')
+    tipo = models.CharField(max_length=15, choices=TIPOS, default='PERSONA')
+    dni = models.CharField('DNI', max_length=8, blank=True)
+    ruc = models.CharField('RUC', max_length=11, blank=True)
+    nombre_organizacion = models.CharField('Nombre de la organización', max_length=150, blank=True)
+    celular = models.CharField(max_length=9)
+    distrito = models.CharField(max_length=120)
+    foto_documento = models.FileField(storage=almacen_privado, upload_to='verificaciones/',
+                                      validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)])
+    foto_chacra = models.FileField(storage=almacen_privado, upload_to='verificaciones/',
+                                   validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)])
+    documento_organizacion = models.FileField(storage=almacen_privado, upload_to='verificaciones/', blank=True,
+                                              validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)])
+    inscrito_padron = models.BooleanField('Declara estar en el Padrón', default=False, help_text="Declara estar en el Padrón de Productores Agrarios")
+    certificado_organico = models.FileField(storage=almacen_privado, upload_to='verificaciones/', blank=True,
+                                            validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)])
+    certificadora = models.CharField(max_length=120, blank=True)
+    acepta_tratamiento_datos = models.BooleanField('Aceptó el uso de sus datos', default=False)
+    fecha_envio = models.DateTimeField('Enviado el', auto_now=True)
+
+    # Lo que el administrador comprobo (se muestra al comprador sin numeros ni archivos)
+    revisado_identidad = models.BooleanField('Identidad comprobada', default=False, help_text="DNI/RUC coincide con la foto y SUNAT")
+    revisado_padron = models.BooleanField('Está en el Padrón agrario', default=False, help_text="Encontrado en consultapadron.midagri.gob.pe")
+    revisado_organizacion = models.BooleanField('Organización comprobada', default=False, help_text="Partida SUNARP o constancia válida")
+    revisado_chacra = models.BooleanField('Foto en chacra válida', default=False, help_text="La foto muestra al vendedor en su chacra o con su producto")
+    revisado_organico = models.BooleanField('Certificado orgánico válido', default=False, help_text="Certificado orgánico vigente de un certificador registrado en SENASA")
+    motivo_rechazo = models.CharField('Motivo del rechazo (lo verá el vendedor)', max_length=250, blank=True)
+    revisado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verificaciones_revisadas')
+
+    class Meta:
+        verbose_name = 'verificación de vendedor'
+        verbose_name_plural = 'verificaciones de vendedores'
+
+    def documento(self):
+        return self.ruc if self.tipo == 'ORGANIZACION' else self.dni
+
+    def comprobado_texto(self):
+        """Resumen publico de lo verificado, por ejemplo: 'Identidad, Padrón agrario y Chacra'."""
+        partes = []
+        if self.revisado_identidad:
+            partes.append('identidad (DNI/RUC)')
+        if self.revisado_padron:
+            partes.append('Padrón de Productores Agrarios')
+        if self.revisado_organizacion:
+            partes.append('registro de la organización')
+        if self.revisado_chacra:
+            partes.append('foto en su chacra')
+        if self.revisado_organico:
+            partes.append('certificado orgánico')
+        return ', '.join(partes)
+
+    def __str__(self):
+        return f"Verificación de {self.usuario.username}"
+
+
+def ruc_valido(ruc):
+    """Comprueba el formato y el digito verificador del RUC (modulo 11 de SUNAT)."""
+    if len(ruc) != 11 or not ruc.isdigit() or ruc[:2] not in ('10', '15', '17', '20'):
+        return False
+    pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
+    suma = sum(int(d) * p for d, p in zip(ruc[:10], pesos))
+    digito = 11 - (suma % 11)
+    if digito == 10:
+        digito = 0
+    elif digito == 11:
+        digito = 1
+    return digito == int(ruc[10])
