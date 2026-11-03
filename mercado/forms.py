@@ -5,8 +5,8 @@ from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import (
-    PerfilUsuario, Producto, OfertaNegociacion, Pedido, ResenaProducto,
-    OPCIONES_LUGARES, LUGAR_POR_DEFECTO,
+    PerfilUsuario, Producto, OfertaNegociacion, Pedido, ResenaProducto, VerificacionVendedor,
+    OPCIONES_LUGARES, LUGAR_POR_DEFECTO, ruc_valido,
 )
 
 # Tamaño maximo de la foto que sube el vendedor (ya llega achicada desde el navegador)
@@ -111,11 +111,12 @@ class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
         fields = [
-            'categoria', 'nombre', 'fecha_cosecha', 'origen', 'imagen',
+            'categoria', 'nombre', 'tipo_cultivo', 'fecha_cosecha', 'origen', 'imagen',
             'descripcion', 'precio', 'en_oferta', 'precio_oferta',
             'acepta_ofertas', 'unidad', 'stock', 'minimo_compra', 'disponible'
         ]
         widgets = {
+            'tipo_cultivo': forms.Select(attrs={'class': 'form-select'}),
             'categoria': forms.Select(attrs={'class': 'form-select'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Camote Morado, Papa Amarilla, Palta...'}),
             'fecha_cosecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
@@ -135,6 +136,8 @@ class ProductoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['categoria'].empty_label = "Elige una categoría"
         self.fields['categoria'].queryset = self.fields['categoria'].queryset.order_by('nombre')
+        # Si no se elige, queda como cultivo tradicional
+        self.fields['tipo_cultivo'].required = False
 
         hoy = timezone.localdate()
         maximo = hoy + timedelta(days=settings.PUBLICACION_DIAS_MAXIMO)
@@ -150,6 +153,9 @@ class ProductoForm(forms.ModelForm):
             self.fields['oferta_desde'].initial = timezone.localtime(instancia.oferta_inicio).date()
         if instancia.pk and instancia.oferta_fin:
             self.fields['oferta_hasta'].initial = timezone.localtime(instancia.oferta_fin).date()
+
+    def clean_tipo_cultivo(self):
+        return self.cleaned_data.get('tipo_cultivo') or self.instance.tipo_cultivo or 'TRADICIONAL'
 
     def clean_imagen(self):
         imagen = self.cleaned_data.get('imagen')
@@ -292,3 +298,109 @@ class PerfilForm(forms.ModelForm):
             'nombre_finca': forms.TextInput(attrs={'class': 'form-control'}),
             'cuenta_bancaria': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. BCP Soles: 191-12345678-0-99'}),
         }
+
+
+TAMANO_MAXIMO_DOCUMENTO = 5 * 1024 * 1024
+
+
+class VerificacionVendedorForm(forms.ModelForm):
+    """Un solo formulario corto: quien eres, dos fotos y el padron. Lo revisa una persona."""
+    distrito = forms.ChoiceField(label="Distrito donde produces", choices=OPCIONES_LUGARES,
+                                 widget=forms.Select(attrs={'class': 'form-select'}))
+
+    class Meta:
+        model = VerificacionVendedor
+        fields = [
+            'tipo', 'dni', 'ruc', 'nombre_organizacion', 'celular', 'distrito',
+            'foto_documento', 'foto_chacra', 'documento_organizacion',
+            'inscrito_padron', 'certificado_organico', 'certificadora', 'acepta_tratamiento_datos',
+        ]
+        labels = {
+            'tipo': '¿Cómo vendes?',
+            'dni': 'Tu DNI',
+            'ruc': 'RUC de la organización',
+            'nombre_organizacion': 'Nombre de la asociación, cooperativa o empresa',
+            'celular': 'Celular',
+            'foto_documento': 'Foto de tu DNI (lado de la foto)',
+            'foto_chacra': 'Foto tuya en tu chacra o con tu producto',
+            'documento_organizacion': 'Partida de SUNARP o constancia de la directiva',
+            'inscrito_padron': 'Estoy inscrito en el Padrón de Productores Agrarios del MIDAGRI',
+            'certificado_organico': 'Certificado orgánico (solo si vendes productos orgánicos)',
+            'certificadora': 'Entidad que te certificó',
+            'acepta_tratamiento_datos': 'Autorizo a AgroComercial a usar estos datos solo para verificar mi cuenta',
+        }
+        widgets = {
+            'tipo': forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'dni': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'maxlength': '8', 'placeholder': '8 dígitos', 'autocomplete': 'off'}),
+            'ruc': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'maxlength': '11', 'placeholder': '11 dígitos', 'autocomplete': 'off'}),
+            'nombre_organizacion': forms.TextInput(attrs={'class': 'form-control'}),
+            'celular': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'tel', 'maxlength': '9', 'placeholder': '9 dígitos, ej. 987654321', 'autocomplete': 'tel'}),
+            'foto_documento': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*,.pdf'}),
+            'foto_chacra': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'documento_organizacion': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*,.pdf'}),
+            'inscrito_padron': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'certificado_organico': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*,.pdf'}),
+            'certificadora': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Control Union, BioLatina, SGP de tu zona'}),
+            'acepta_tratamiento_datos': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def clean_dni(self):
+        return (self.cleaned_data.get('dni') or '').strip()
+
+    def clean_ruc(self):
+        return (self.cleaned_data.get('ruc') or '').strip()
+
+    def clean_celular(self):
+        celular = (self.cleaned_data.get('celular') or '').replace(' ', '')
+        if len(celular) != 9 or not celular.isdigit() or not celular.startswith('9'):
+            raise forms.ValidationError("Escribe un celular peruano de 9 dígitos que empiece con 9.")
+        return celular
+
+    def clean_acepta_tratamiento_datos(self):
+        if not self.cleaned_data.get('acepta_tratamiento_datos'):
+            raise forms.ValidationError("Necesitamos tu autorización para revisar tus documentos.")
+        return True
+
+    def clean(self):
+        datos = super().clean()
+        tipo = datos.get('tipo')
+        dni = datos.get('dni', '')
+        ruc = datos.get('ruc', '')
+        if tipo == 'PERSONA':
+            if len(dni) != 8 or not dni.isdigit():
+                self.add_error('dni', "El DNI tiene 8 dígitos.")
+            if not datos.get('inscrito_padron'):
+                self.add_error('inscrito_padron', "Para vender como productor individual debes estar en el Padrón de Productores Agrarios. Puedes inscribirte gratis en tu agencia agraria.")
+        if tipo == 'ORGANIZACION':
+            if not ruc_valido(ruc):
+                self.add_error('ruc', "Ese RUC no es válido. Revisa los 11 dígitos.")
+            if not datos.get('nombre_organizacion'):
+                self.add_error('nombre_organizacion', "Escribe el nombre de la organización.")
+            if not datos.get('documento_organizacion') and not (self.instance and self.instance.documento_organizacion):
+                self.add_error('documento_organizacion', "Sube la partida de SUNARP o la constancia de la directiva.")
+        if datos.get('certificado_organico') and not datos.get('certificadora'):
+            self.add_error('certificadora', "Indica qué entidad emitió tu certificado orgánico.")
+        for campo in ('foto_documento', 'foto_chacra', 'documento_organizacion', 'certificado_organico'):
+            archivo = datos.get(campo)
+            if archivo and hasattr(archivo, 'size') and archivo.size > TAMANO_MAXIMO_DOCUMENTO:
+                self.add_error(campo, "El archivo pesa más de 5 MB. Toma la foto de nuevo o usa una más liviana.")
+            elif archivo and hasattr(archivo, 'size') and not archivo_legible(archivo):
+                self.add_error(campo, "No pudimos abrir ese archivo. Sube una foto (JPG o PNG) o un PDF.")
+        return datos
+
+
+def archivo_legible(archivo):
+    """Comprueba por sus primeros bytes que el archivo de verdad sea JPG, PNG, WEBP o PDF."""
+    try:
+        archivo.seek(0)
+        inicio = archivo.read(12)
+        return (
+            inicio.startswith(b'\xff\xd8\xff')            # JPG
+            or inicio.startswith(b'\x89PNG')                # PNG
+            or (inicio[:4] == b'RIFF' and inicio[8:12] == b'WEBP')
+            or inicio.startswith(b'%PDF-')
+        )
+    except Exception:
+        return False
+    finally:
+        archivo.seek(0)
