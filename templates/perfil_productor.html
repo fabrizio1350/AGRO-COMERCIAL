@@ -8,7 +8,8 @@
         <span class="avatar-inicial avatar-grande">{{ productor.first_name|default:productor.username|slice:":1"|upper }}</span>
         <div class="flex-grow-1">
             <span class="antetitulo text-white-50"><i class="bi bi-shop" aria-hidden="true"></i>Productor</span>
-            <h1 class="h2 fw-bold mb-1">{{ productor.get_full_name|default:productor.username }}</h1>
+            <h1 class="h2 fw-bold mb-1">{{ productor.get_full_name|default:productor.username }} {% if perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% endif %}</h1>
+            {% if perfil.es_demo %}<p class="small mb-1 opacity-75">Este es un productor de prueba: sus datos, productos y fotos son de ejemplo.</p>{% endif %}
             <p class="mb-0 opacity-75">
                 {% if perfil.nombre_finca %}<strong>{{ perfil.nombre_finca }}</strong> · {% endif %}
                 <i class="bi bi-geo-alt" aria-hidden="true"></i> {{ perfil.ubicacion|default:"Arequipa" }}
@@ -51,7 +52,7 @@
                 {% for i in "12345" %}<i class="bi {% if forloop.counter <= r.calificacion %}bi-star-fill{% else %}bi-star{% endif %}" aria-hidden="true"></i>{% endfor %}
             </div>
             <p class="mb-2">{{ r.comentario }}</p>
-            <small class="text-muted">{{ r.autor.get_full_name|default:r.autor.username }} · {{ r.producto.nombre }}</small>
+            <small class="text-muted">{{ r.autor.get_full_name|default:r.autor.username }}{% if r.autor.perfil.es_demo %} {% include 'includes/etiqueta_demo.html' %}{% endif %} · {{ r.producto.nombre }}</small>
         </div>
     </div>
     {% endfor %}
