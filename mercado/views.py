@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.utils import timezone
 from django.core.mail import send_mail
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, FileResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
@@ -32,6 +32,7 @@ from .models import (
     Conversacion,
     Mensaje,
     Notificacion,
+    VerificacionVendedor,
     CATEGORIAS_AGRICOLAS,
     LUGARES_AREQUIPA,
     LUGAR_POR_DEFECTO,
@@ -44,6 +45,7 @@ from .forms import (
     PasarelaPagoForm,
     ResenaForm,
     PerfilForm,
+    VerificacionVendedorForm,
 )
 
 
@@ -302,6 +304,13 @@ def leer_decimal(texto):
 def obtener_o_crear_perfil(usuario):
     perfil, _ = PerfilUsuario.objects.get_or_create(usuario=usuario)
     return perfil
+
+
+def organico_permitido(perfil, form):
+    """Solo puede marcar 'Orgánico' quien tiene certificado revisado (Ley 29196 / SENASA)."""
+    if form.cleaned_data.get('tipo_cultivo') != 'ORGANICO':
+        return True
+    return perfil.organico_verificado or perfil.es_demo
 
 
 def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
@@ -815,6 +824,8 @@ def detalle_producto(request, producto_id):
     """Apartado completo de descripcion del producto, ficha tecnica, compras, ofertas y resenas."""
     asegurar_datos_iniciales()
     producto = get_object_or_404(Producto, id=producto_id)
+    if not producto.vendedor_habilitado() and request.user != producto.productor:
+        raise Http404("El vendedor de este producto todavía no está verificado.")
     relacionados = Producto.objects.publicados().filter(
         categoria=producto.categoria,
     ).exclude(id=producto.id)[:3]
@@ -1195,7 +1206,9 @@ def comprobante_pago(request, codigo):
 
 def lista_productores(request):
     asegurar_datos_iniciales()
-    perfiles_productores = PerfilUsuario.objects.filter(rol='PRODUCTOR').select_related('usuario')
+    perfiles_productores = PerfilUsuario.objects.filter(rol='PRODUCTOR').filter(
+        Q(estado_verificacion='VERIFICADO') | Q(es_demo=True)
+    ).select_related('usuario', 'usuario__verificacion')
     publicados = Producto.objects.publicados()
     perfiles_productores = list(perfiles_productores)
     for perfil in perfiles_productores:
@@ -1210,6 +1223,8 @@ def perfil_productor(request, usuario_id):
         PerfilUsuario.objects.select_related('usuario').filter(Q(rol='PRODUCTOR') | Q(usuario__productos__isnull=False)).distinct(),
         usuario_id=usuario_id,
     )
+    if not perfil.puede_vender_publicamente() and request.user != perfil.usuario:
+        raise Http404("Este vendedor todavía no está verificado.")
     productos = Producto.objects.publicados().filter(productor=perfil.usuario).select_related('categoria')
     resenas = ResenaProducto.objects.filter(producto__productor=perfil.usuario).select_related('autor', 'producto')
     return render(request, 'perfil_productor.html', {
@@ -1246,7 +1261,10 @@ def registro_vista(request):
             )
             login(request, usuario)
             messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Cuenta creada con contraseña encriptada.")
-            # Lo primero que ve el usuario nuevo son las ofertas vigentes
+            if form.cleaned_data['rol'] == 'PRODUCTOR':
+                # El vendedor nuevo completa su verificacion antes de que sus productos se muestren
+                return redirect('verificacion_vendedor')
+            # Lo primero que ve el comprador nuevo son las ofertas vigentes
             return redirect('ventas_por_oferta')
     else:
         form = RegistroUsuarioForm(initial={'rol': rol_inicial})
@@ -1449,6 +1467,9 @@ def login_google_callback(request):
 
     login(request, usuario)
     messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Ingresaste con tu cuenta oficial de Google ({usuario.email}).")
+    perfil = obtener_o_crear_perfil(usuario)
+    if perfil.rol == 'PRODUCTOR' and perfil.estado_verificacion == 'SIN_ENVIAR' and not perfil.es_demo:
+        return redirect('verificacion_vendedor')
     return redirect('ventas_por_oferta')
 
 
@@ -1541,6 +1562,8 @@ def crear_producto(request):
 
     if request.method == 'POST':
         form = ProductoForm(request.POST, request.FILES)
+        if form.is_valid() and not organico_permitido(perfil, form):
+            form.add_error('tipo_cultivo', "Para vender como Orgánico primero sube tu certificado orgánico en la verificación de vendedor.")
         if form.is_valid():
             producto = form.save(commit=False)
             producto.productor = request.user
@@ -1554,7 +1577,10 @@ def crear_producto(request):
                 return redirect('pagar_comision_oferta', producto_id=producto.id)
             producto.save()
             guardar_fotos_extra(request, producto)
-            messages.success(request, f"El producto '{producto.nombre}' fue publicado exitosamente.")
+            if perfil.puede_vender_publicamente():
+                messages.success(request, f"El producto '{producto.nombre}' fue publicado exitosamente.")
+            else:
+                messages.info(request, f"'{producto.nombre}' quedó guardado. Se mostrará a los compradores cuando tu cuenta esté verificada.")
             return redirect('panel_productor')
     else:
         form = ProductoForm()
@@ -1582,6 +1608,8 @@ def editar_producto(request, producto_id):
     )
     if request.method == 'POST':
         form = ProductoForm(request.POST, request.FILES, instance=producto)
+        if form.is_valid() and not organico_permitido(perfil, form):
+            form.add_error('tipo_cultivo', "Para vender como Orgánico primero sube tu certificado orgánico en la verificación de vendedor.")
         if form.is_valid():
             producto = form.save(commit=False)
             if producto.en_oferta and not estaba_en_oferta:
@@ -1951,3 +1979,72 @@ def solicitud_desde_chat(request, conversacion_id):
                         reverse('ventas_por_oferta'), 'bi-cash-coin')
     messages.success(request, "Solicitud enviada. El vendedor la verá en su sección de Ofertas.")
     return redirect('conversacion', conversacion_id=conversacion.id)
+
+
+# ---------------- Verificacion de vendedores ----------------
+
+@login_required
+def verificacion_vendedor(request):
+    """Un solo formulario corto para que el vendedor demuestre que es productor real."""
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol != 'PRODUCTOR':
+        messages.warning(request, "La verificación es solo para cuentas de vendedor.")
+        return redirect('inicio')
+    verificacion = VerificacionVendedor.objects.filter(usuario=request.user).first()
+    editar = request.GET.get('editar') == '1' or perfil.estado_verificacion in ('SIN_ENVIAR', 'RECHAZADO')
+    if perfil.es_demo or perfil.estado_verificacion == 'VERIFICADO':
+        editar = False
+
+    if request.method == 'POST' and editar:
+        form = VerificacionVendedorForm(request.POST, request.FILES, instance=verificacion)
+        if form.is_valid():
+            verificacion = form.save(commit=False)
+            verificacion.usuario = request.user
+            # Cada nuevo envio se revisa desde cero
+            for campo in ('revisado_identidad', 'revisado_padron', 'revisado_organizacion', 'revisado_chacra', 'revisado_organico'):
+                setattr(verificacion, campo, False)
+            verificacion.motivo_rechazo = ''
+            verificacion.save()
+            perfil.estado_verificacion = 'PENDIENTE'
+            if not perfil.ruc_dni:
+                perfil.ruc_dni = verificacion.documento()
+            if not perfil.telefono:
+                perfil.telefono = verificacion.celular
+            perfil.save()
+            enlace = reverse('admin:mercado_verificacionvendedor_change', args=[verificacion.id])
+            for admin_usuario in User.objects.filter(is_staff=True, is_active=True):
+                Notificacion.avisar(admin_usuario, f"Nueva verificación de vendedor: {request.user.get_full_name() or request.user.username}", enlace, 'bi-patch-check')
+            messages.success(request, "¡Listo! Recibimos tus datos. Te avisaremos cuando tu cuenta esté verificada (normalmente en 1 o 2 días hábiles).")
+            return redirect('verificacion_vendedor')
+    else:
+        form = VerificacionVendedorForm(instance=verificacion, initial=None if verificacion else {
+            'celular': perfil.telefono[-9:] if perfil.telefono else '',
+            'distrito': perfil.ubicacion,
+            'dni': perfil.ruc_dni if len(perfil.ruc_dni or '') == 8 else '',
+            'ruc': perfil.ruc_dni if len(perfil.ruc_dni or '') == 11 else '',
+        })
+
+    return render(request, 'verificacion_vendedor.html', {
+        'perfil': perfil,
+        'verificacion': verificacion,
+        'form': form,
+        'editar': editar,
+    })
+
+
+CAMPOS_ARCHIVO_VERIFICACION = ('foto_documento', 'foto_chacra', 'documento_organizacion', 'certificado_organico')
+
+
+@login_required
+def archivo_verificacion(request, verificacion_id, campo):
+    """Entrega un documento privado solo al personal administrador (nunca es publico)."""
+    if not request.user.is_staff or campo not in CAMPOS_ARCHIVO_VERIFICACION:
+        raise Http404()
+    verificacion = get_object_or_404(VerificacionVendedor, id=verificacion_id)
+    archivo = getattr(verificacion, campo)
+    if not archivo:
+        raise Http404()
+    respuesta = FileResponse(archivo.open('rb'))
+    respuesta['X-Content-Type-Options'] = 'nosniff'
+    respuesta['Cache-Control'] = 'private, no-store'
+    return respuesta
