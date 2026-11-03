@@ -35,6 +35,7 @@
                 <div class="flex-grow-1">
                     <div class="text-muted small">Vendido por el productor:</div>
                     <a href="{% url 'perfil_productor' producto.productor.id %}" class="fw-bold text-reset">{{ producto.productor.first_name|default:producto.productor.username }} {{ producto.productor.last_name }}</a>
+                    {% if producto.productor.perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% endif %}
                     <div class="text-muted small">{{ producto.productor.perfil.nombre_finca|default:producto.origen }}</div>
                 </div>
             </div>
@@ -264,7 +265,7 @@
                     {% for res in resenas %}
                     <div class="border rounded p-3 mb-2 bg-light">
                         <div class="d-flex justify-content-between mb-1">
-                            <strong class="small">{{ res.autor.first_name|default:res.autor.username }}</strong>
+                            <strong class="small">{{ res.autor.first_name|default:res.autor.username }} {% if res.autor.perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% endif %}</strong>
                             <span class="badge bg-warning">{{ res.calificacion }} / 5</span>
                         </div>
                         <p class="small text-secondary mb-0">{{ res.comentario }}</p>
