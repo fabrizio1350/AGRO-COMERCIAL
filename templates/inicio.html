@@ -257,7 +257,7 @@
                 <a href="{% url 'perfil_productor' perfil.usuario.id %}" class="tarjeta-productor">
                     <span class="avatar-inicial">{{ perfil.usuario.first_name|default:perfil.usuario.username|slice:":1"|upper }}</span>
                     <span class="flex-grow-1 min-w-0">
-                        <strong class="d-block text-truncate">{{ perfil.nombre_finca|default:perfil.usuario.get_full_name|default:perfil.usuario.username }} {% if perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% endif %}</strong>
+                        <strong class="d-block text-truncate">{{ perfil.nombre_finca|default:perfil.usuario.get_full_name|default:perfil.usuario.username }} {% if perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% elif perfil.vendedor_verificado %}{% include 'includes/etiqueta_verificado.html' with p=perfil %}{% endif %}</strong>
                         <span class="small text-muted d-block text-truncate"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ perfil.ubicacion|default:"Arequipa" }}</span>
                         <span class="small text-success fw-semibold">{{ perfil.total_publicados }} producto{{ perfil.total_publicados|pluralize }} publicado{{ perfil.total_publicados|pluralize }}</span>
                     </span>
