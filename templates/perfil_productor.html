@@ -16,7 +16,7 @@
                 · En AgroComercial desde {{ productor.date_joined|date:"F Y" }}
             </p>
         </div>
-        {% if user.is_authenticated and user != productor and productos %}
+        {% if rol_actual == 'COMPRADOR' and productos %}
             <form action="{% url 'iniciar_chat' productos.0.id %}" method="post" class="m-0">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-warning"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Enviar mensaje</button>
