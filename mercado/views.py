@@ -77,6 +77,7 @@ def asegurar_datos_iniciales():
             telefono="964112233",
             ubicacion="Chiguata, Arequipa",
             nombre_finca="Asociación Agrícola Valle de Chiguata",
+            es_demo=True,
             cuenta_bancaria="BCP Soles: 355-98765432-0-11"
         )
     else:
@@ -103,6 +104,7 @@ def asegurar_datos_iniciales():
             telefono="945887766",
             ubicacion="Majes (Caylloma), Arequipa",
             nombre_finca="Fundo Santa Elena",
+            es_demo=True,
             cuenta_bancaria="BBVA Soles: 0011-0234-0200112233"
         )
     else:
@@ -128,7 +130,8 @@ def asegurar_datos_iniciales():
             ruc_dni="20601122334",
             telefono="999445566",
             ubicacion="Cerro Colorado, Arequipa",
-            nombre_finca="Distribuidora Mayorista Mendoza SAC"
+            nombre_finca="Distribuidora Mayorista Mendoza SAC",
+            es_demo=True,
         )
 
     hoy = date.today()
