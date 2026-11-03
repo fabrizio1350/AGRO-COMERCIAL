@@ -7,6 +7,7 @@ La foto lleva un nombre de transicion para que "vuele" hasta el detalle en Chrom
         <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" loading="lazy" style="view-transition-name: foto-producto-{{ prod.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
         <div class="chip-foto">
             {% if prod.oferta_activa %}<span class="chip chip-descuento">-{{ prod.porcentaje_descuento }}%</span>{% endif %}
+            {% if prod.productor.perfil.es_demo %}<span class="chip chip-demo" title="Publicación de prueba con datos de ejemplo"><i class="bi bi-robot" aria-hidden="true"></i>Demo</span>{% endif %}
             {% if prod.tipo_cultivo == 'ORGANICO' %}<span class="chip"><i class="bi bi-leaf" aria-hidden="true"></i>Orgánico</span>{% endif %}
         </div>
         {% if user.is_authenticated %}{% include 'includes/boton_favorito.html' with prod=prod %}{% endif %}
