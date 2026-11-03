@@ -1982,6 +1982,24 @@ main {
 }
 .grafico-ventas .barras { margin-bottom: 1.75rem; }
 
+/* Etiqueta de cuentas de prueba (bots Demo) */
+.etiqueta-demo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background-color: #ede9fe;
+    color: #5b21b6;
+    font-size: 0.72rem;
+    font-weight: 700;
+    vertical-align: middle;
+}
+.chip.chip-demo {
+    background-color: #ede9fe;
+    color: #5b21b6;
+}
+
 /* Menos movimiento: sin cinta, sin flotar, sin brillos ni transiciones de pagina */
 @media (prefers-reduced-motion: reduce) {
     @view-transition { navigation: none; }
