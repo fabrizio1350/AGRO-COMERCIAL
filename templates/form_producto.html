@@ -42,6 +42,16 @@
                             {{ form.categoria }}
                         </div>
 
+                        <div class="col-md-7">
+                            <label class="form-label small fw-semibold" for="{{ form.tipo_cultivo.id_for_label }}">Tipo de cultivo</label>
+                            {{ form.tipo_cultivo }}
+                            {% if form.tipo_cultivo.errors %}
+                                <div class="text-danger small mt-1">{{ form.tipo_cultivo.errors|striptags }} <a href="{% url 'verificacion_vendedor' %}">Ir a mi verificación</a></div>
+                            {% else %}
+                                <div class="form-text">"Orgánico" solo con certificado orgánico revisado por AgroComercial.</div>
+                            {% endif %}
+                        </div>
+
                         <div class="col-md-5">
                             <label class="form-label small fw-semibold">Fecha de Cosecha</label>
                             {{ form.fecha_cosecha }}
