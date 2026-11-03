@@ -16,7 +16,7 @@
         <div class="foto-detalle mb-3">
             <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" style="view-transition-name: foto-producto-{{ producto.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
             {% if producto.oferta_activa %}<span class="chip chip-descuento">-{{ producto.porcentaje_descuento }}%</span>{% endif %}
-            {% if user.is_authenticated %}{% include 'includes/boton_favorito.html' with prod=producto %}{% endif %}
+            {% if rol_actual == 'COMPRADOR' %}{% include 'includes/boton_favorito.html' with prod=producto %}{% endif %}
         </div>
         {% with extras=producto.fotos.all %}
         {% if extras %}
@@ -39,8 +39,8 @@
                     <div class="text-muted small">{{ producto.productor.perfil.nombre_finca|default:producto.origen }}</div>
                 </div>
             </div>
-            {% if producto.productor != user %}
-                {% if user.is_authenticated %}
+            {% if producto.productor != user and rol_actual != 'PRODUCTOR' %}
+                {% if rol_actual == 'COMPRADOR' %}
                     <form action="{% url 'iniciar_chat' producto.id %}" method="post" class="d-grid my-2">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-success"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Chatear con el productor</button>
@@ -132,7 +132,7 @@
                     </div>
                 {% else %}
                     <div class="p-3 rounded-3 border bg-light text-secondary small">
-                        <i class="bi bi-info-circle me-1"></i>Estás en <strong>Modo Vendedor</strong> (vista de consulta). Solo las cuentas de Comprador pueden adquirir productos.
+                        <i class="bi bi-info-circle me-1"></i>Tienes una cuenta de <strong>vendedor</strong>: aquí solo puedes ver la publicación. Las compras y el chat con productores se hacen desde una cuenta de comprador.
                     </div>
                 {% endif %}
 
