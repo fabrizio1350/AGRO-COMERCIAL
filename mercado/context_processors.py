@@ -30,7 +30,7 @@ def datos_globales_usuario(request):
         }
 
     perfil, _ = PerfilUsuario.objects.get_or_create(usuario=request.user)
-    total_carrito = sum(item.cantidad for item in ItemCarrito.objects.filter(comprador=request.user))
+    total_carrito = ItemCarrito.objects.filter(comprador=request.user, precio_unitario_acordado__isnull=True).count()
     ofertas_vendedor = OfertaNegociacion.objects.filter(
         producto__productor=request.user,
         estado='PENDIENTE'
