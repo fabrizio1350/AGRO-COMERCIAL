@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}AgroComercial | Del campo directamente a tu negocio{% endblock %}
+{% block title %}AgroComercial | Ofertas de los mercados de Arequipa{% endblock %}
 
 {% block ancho %}
 <!-- Hero: banners grandes que pasan solos -->
@@ -11,9 +11,9 @@
             <div class="swiper-slide hero-slide" role="group" aria-label="1 de 3">
                 <div class="hero-fondo" style="background-image: url('{% static 'imagenes/banner_agro.jpg' %}');"></div>
                 <div class="hero-contenido">
-                    <span class="hero-etiqueta"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Productores de Arequipa</span>
-                    <h1 class="hero-titulo" data-titulo-animado>Del campo <em>directamente</em> a tu negocio</h1>
-                    <p class="hero-texto">Compra papa, palta, quinua, rocoto y más a quienes los cosechan. Sin intermediarios y con precios por volumen.</p>
+                    <span class="hero-etiqueta"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Mercados de Arequipa</span>
+                    <h1 class="hero-titulo" data-titulo-animado>Las ofertas del mercado, <em>antes de salir de casa</em></h1>
+                    <p class="hero-texto">Mira qué hay hoy en los puestos, cuánto queda y a qué precio. Arma tu lista y ve directo al puesto a comprar.</p>
                     <div class="hero-acciones">
                         <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning"><i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Ver ofertas</a>
                         <a href="{% url 'catalogo' %}" class="btn btn-vidrio">Explorar productos</a>
@@ -23,23 +23,23 @@
             <div class="swiper-slide hero-slide" role="group" aria-label="2 de 3">
                 <div class="hero-fondo" style="background-image: url('{% static 'imagenes/papa_amarilla.jpg' %}');"></div>
                 <div class="hero-contenido">
-                    <span class="hero-etiqueta"><i class="bi bi-box-seam" aria-hidden="true"></i>Al por mayor</span>
-                    <h2 class="hero-titulo" data-titulo-animado>Encuentra productos <em>al por mayor</em></h2>
-                    <p class="hero-texto">Sacos, cajas y toneladas para restaurantes, mercados y distribuidores, con la cantidad mínima clara desde el inicio.</p>
+                    <span class="hero-etiqueta"><i class="bi bi-broadcast" aria-hidden="true"></i>Stock en tiempo real</span>
+                    <h2 class="hero-titulo" data-titulo-animado>Sabes cuánto queda <em>antes de ir</em></h2>
+                    <p class="hero-texto">Cuando el vendedor vende algo, el stock baja al momento en la web. Nada de llegar y encontrar todo agotado.</p>
                     <div class="hero-acciones">
                         <a href="{% url 'catalogo' %}" class="btn btn-warning">Ver catálogo</a>
-                        <a href="{% url 'registro' %}?rol=COMPRADOR" class="btn btn-vidrio">Crear cuenta de comprador</a>
+                        <a href="{% url 'productores' %}" class="btn btn-vidrio">Ver puestos en el mapa</a>
                     </div>
                 </div>
             </div>
             <div class="swiper-slide hero-slide" role="group" aria-label="3 de 3">
                 <div class="hero-fondo" style="background-image: url('{% static 'imagenes/finca_productor.jpg' %}');"></div>
                 <div class="hero-contenido">
-                    <span class="hero-etiqueta"><i class="bi bi-flower1" aria-hidden="true"></i>Para productores</span>
-                    <h2 class="hero-titulo" data-titulo-animado>Publica tu cosecha y <em>encuentra compradores</em></h2>
-                    <p class="hero-texto">Sube fotos, pon tu precio y crea ofertas con fecha límite. Los compradores te contactan directamente.</p>
+                    <span class="hero-etiqueta"><i class="bi bi-shop" aria-hidden="true"></i>Para vendedores</span>
+                    <h2 class="hero-titulo" data-titulo-animado>¿Tienes un puesto? <em>Vende más rápido</em></h2>
+                    <p class="hero-texto">Marca tu puesto en el mapa, sube tus productos con foto y precio, y avisa al instante lo que ya vendiste.</p>
                     <div class="hero-acciones">
-                        <a href="{% if user.is_authenticated %}{% url 'crear_producto' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-warning">Publicar mi cosecha</a>
+                        <a href="{% if user.is_authenticated %}{% url 'crear_producto' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-warning">Publicar mis productos</a>
                         <a href="#como-funciona" class="btn btn-vidrio">Cómo funciona</a>
                     </div>
                 </div>
@@ -59,7 +59,6 @@
             <span class="precio-oferta">S/ {{ mejor_oferta.precio_oferta }}</span>
             <span class="precio-anterior">S/ {{ mejor_oferta.precio }}</span>
         </div>
-        {% include 'includes/barra_tiempo.html' with prod=mejor_oferta compacta=True %}
     </a>
     {% endif %}
 
@@ -74,12 +73,12 @@
 <div class="cinta" aria-hidden="true">
     <div class="cinta-pista">
         {% for i in "12" %}
-        <span><i class="bi bi-flower1"></i>Directo del productor</span>
-        <span><i class="bi bi-lightning-charge-fill"></i>Ofertas con fecha real</span>
-        <span><i class="bi bi-geo-alt-fill"></i>25 distritos de Arequipa</span>
-        <span><i class="bi bi-box-seam"></i>Compra por volumen</span>
-        <span><i class="bi bi-chat-dots-fill"></i>Trato directo con el vendedor</span>
-        <span><i class="bi bi-shield-check"></i>Pagos registrados en la plataforma</span>
+        <span><i class="bi bi-shop"></i>Puestos de mercado reales</span>
+        <span><i class="bi bi-lightning-charge-fill"></i>Ofertas del día</span>
+        <span><i class="bi bi-broadcast"></i>Stock en tiempo real</span>
+        <span><i class="bi bi-geo-alt-fill"></i>Cómo llegar con Google Maps</span>
+        <span><i class="bi bi-cash-coin"></i>Pagas en el puesto</span>
+        <span><i class="bi bi-phone"></i>Efectivo, tarjeta o Yape</span>
         {% endfor %}
     </div>
 </div>
@@ -117,8 +116,8 @@
     <div class="container-xxl">
         <div class="encabezado-seccion revelar">
             <div>
-                <span class="antetitulo"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>Por tiempo limitado</span>
-                <h2>Ofertas destacadas <span class="resaltado">del campo</span></h2>
+                <span class="antetitulo"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>Mientras dure el stock</span>
+                <h2>Ofertas de hoy <span class="resaltado">en el mercado</span></h2>
             </div>
             <a href="{% url 'ventas_por_oferta' %}" class="enlace-ver-todo">Todas las ofertas <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
         </div>
@@ -133,11 +132,11 @@
         <div class="encabezado-seccion revelar">
             <div>
                 <span class="antetitulo"><i class="bi bi-basket-fill" aria-hidden="true"></i>Recién publicados</span>
-                <h2>Productos disponibles</h2>
+                <h2>Disponibles ahora</h2>
             </div>
             <a href="{% url 'catalogo' %}" class="enlace-ver-todo">Ir al catálogo <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
         </div>
-        <div class="row g-3 g-lg-4" data-escalonado>
+        <div class="row g-3 g-lg-4" data-escalonado data-stock-url="{% url 'stock_publico' %}">
             {% for prod in productos_destacados %}
             <div class="col-6 col-lg-3">
                 {% include 'includes/tarjeta_producto.html' with prod=prod %}
@@ -157,113 +156,55 @@
         <div class="encabezado-seccion revelar">
             <div>
                 <span class="antetitulo"><i class="bi bi-signpost-split-fill" aria-hidden="true"></i>Cómo funciona</span>
-                <h2>Del campo a tu negocio en 5 pasos</h2>
+                <h2>Del puesto a tu mesa en 4 pasos</h2>
             </div>
         </div>
-        <div class="pasos" data-pasos>
+        <div class="pasos pasos-4" data-pasos>
             <div class="linea-pasos" aria-hidden="true"><span></span></div>
             <div class="paso">
-                <div class="icono"><i class="bi bi-person-plus" aria-hidden="true"></i></div>
-                <h3>El agricultor se registra</h3>
-                <p>Crea su cuenta de productor con su distrito y datos de contacto.</p>
-            </div>
-            <div class="paso">
-                <div class="icono"><i class="bi bi-camera" aria-hidden="true"></i></div>
-                <h3>Publica sus productos</h3>
-                <p>Sube fotos, precio, cantidad disponible y la fecha en que vence.</p>
-            </div>
-            <div class="paso">
                 <div class="icono"><i class="bi bi-search" aria-hidden="true"></i></div>
-                <h3>Los compradores lo encuentran</h3>
-                <p>Buscan por categoría, distrito, precio u ofertas vigentes.</p>
+                <h3>Busca lo que necesitas</h3>
+                <p>Mira productos y ofertas de los puestos, con foto, precio y cuánto queda.</p>
             </div>
             <div class="paso">
-                <div class="icono"><i class="bi bi-send" aria-hidden="true"></i></div>
-                <h3>Envían su pedido</h3>
-                <p>Compran directo o proponen un precio por volumen al vendedor.</p>
+                <div class="icono"><i class="bi bi-list-check" aria-hidden="true"></i></div>
+                <h3>Arma tu lista</h3>
+                <p>Elige qué quieres comprar y cuánto. Tu lista te avisa si el stock baja.</p>
             </div>
             <div class="paso">
-                <div class="icono"><i class="bi bi-hand-thumbs-up" aria-hidden="true"></i></div>
-                <h3>Coordinan la entrega</h3>
-                <p>El vendedor confirma y ambos acuerdan el despacho.</p>
+                <div class="icono"><i class="bi bi-geo-alt" aria-hidden="true"></i></div>
+                <h3>Ve al puesto</h3>
+                <p>Cada producto muestra el mercado, el número de puesto y cómo llegar.</p>
+            </div>
+            <div class="paso">
+                <div class="icono"><i class="bi bi-cash-coin" aria-hidden="true"></i></div>
+                <h3>Paga ahí mismo</h3>
+                <p>En efectivo, tarjeta o Yape/Plin, según lo que acepte cada vendedor.</p>
             </div>
         </div>
 
         <div class="cifras" data-cifras>
-            <div class="cifra"><strong data-contador="{{ total_productos }}">{{ total_productos }}</strong><span>productos publicados</span></div>
+            <div class="cifra"><strong data-contador="{{ total_productos }}">{{ total_productos }}</strong><span>productos disponibles</span></div>
             <div class="cifra"><strong data-contador="{{ total_ofertas }}">{{ total_ofertas }}</strong><span>ofertas vigentes</span></div>
-            <div class="cifra"><strong data-contador="{{ total_productores }}">{{ total_productores }}</strong><span>productores registrados</span></div>
-            <div class="cifra"><strong data-contador="{{ total_distritos }}">{{ total_distritos }}</strong><span>distritos con productos</span></div>
+            <div class="cifra"><strong data-contador="{{ total_puestos }}">{{ total_puestos }}</strong><span>puestos con productos</span></div>
         </div>
     </div>
 </section>
 
-<!-- Beneficios -->
+<!-- Puestos -->
+{% if puestos_destacados %}
 <section class="seccion">
     <div class="container-xxl">
         <div class="encabezado-seccion revelar">
             <div>
-                <span class="antetitulo"><i class="bi bi-stars" aria-hidden="true"></i>Por qué AgroComercial</span>
-                <h2>Pensado para quienes <span class="resaltado">compran y venden</span> en volumen</h2>
+                <span class="antetitulo"><i class="bi bi-shop" aria-hidden="true"></i>Puestos</span>
+                <h2>Dónde <span class="resaltado">comprar</span></h2>
             </div>
+            <a href="{% url 'productores' %}" class="enlace-ver-todo">Ver todos en el mapa <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
         </div>
         <div class="row g-3 g-lg-4" data-escalonado>
-            <div class="col-sm-6 col-lg-3">
-                <div class="beneficio">
-                    <div class="icono tono-verde"><i class="bi bi-people" aria-hidden="true"></i></div>
-                    <h3>Trato directo</h3>
-                    <p>Compras a quien cosecha, sin cadenas de intermediarios que suban el precio.</p>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <div class="beneficio">
-                    <div class="icono tono-naranja"><i class="bi bi-hourglass-split" aria-hidden="true"></i></div>
-                    <h3>Ofertas reales</h3>
-                    <p>Cada oferta muestra su fecha de vencimiento real; nada de contadores inventados.</p>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <div class="beneficio">
-                    <div class="icono tono-amarillo"><i class="bi bi-box-seam" aria-hidden="true"></i></div>
-                    <h3>Volumen claro</h3>
-                    <p>Unidad de venta, stock y compra mínima visibles en cada publicación.</p>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <div class="beneficio">
-                    <div class="icono tono-rosa"><i class="bi bi-geo-alt" aria-hidden="true"></i></div>
-                    <h3>Hecho para Arequipa</h3>
-                    <p>Productos de los 25 distritos y provincias de la región, de la costa a la sierra.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Productores -->
-{% if productores_destacados %}
-<section class="seccion">
-    <div class="container-xxl">
-        <div class="encabezado-seccion revelar">
-            <div>
-                <span class="antetitulo"><i class="bi bi-person-badge-fill" aria-hidden="true"></i>Productores</span>
-                <h2>Quiénes cosechan lo que compras</h2>
-            </div>
-            <a href="{% url 'productores' %}" class="enlace-ver-todo">Ver productores <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-        </div>
-        <div class="row g-3" data-escalonado>
-            {% for perfil in productores_destacados %}
-            <div class="col-md-6 col-lg-4">
-                <a href="{% url 'perfil_productor' perfil.usuario.id %}" class="tarjeta-productor">
-                    <span class="avatar-inicial">{{ perfil.usuario.first_name|default:perfil.usuario.username|slice:":1"|upper }}</span>
-                    <span class="flex-grow-1 min-w-0">
-                        <strong class="d-block text-truncate">{{ perfil.nombre_finca|default:perfil.usuario.get_full_name|default:perfil.usuario.username }} {% if perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% elif perfil.vendedor_verificado %}{% include 'includes/etiqueta_verificado.html' with p=perfil %}{% endif %}</strong>
-                        <span class="small text-muted d-block text-truncate"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ perfil.ubicacion|default:"Arequipa" }}</span>
-                        <span class="small text-success fw-semibold">{{ perfil.total_publicados }} producto{{ perfil.total_publicados|pluralize }} publicado{{ perfil.total_publicados|pluralize }}</span>
-                    </span>
-                    <i class="bi bi-arrow-right text-muted" aria-hidden="true"></i>
-                </a>
-            </div>
+            {% for puesto in puestos_destacados %}
+            <div class="col-sm-6 col-lg-4">{% include 'includes/tarjeta_puesto.html' with puesto=puesto %}</div>
             {% endfor %}
         </div>
     </div>
@@ -276,11 +217,11 @@
         <div class="llamado revelar">
             <div class="row align-items-center g-3 position-relative" style="z-index: 1;">
                 <div class="col-lg-8">
-                    <h2 class="mb-2">¿Tienes una cosecha lista para vender?</h2>
-                    <p class="mb-0 opacity-75">Crea tu cuenta de productor gratis y publica tu primer producto en minutos.</p>
+                    <h2 class="mb-2">¿Vendes en un mercado?</h2>
+                    <p class="mb-0 opacity-75">Crea tu cuenta gratis, marca tu puesto en el mapa y publica tus productos en minutos.</p>
                 </div>
                 <div class="col-lg-4 text-lg-end">
-                    <a href="{% if user.is_authenticated %}{% url 'crear_producto' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-light btn-lg fw-bold px-4">Publicar mi cosecha <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                    <a href="{% if user.is_authenticated %}{% url 'crear_producto' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-light btn-lg fw-bold px-4">Empezar a vender <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
                 </div>
             </div>
         </div>
