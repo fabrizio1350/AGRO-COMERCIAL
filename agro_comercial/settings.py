@@ -28,12 +28,15 @@ ALLOWED_HOSTS = [
 if not DEBUG and (not ALLOWED_HOSTS or '*' in ALLOWED_HOSTS):
     raise ImproperlyConfigured('Configura ALLOWED_HOSTS con los dominios del sitio.')
 
-SECURE_SSL_REDIRECT = not DEBUG
+# REDIRIGIR_HTTPS=False si el proxy ya fuerza https y Django entra en bucle de redirecciones
+SECURE_SSL_REDIRECT = not DEBUG and os.environ.get('REDIRIGIR_HTTPS', 'True').lower() == 'true'
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 if os.environ.get('TRUST_PROXY_HTTPS', '').lower() == 'true':
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Dominios con https que envian formularios, ej. https://agro.proyects.site
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
 
 DATOS_DEMO_AUTOMATICOS = DEBUG and os.environ.get('DATOS_DEMO_AUTOMATICOS', '').lower() == 'true'
 
