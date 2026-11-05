@@ -64,3 +64,63 @@ class MercadoPresencialTests(TestCase):
         self.assertFalse(publicado.oferta_pendiente_pago)
         self.client.force_login(self.comprador)
         self.assertEqual(self.client.post(reverse('editar_producto', args=[publicado.pk]), {}).status_code, 404)
+
+
+class PanelYListaTests(TestCase):
+    def setUp(self):
+        self.vendedor = User.objects.create_user('vende', password='clave12345')
+        self.comprador = User.objects.create_user('compra', password='clave12345')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=self.comprador, rol='COMPRADOR')
+        self.producto = Producto.objects.create(
+            productor=self.vendedor, nombre='Choclo', descripcion='Tierno', precio=Decimal('1.50'), stock=10,
+            unidad='UNIDAD', categoria=Categoria.objects.create(nombre='Granos'),
+        )
+
+    def poner_puesto(self):
+        return Puesto.objects.create(vendedor=self.vendedor, nombre='Mercado San Camilo', numero='7',
+                                     latitud=Decimal('-16.4'), longitud=Decimal('-71.53'), yape_plin=True)
+
+    def test_sin_puesto_no_se_publica(self):
+        self.assertNotIn(self.producto, Producto.objects.publicados())
+        self.assertEqual(self.client.get(reverse('detalle_producto', args=[self.producto.pk])).status_code, 404)
+        self.poner_puesto()
+        self.assertIn(self.producto, Producto.objects.publicados())
+        respuesta = self.client.get(reverse('detalle_producto', args=[self.producto.pk]))
+        self.assertContains(respuesta, 'Puesto 7')
+        self.assertContains(respuesta, 'Yape / Plin')
+        self.assertContains(respuesta, 'Cómo llegar')
+
+    def test_vendi_resta_stock_registra_venta_y_responde_json(self):
+        from .models import VentaPuesto
+        self.poner_puesto()
+        self.client.force_login(self.vendedor)
+        url = reverse('actualizar_stock', args=[self.producto.pk])
+        respuesta = self.client.post(url, {'accion': 'vendi', 'cantidad': 3}, HTTP_X_STOCK_RAPIDO='1')
+        self.assertEqual(respuesta.json()['stock'], 7)
+        self.assertEqual(VentaPuesto.objects.get().cantidad, 3)
+        # No se puede vender mas de lo que queda
+        self.assertEqual(self.client.post(url, {'accion': 'vendi', 'cantidad': 50}, HTTP_X_STOCK_RAPIDO='1').status_code, 409)
+        self.client.post(url, {'accion': 'sumar', 'cantidad': 5}, HTTP_X_STOCK_RAPIDO='1')
+        self.client.post(url, {'accion': 'agotado'}, HTTP_X_STOCK_RAPIDO='1')
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 0)
+        self.assertIsNotNone(self.producto.stock_actualizado)
+        self.assertContains(self.client.get(reverse('panel_productor')), 'S/ 4,50')
+
+    def test_lista_del_comprador_agrupa_por_puesto_y_avisa_stock(self):
+        self.poner_puesto()
+        self.client.force_login(self.comprador)
+        respuesta = self.client.post(reverse('agregar_al_carrito', args=[self.producto.pk]), {'cantidad': 4},
+                                     HTTP_X_CARRITO_RAPIDO='1')
+        self.assertEqual(respuesta.json()['total_carrito'], 1)
+        pagina = self.client.get(reverse('carrito'))
+        self.assertContains(pagina, 'Mercado San Camilo')
+        self.assertContains(pagina, 'S/ 6,00')
+        datos = self.client.get(reverse('stock_publico'), {'ids': self.producto.pk}).json()
+        self.assertEqual(datos[str(self.producto.pk)]['stock'], 10)
+
+    def test_vendedor_nuevo_va_a_marcar_su_puesto(self):
+        self.client.force_login(self.vendedor)
+        self.assertRedirects(self.client.get(reverse('crear_producto')), reverse('configurar_puesto'))
+        self.assertContains(self.client.get(reverse('panel_productor')), 'Marcar mi puesto en el mapa')
