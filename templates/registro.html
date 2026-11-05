@@ -1,12 +1,99 @@
-{% extends "presencial/base.html" %}
+{% extends 'base.html' %}
+
+{% block title %}Crear Cuenta | AgroComercial{% endblock %}
+
 {% block content %}
-<section class="encabezado"><h1>Crea tu cuenta</h1></section>
-<div class="formulario"><p>Guarda productos para tu visita o publica las ofertas de tu puesto.</p>
-<form method="post">{% csrf_token %}{{ form.non_field_errors }}
-{% for campo in form %}
-{% if campo.name == 'username' or campo.name == 'first_name' or campo.name == 'last_name' or campo.name == 'email' or campo.name == 'rol' or campo.name == 'password1' or campo.name == 'password2' %}
-<div>{{ campo.errors }}{{ campo.label_tag }}{{ campo }}</div>
-{% endif %}
-{% endfor %}
-<button class="boton">Crear cuenta</button></form></div>
+<div class="acceso entrar">
+    <aside class="acceso-imagen d-none d-lg-flex" aria-hidden="true">
+        <div class="acceso-imagen-texto">
+            <span class="antetitulo text-warning"><i class="bi bi-flower1"></i>AgroComercial</span>
+            <h2>Crea tu cuenta en un minuto</h2>
+            <p>Como comprador ves las ofertas y el stock de los puestos; como vendedor publicas lo que tienes y vendes más rápido.</p>
+            <ul>
+                <li><i class="bi bi-check-circle-fill"></i>Gratis para compradores y vendedores</li>
+                <li><i class="bi bi-check-circle-fill"></i>Tu puesto en el mapa en 2 minutos</li>
+                <li><i class="bi bi-check-circle-fill"></i>Sin pagos en línea: se paga en el puesto</li>
+            </ul>
+        </div>
+    </aside>
+    <div class="acceso-formulario">
+        <div class="tarjeta-acceso">
+            <h2 class="h4 fw-bold text-center mb-1">Crear una Cuenta</h2>
+            <p class="text-muted small text-center mb-4">
+                Solo tus datos básicos. Si tienes un puesto, después lo marcas en el mapa.
+            </p>
+
+            <form method="post" action="{% url 'registro' %}">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger small">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1">{{ form.username.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.rol.label }}</label>
+                        {{ form.rol }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.first_name.label }}</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.last_name.label }}</label>
+                        {{ form.last_name }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small mt-1">{{ form.email.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">{{ form.telefono.label }}</label>
+                        {{ form.telefono }}
+                    </div>
+
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Contraseña</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <div class="text-danger small mt-1">{{ form.password1.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Confirmar contraseña</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="text-danger small mt-1">{{ form.password2.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold mt-4">
+                    Crear mi cuenta
+                </button>
+            </form>
+
+            <div class="text-center mt-3 small">
+                ¿Ya tienes una cuenta?
+                <a href="{% url 'login' %}" class="text-success fw-semibold text-decoration-none ms-1">Iniciar sesión</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
