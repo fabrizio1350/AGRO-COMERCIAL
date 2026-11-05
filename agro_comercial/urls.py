@@ -8,7 +8,7 @@ urlpatterns = [
     path('', include('mercado.urls')),
 ]
 
-if settings.DEBUG:
+if settings.SERVIR_ARCHIVOS:
     urlpatterns += [
         re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.BASE_DIR / 'static'}),
         re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
