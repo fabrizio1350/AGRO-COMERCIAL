@@ -1,277 +1,95 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ accion }} | AgroComercial{% endblock %}
+{% block title %}{% if producto.pk %}Editar producto{% else %}Publicar producto{% endif %} | AgroComercial{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="bg-white border p-4 p-md-5">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 class="h4 fw-bold mb-1">{{ accion }}</h2>
-                    <p class="text-muted small mb-0">Completa los datos del producto agrícola que vas a poner a la venta.</p>
-                </div>
-                <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary btn-sm">
-                    &larr; Volver
-                </a>
-            </div>
-
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-
-                {% if form.errors %}
-                <div class="alert alert-danger small">
-                    Por favor verifica los datos ingresados.
-                </div>
-                {% endif %}
-
-                <!-- 1. Datos del Producto (Simples y directos) -->
-                <div class="p-3 rounded border bg-light mb-4">
-                    <h6 class="fw-bold mb-3 text-success">1. Datos del Producto</h6>
-                    <div class="row g-3">
-                        <div class="col-md-7">
-                            <label class="form-label small fw-semibold">Nombre del Producto</label>
-                            {{ form.nombre }}
-                            {% if form.nombre.errors %}
-                                <div class="text-danger small mt-1">{{ form.nombre.errors|striptags }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label small fw-semibold">Categoría</label>
-                            {{ form.categoria }}
-                        </div>
-
-                        <div class="col-md-7">
-                            <label class="form-label small fw-semibold" for="{{ form.tipo_cultivo.id_for_label }}">Tipo de cultivo</label>
-                            {{ form.tipo_cultivo }}
-                            {% if form.tipo_cultivo.errors %}
-                                <div class="text-danger small mt-1">{{ form.tipo_cultivo.errors|striptags }} <a href="{% url 'verificacion_vendedor' %}">Ir a mi verificación</a></div>
-                            {% else %}
-                                <div class="form-text">"Orgánico" solo con certificado orgánico revisado por AgroComercial.</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-5">
-                            <label class="form-label small fw-semibold">Fecha de Cosecha</label>
-                            {{ form.fecha_cosecha }}
-                        </div>
-                        <div class="col-md-7">
-                            <label class="form-label small fw-semibold">Lugar de Origen (Arequipa)</label>
-                            {{ form.origen }}
-                            {% if form.origen.errors %}
-                                <div class="text-danger small mt-1">{{ form.origen.errors|striptags }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold" for="{{ form.imagen.id_for_label }}">Foto del Producto</label>
-                            <!-- Zona para arrastrar o elegir la foto; se ajusta sola al tamaño de la web -->
-                            <div class="zona-foto {% if producto.imagen %}con-foto{% endif %}" id="zonaFoto" tabindex="0" role="button" aria-label="Subir foto del producto">
-                                <img id="vistaFoto" class="vista-foto" alt="Vista previa de la foto" {% if producto.imagen %}src="{{ producto.imagen.url }}"{% endif %}>
-                                <div class="texto-zona-foto">
-                                    <i class="bi bi-cloud-arrow-up"></i>
-                                    <span class="fw-semibold">Arrastra tu foto aquí</span>
-                                    <span class="small text-muted">o toca para elegirla desde tu celular o PC</span>
-                                    <span class="small text-muted">JPG, PNG o WEBP</span>
-                                </div>
-                            </div>
-                            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                                <button type="button" class="btn btn-outline-success btn-sm" id="btnElegirFoto">
-                                    <i class="bi bi-image me-1"></i><span id="textoBtnFoto">{% if producto.imagen %}Cambiar foto{% else %}Elegir foto{% endif %}</span>
-                                </button>
-                                <span class="small text-muted" id="estadoFoto">
-                                    {% if producto.imagen %}Esta es la foto actual del producto.{% else %}Si no subes foto se usará una imagen automática.{% endif %}
-                                </span>
-                            </div>
-                            {{ form.imagen }}
-                            {% if form.imagen.errors %}
-                                <div class="text-danger small mt-1">{{ form.imagen.errors|striptags }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold" for="fotosExtra">Más fotos (opcional, hasta 4)</label>
-                            {% if producto and producto.fotos.exists %}
-                            <div class="d-flex flex-wrap gap-2 mb-2">
-                                {% for foto in producto.fotos.all %}
-                                <label class="foto-extra">
-                                    <img src="{{ foto.imagen.url }}" alt="Foto adicional {{ forloop.counter }}">
-                                    <span class="small"><input type="checkbox" name="borrar_foto" value="{{ foto.id }}" class="form-check-input me-1">Quitar</span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <input type="file" name="fotos_extra" id="fotosExtra" class="form-control" accept=".jpg,.jpeg,.png,.webp" multiple>
-                            <div class="form-text">Muestra el lote, el empaque o la chacra. JPG, PNG o WEBP de hasta 5 MB cada una.</div>
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold">Descripción del Producto</label>
-                            {{ form.descripcion }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. Precio, Cantidad y Oferta (Inputs perfectamente alineados en la misma fila) -->
-                <div class="p-3 rounded border bg-light mb-4">
-                    <h6 class="fw-bold mb-3 text-success">2. Precio, Cantidad y Opciones de Oferta</h6>
-                    <div class="row g-3 align-items-end">
-                        <div class="col-6 col-md-3">
-                            <label class="form-label small fw-semibold mb-1">Precio (S/)</label>
-                            {{ form.precio }}
-                            {% if form.precio.errors %}
-                                <div class="text-danger small mt-1">{{ form.precio.errors|striptags }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label small fw-semibold mb-1">Unidad de Venta</label>
-                            {{ form.unidad }}
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label small fw-semibold mb-1">Stock Disponible</label>
-                            <div class="input-group">
-                                {{ form.stock }}
-                                <span class="input-group-text small bg-white text-secondary" id="sufijoStockUnidad">kg</span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <label class="form-label small fw-semibold mb-1">Mínimo</label>
-                            <div class="input-group">
-                                {{ form.minimo_compra }}
-                                <span class="input-group-text small bg-white text-secondary" id="sufijoMinimoUnidad">kg</span>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold mb-1" for="{{ form.vence_el.id_for_label }}">La publicación vence el</label>
-                            {{ form.vence_el }}
-                            {% if form.vence_el.errors %}
-                                <div class="text-danger small mt-1">{{ form.vence_el.errors|striptags }}</div>
-                            {% endif %}
-                            <div class="form-text small">Al vencer, el producto deja de mostrarse. Puedes renovarlo desde tu panel.</div>
-                        </div>
-
-                        <div class="col-12"><hr class="my-1 text-muted"></div>
-
-                        <div class="col-md-6">
-                            <div class="p-3 bg-white rounded border h-100">
-                                <div class="form-check mb-2">
-                                    {{ form.en_oferta }}
-                                    <label class="form-check-label fw-semibold small" for="{{ form.en_oferta.id_for_label }}">
-                                        Poner en Oferta / Descuento
-                                    </label>
-                                </div>
-                                <label class="form-label small text-muted mb-1">Precio de Oferta (S/)</label>
-                                {{ form.precio_oferta }}
-                                {% if form.precio_oferta.errors %}
-                                    <div class="text-danger small mt-1">{{ form.precio_oferta.errors|striptags }}</div>
-                                {% endif %}
-                                <div class="row g-2 mt-1">
-                                    <div class="col-6">
-                                        <label class="form-label small text-muted mb-1" for="{{ form.oferta_desde.id_for_label }}">Desde</label>
-                                        {{ form.oferta_desde }}
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="form-label small text-muted mb-1" for="{{ form.oferta_hasta.id_for_label }}">Hasta</label>
-                                        {{ form.oferta_hasta }}
-                                    </div>
-                                </div>
-                                {% if form.oferta_hasta.errors %}
-                                    <div class="text-danger small mt-1">{{ form.oferta_hasta.errors|striptags }}</div>
-                                {% endif %}
-                                <div class="vista-previa-oferta small mt-2" id="vistaPreviaOferta" aria-live="polite"></div>
-                                <div class="form-text small">
-                                    Publicar como oferta tiene una comisión de AgroComercial del {{ comision_porcentaje|floatformat:"-2" }}% del valor del lote (mín. S/ {{ comision_minima|floatformat:2 }}). Tu oferta se publica al pagarla.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="p-3 bg-white rounded border h-100 d-flex flex-column justify-content-center">
-                                <div class="form-check mb-2">
-                                    {{ form.acepta_ofertas }}
-                                    <label class="form-check-label fw-semibold small" for="{{ form.acepta_ofertas.id_for_label }}">
-                                        Aceptar ofertas de precio de compradores
-                                    </label>
-                                </div>
-                                <div class="form-check mt-1">
-                                    {{ form.disponible }}
-                                    <label class="form-check-label fw-semibold small" for="{{ form.disponible.id_for_label }}">
-                                        Producto disponible en el catálogo
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="d-flex justify-content-end gap-2">
-                    <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary px-4">Cancelar</a>
-                    <button type="submit" class="btn btn-success px-4">Guardar Producto</button>
-                </div>
-            </form>
-        </div>
+<div class="formulario-simple mx-auto">
+    <a href="{% url 'panel_productor' %}" class="small text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver a mi puesto</a>
+    <div class="mt-2 mb-4 entrar">
+        <span class="antetitulo"><i class="bi bi-basket-fill" aria-hidden="true"></i>{{ puesto.nombre }} · {{ puesto.titulo_puesto }}</span>
+        <h1 class="h3 fw-bold mb-1">{% if producto.pk %}Editar {{ producto.nombre }}{% else %}¿Qué vas a vender hoy?{% endif %}</h1>
+        <p class="text-muted mb-0">Foto, precio y cuánto tienes. Lo demás es opcional.</p>
     </div>
+
+    <form method="post" enctype="multipart/form-data" novalidate class="entrar entrar-2">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger small">{{ form.non_field_errors|striptags }}</div>{% endif %}
+
+        <section class="bloque-verificacion">
+            <h2><span class="numero">1</span>Foto</h2>
+            {% include 'includes/zona_foto.html' with campo=form.imagen actual=foto_actual texto='Toma una foto de tu producto' %}
+        </section>
+
+        <section class="bloque-verificacion">
+            <h2><span class="numero">2</span>Producto y precio</h2>
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label class="form-label small fw-semibold" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+                    {{ form.nombre }}
+                    {% if form.nombre.errors %}<div class="text-danger small mt-1">{{ form.nombre.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small fw-semibold" for="{{ form.categoria.id_for_label }}">Categoría</label>
+                    {{ form.categoria }}
+                    {% if form.categoria.errors %}<div class="text-danger small mt-1">{{ form.categoria.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-6 col-md-4">
+                    <label class="form-label small fw-semibold" for="{{ form.unidad.id_for_label }}">{{ form.unidad.label }}</label>
+                    {{ form.unidad }}
+                </div>
+                <div class="col-6 col-md-4">
+                    <label class="form-label small fw-semibold" for="{{ form.precio.id_for_label }}">{{ form.precio.label }}</label>
+                    {{ form.precio }}
+                    {% if form.precio.errors %}<div class="text-danger small mt-1">{{ form.precio.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="{{ form.stock.id_for_label }}">{{ form.stock.label }}</label>
+                    {{ form.stock }}
+                    {% if form.stock.errors %}<div class="text-danger small mt-1">{{ form.stock.errors|striptags }}</div>{% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section class="bloque-verificacion">
+            <h2><span class="numero">3</span>Oferta (opcional)</h2>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label small fw-semibold" for="{{ form.precio_oferta.id_for_label }}">{{ form.precio_oferta.label }}</label>
+                    {{ form.precio_oferta }}
+                    {% if form.precio_oferta.errors %}<div class="text-danger small mt-1">{{ form.precio_oferta.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-7"><p class="small text-muted mb-1">Pon un precio menor al normal y tu producto sale en <strong>Ofertas</strong> mientras te quede stock.</p></div>
+                <div class="col-12">
+                    <label class="form-label small fw-semibold" for="{{ form.descripcion.id_for_label }}">{{ form.descripcion.label }} (opcional)</label>
+                    {{ form.descripcion }}
+                </div>
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        {{ form.disponible }}
+                        <label class="form-check-label fw-semibold" for="{{ form.disponible.id_for_label }}">{{ form.disponible.label }}</label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="estado-verificacion estado-ok mb-3">
+            <i class="bi bi-cash-coin" aria-hidden="true"></i>
+            <div class="small">Los compradores verán que pagan en tu puesto con: <strong>{{ puesto.metodos_pago|join:", " }}</strong>. <a href="{% url 'configurar_puesto' %}">Cambiar</a></div>
+        </div>
+
+        <div class="d-grid d-sm-flex gap-2">
+            <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>{% if producto.pk %}Guardar cambios{% else %}Publicar producto{% endif %}</button>
+            <a href="{% url 'panel_productor' %}" class="btn btn-link text-muted">Cancelar</a>
+            {% if producto.pk %}
+            <button type="submit" form="formEliminar" class="btn btn-link text-danger ms-sm-auto">Eliminar producto</button>
+            {% endif %}
+        </div>
+    </form>
+    {% if producto.pk %}<form method="post" action="{% url 'eliminar_producto' producto.id %}" id="formEliminar" onsubmit="return confirm('¿Eliminar {{ producto.nombre|escapejs }}?');">{% csrf_token %}</form>{% endif %}
 </div>
-
-<script>
-    // Vista previa del descuento mientras el vendedor escribe (el servidor vuelve a validar todo)
-    (function() {
-        const precio = document.getElementById('id_precio');
-        const precioOferta = document.getElementById('id_precio_oferta');
-        const enOferta = document.getElementById('id_en_oferta');
-        const caja = document.getElementById('vistaPreviaOferta');
-        if (!precio || !precioOferta || !caja) return;
-        function actualizar() {
-            const normal = parseFloat(precio.value);
-            const oferta = parseFloat(precioOferta.value);
-            if (!enOferta.checked || !(normal > 0) || !(oferta > 0)) {
-                caja.textContent = '';
-                caja.className = 'vista-previa-oferta small mt-2';
-                return;
-            }
-            if (oferta >= normal) {
-                caja.textContent = 'El precio de oferta debe ser menor a S/ ' + normal.toFixed(2) + '.';
-                caja.className = 'vista-previa-oferta small mt-2 text-danger';
-                return;
-            }
-            const descuento = Math.round((normal - oferta) * 100 / normal);
-            caja.textContent = 'Vista previa: S/ ' + normal.toFixed(2) + ' → S/ ' + oferta.toFixed(2) + ' (−' + descuento + '%, ahorro S/ ' + (normal - oferta).toFixed(2) + ')';
-            caja.className = 'vista-previa-oferta small mt-2 text-success fw-semibold';
-        }
-        [precio, precioOferta, enOferta].forEach(function(el) {
-            el.addEventListener('input', actualizar);
-            el.addEventListener('change', actualizar);
-        });
-        actualizar();
-    })();
-
-    (function() {
-        const selectUnidad = document.getElementById('id_unidad');
-        const sufijoStock = document.getElementById('sufijoStockUnidad');
-        const sufijoMinimo = document.getElementById('sufijoMinimoUnidad');
-        const mapaUnidades = {
-            'KG': 'kg',
-            'SACO': 'sacos',
-            'CAJA': 'cajas',
-            'ARROBA': 'arrobas',
-            'TONELADA': 'ton.'
-        };
-        function actualizarEtiquetaUnidad() {
-            if (!selectUnidad) return;
-            const texto = mapaUnidades[selectUnidad.value] || 'unid.';
-            if (sufijoStock) sufijoStock.textContent = texto;
-            if (sufijoMinimo) sufijoMinimo.textContent = texto;
-        }
-        if (selectUnidad) {
-            selectUnidad.addEventListener('change', actualizarEtiquetaUnidad);
-            actualizarEtiquetaUnidad();
-        }
-    })();
-</script>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/subir_foto.js' %}"></script>
+<script src="{% static 'js/subir_foto.js' %}?v={{ version_estaticos }}"></script>
 {% endblock %}
