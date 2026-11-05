@@ -2,7 +2,7 @@
 // Antes de enviarla se recorta y achica a 1200x900 (4:3) para que se vea bien en la web.
 document.addEventListener('DOMContentLoaded', function () {
     var zona = document.getElementById('zonaFoto');
-    var input = document.querySelector('input[type="file"][name="imagen"]');
+    var input = document.querySelector('input[type="file"][name="' + ((zona && zona.getAttribute('data-campo')) || 'imagen') + '"]');
     var vista = document.getElementById('vistaFoto');
     var boton = document.getElementById('btnElegirFoto');
     var textoBoton = document.getElementById('textoBtnFoto');
