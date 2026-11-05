@@ -1,349 +1,105 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Panel del Vendedor | AgroComercial{% endblock %}
+{% block title %}Mi puesto | AgroComercial{% endblock %}
 
 {% block content %}
-<div class="bg-white border p-4 mb-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+{% if not puesto %}
+<section class="bienvenida-vendedor entrar">
+    <span class="antetitulo"><i class="bi bi-shop" aria-hidden="true"></i>Empieza aquí</span>
+    <h1 class="h2 fw-bold mb-2">Hola, {{ user.first_name|default:user.username }}. Vamos a poner tu puesto en el mapa</h1>
+    <p class="text-muted mb-4">Solo 2 pasos y tus productos ya se ven en la web.</p>
+    <ol class="pasos-inicio">
+        <li class="actual"><span class="numero">1</span><div><strong>Marca tu puesto</strong><span>Ubicación, nombre del lugar, número y foto.</span></div></li>
+        <li><span class="numero">2</span><div><strong>Publica tus productos</strong><span>Foto, precio y cuánto tienes.</span></div></li>
+    </ol>
+    <a href="{% url 'configurar_puesto' %}" class="btn btn-success btn-lg mt-3"><i class="bi bi-geo-alt-fill me-1" aria-hidden="true"></i>Marcar mi puesto en el mapa</a>
+</section>
+{% else %}
+
+<section class="cabecera-puesto entrar">
+    <img src="{{ puesto.url_foto }}" alt="Foto de {{ puesto.nombre }}" class="foto-puesto grande" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+    <div class="flex-grow-1 min-w-0">
+        <span class="antetitulo mb-1"><i class="bi bi-shop" aria-hidden="true"></i>Mi puesto</span>
+        <h1 class="h3 fw-bold mb-1 text-truncate">{{ puesto.nombre }}</h1>
+        <div class="text-muted small mb-2">{{ puesto.titulo_puesto }}{% if puesto.referencia %} · {{ puesto.referencia }}{% endif %}{% if puesto.horario %} · {{ puesto.horario }}{% endif %}</div>
+        <div class="d-flex flex-wrap gap-1">{% for icono, nombre in puesto.iconos_pago %}<span class="chip-pago chico"><i class="bi {{ icono }}" aria-hidden="true"></i>{{ nombre }}</span>{% endfor %}</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 acciones-puesto">
+        <a href="{% url 'crear_producto' %}" class="btn btn-success"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Publicar producto</a>
+        <a href="{% url 'configurar_puesto' %}" class="btn btn-outline-secondary"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Editar puesto</a>
+    </div>
+</section>
+
+<div class="row g-3 my-1" data-escalonado>
+    <div class="col-6 col-lg-3"><div class="tarjeta-cifra"><span>Vendido hoy</span><strong class="text-success" id="vendidoHoy">S/ {{ vendido_hoy|floatformat:2 }}</strong></div></div>
+    <div class="col-6 col-lg-3"><div class="tarjeta-cifra"><span>Ventas registradas hoy</span><strong id="unidadesHoy">{{ unidades_hoy }}</strong></div></div>
+    <div class="col-6 col-lg-3"><div class="tarjeta-cifra"><span>Productos en la web</span><strong>{{ total_publicados }}</strong>{% if total_agotados %}<small class="text-danger">{{ total_agotados }} agotado{{ total_agotados|pluralize }}</small>{% endif %}</div></div>
+    <div class="col-6 col-lg-3"><div class="tarjeta-cifra"><span>Lo tienen en su lista</span><strong>{{ total_interesados }}</strong><small class="text-muted">compradores</small></div></div>
+</div>
+
+<section class="mt-4" aria-labelledby="tituloProductos">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
         <div>
-            <h1 class="h4 fw-bold mb-1">Panel de Vendedor: {{ perfil.nombre_finca|default:user.username }}</h1>
-            <p class="text-muted small mb-0">
-                Gestiona tus productos publicados, responde ofertas de compradores y actualiza tus despachos.
-            </p>
-        </div>
-        <div class="mt-3 mt-md-0 d-flex flex-wrap gap-2">
-            <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm">
-                + Publicar Nuevo Producto
-            </a>
-            <a href="{% url 'ventas_por_oferta' %}" class="btn btn-outline-secondary btn-sm">
-                Ofertas Recibidas ({{ ofertas_recibidas.count }})
-            </a>
-            <a href="{% url 'perfil' %}" class="btn btn-outline-dark btn-sm">
-                <i class="bi bi-gear me-1"></i>Configuración de Usuario
-            </a>
+            <h2 class="h4 fw-bold mb-0" id="tituloProductos">Mis productos</h2>
+            <p class="small text-muted mb-0">¿Vendiste algo? Toca <strong>Vendí</strong> y los compradores lo ven al instante.</p>
         </div>
     </div>
-    {% if not perfil.puede_vender_publicamente %}
-    <div class="estado-verificacion {% if perfil.estado_verificacion == 'PENDIENTE' %}estado-espera{% elif perfil.estado_verificacion == 'RECHAZADO' %}estado-error{% else %}estado-espera{% endif %} mt-3">
-        <i class="bi {% if perfil.estado_verificacion == 'PENDIENTE' %}bi-hourglass-split{% else %}bi-patch-exclamation{% endif %}" aria-hidden="true"></i>
-        <div class="flex-grow-1">
-            {% if perfil.estado_verificacion == 'PENDIENTE' %}
-                <strong>Estamos revisando tu verificación.</strong> Tus productos se mostrarán a los compradores apenas te aprobemos.
-            {% elif perfil.estado_verificacion == 'RECHAZADO' %}
-                <strong>Tu verificación necesita una corrección.</strong> Tus productos siguen ocultos hasta que la corrijas.
-            {% else %}
-                <strong>Tus productos todavía no se ven.</strong> Verifica tu cuenta de vendedor (unos 3 minutos) para empezar a vender.
-            {% endif %}
-        </div>
-        <a href="{% url 'verificacion_vendedor' %}" class="btn btn-sm {% if perfil.estado_verificacion == 'PENDIENTE' %}btn-outline-secondary{% else %}btn-success{% endif %} flex-shrink-0">{% if perfil.estado_verificacion == 'PENDIENTE' %}Ver estado{% elif perfil.estado_verificacion == 'RECHAZADO' %}Corregir{% else %}Verificar ahora{% endif %}</a>
-    </div>
-    {% endif %}
-    {% if not perfil.cuenta_bancaria or not perfil.ruc_dni %}
-    <div class="mt-3 pt-3 border-top d-flex flex-column flex-md-row justify-content-between align-items-md-center small">
-        <span class="text-secondary">
-            <i class="bi bi-info-circle text-success me-1"></i>
-            ¿Ingresaste con Google? Puedes agregar tu <strong>RUC</strong>, el nombre de tu <strong>chacra/granja (opcional)</strong> y tu <strong>cuenta en soles (opcional)</strong> para habilitar pagos por depósito.
-        </span>
-        <a href="{% url 'perfil' %}" class="text-success fw-semibold text-decoration-none mt-1 mt-md-0">
-            Completar en Configuración de Usuario &rarr;
-        </a>
-    </div>
-    {% endif %}
-</div>
 
-<!-- Tarjetas de resumen del vendedor con la misma altura exacta -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
-            <span class="text-muted small d-block mb-1">Productos Activos</span>
-            <h3 class="h4 fw-bold text-dark mb-0">{{ total_activos }} <span class="text-muted fs-6">/ {{ mis_productos.count }}</span></h3>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
-            <span class="text-muted small d-block mb-1">Ofertas Activas / Vencidas</span>
-            <h3 class="h4 fw-bold text-dark mb-0">{{ total_ofertas_activas }} <span class="text-muted fs-6">/ {{ total_vencidas }} vencidas</span></h3>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
-            <span class="text-muted small d-block mb-1">Pedidos Realizados</span>
-            <h3 class="h4 fw-bold text-dark mb-0">{{ pedidos_recibidos.count }}</h3>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="bg-white border p-3 h-100 d-flex flex-column justify-content-between">
-            <span class="text-muted small d-block mb-1">Total de Ventas</span>
-            <h3 class="h4 fw-bold text-success mb-0">S/ {{ ingresos_estimados|default:"0.00" }}</h3>
-        </div>
-    </div>
-</div>
-
-<!-- Grafico simple de ventas por semana -->
-<section class="grafico-ventas mb-4" aria-labelledby="tituloGrafico">
-    <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-3">
-        <h2 class="h5 fw-bold mb-0" id="tituloGrafico">Ventas por semana (S/)</h2>
-        <span class="small text-muted">Últimas 8 semanas · pedidos confirmados, en camino o entregados</span>
-    </div>
-    {% if hay_ventas_semanas %}
-    <div class="barras" aria-hidden="true">
-        {% for semana in ventas_semanas %}
-        <div class="barra-columna">
-            <span class="barra-valor">S/ {{ semana.total|floatformat:0 }}</span>
-            <span class="barra" style="height: {{ semana.alto }}%;"></span>
-            <span class="barra-fecha">{{ semana.desde|date:"d/m" }}</span>
+    <div class="lista-panel" data-stock-url="{% url 'stock_publico' %}">
+        {% for producto in productos %}
+        <article class="fila-panel {% if producto.stock == 0 %}esta-agotado{% endif %}" id="producto-{{ producto.id }}" data-stock-id="{{ producto.id }}" data-fila-panel>
+            <a href="{% url 'detalle_producto' producto.id %}" class="flex-shrink-0"><img src="{{ producto.url_imagen }}" alt="" class="foto-item" loading="lazy" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';"></a>
+            <div class="info flex-grow-1 min-w-0">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <strong class="text-truncate">{{ producto.nombre }}</strong>
+                    {% if producto.oferta_activa %}<span class="chip chip-descuento chico">-{{ producto.porcentaje_descuento }}%</span>{% endif %}
+                    {% if not producto.disponible %}<span class="badge text-bg-secondary">Oculto</span>{% endif %}
+                </div>
+                <div class="small text-muted">S/ {{ producto.precio_actual }} / {{ producto.unidad_corta }}{% if producto.interesados %} · <i class="bi bi-people" aria-hidden="true"></i> {{ producto.interesados }} en su lista{% endif %}</div>
+                <a href="{% url 'editar_producto' producto.id %}" class="small">Editar producto</a>
+            </div>
+            <div class="stock-panel" data-existencias aria-live="polite">
+                <strong data-numero-stock>{{ producto.stock }}</strong>
+                <span class="small text-muted">{{ producto.nombre_unidad_stock }}</span>
+                <span class="d-none" data-texto-stock>{{ producto.stock }}</span>
+            </div>
+            <form method="post" action="{% url 'actualizar_stock' producto.id %}" data-stock-rapido class="acciones-stock">
+                {% csrf_token %}
+                <div class="selector-cantidad chico">
+                    <button type="button" data-restar aria-label="Menos"><i class="bi bi-dash" aria-hidden="true"></i></button>
+                    <input type="number" name="cantidad" value="1" min="1" inputmode="numeric" aria-label="Cantidad para {{ producto.nombre }}">
+                    <button type="button" data-sumar aria-label="Más"><i class="bi bi-plus" aria-hidden="true"></i></button>
+                </div>
+                <button class="btn btn-success btn-sm fw-semibold" name="accion" value="vendi" {% if producto.stock == 0 %}disabled{% endif %} data-boton-vendi><i class="bi bi-bag-check me-1" aria-hidden="true"></i>Vendí</button>
+                <button class="btn btn-outline-secondary btn-sm" name="accion" value="sumar" title="Llegó más mercadería"><i class="bi bi-box-arrow-in-down me-1" aria-hidden="true"></i>Llegó</button>
+                <button class="btn btn-outline-danger btn-sm" name="accion" value="agotado" formnovalidate {% if producto.stock == 0 %}disabled{% endif %} data-boton-agotado>Agotado</button>
+            </form>
+        </article>
+        {% empty %}
+        <div class="estado-vacio">
+            <i class="bi bi-basket" aria-hidden="true"></i>
+            <h3 class="h5 fw-bold">Publica tu primer producto</h3>
+            <p class="text-muted">Una foto, el precio y cuánto tienes. En un minuto ya aparece en la web.</p>
+            <a href="{% url 'crear_producto' %}" class="btn btn-success">Publicar producto</a>
         </div>
         {% endfor %}
     </div>
-    <table class="visually-hidden">
-        <caption>Ventas por semana</caption>
-        <tr><th scope="col">Semana desde</th><th scope="col">Ventas (S/)</th></tr>
-        {% for semana in ventas_semanas %}<tr><td>{{ semana.desde|date:"d/m/Y" }}</td><td>{{ semana.total }}</td></tr>{% endfor %}
-    </table>
-    {% else %}
-    <p class="text-muted small mb-0"><i class="bi bi-bar-chart me-1" aria-hidden="true"></i>Aún no hay ventas en las últimas 8 semanas. Cuando recibas pedidos verás aquí cómo van tus ventas.</p>
-    {% endif %}
 </section>
 
-<!-- Seccion 1: Mis Productos Publicados -->
-<div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h5 fw-bold mb-0">1. Mis Productos Agrícolas Publicados</h2>
-        <a href="{% url 'crear_producto' %}" class="btn btn-sm btn-outline-success">+ Agregar Producto</a>
-    </div>
-    {% if mis_productos %}
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Imagen</th>
-                    <th>Producto</th>
-                    <th>Precio Base</th>
-                    <th>Modalidad Oferta</th>
-                    <th>Stock</th>
-                    <th>Estado</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for prod in mis_productos %}
-                <tr id="producto-{{ prod.id }}">
-                    <td style="width: 100px;">
-                        <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" class="img-referencia" style="height: 55px;">
-                    </td>
-                    <td>
-                        <a href="{% url 'detalle_producto' prod.id %}" class="fw-bold text-dark text-decoration-none">
-                            {{ prod.nombre }}
-                        </a>
-                        <div class="text-muted small">Cosecha: {{ prod.fecha_cosecha|date:"d/m/Y" }} | Origen: {{ prod.origen }}</div>
-                    </td>
-                    <td>
-                        <strong>S/ {{ prod.precio }}</strong>
-                        <span class="text-muted small">/ {{ prod.get_unidad_display }}</span>
-                    </td>
-                    <td>
-                        {% if prod.oferta_activa %}
-                            <span class="badge bg-danger">En Oferta: S/ {{ prod.precio_oferta }} (-{{ prod.porcentaje_descuento }}%)</span>
-                            {% if prod.oferta_fin %}<div class="small text-muted mt-1">Hasta {{ prod.oferta_fin|date:"d/m/Y" }}</div>{% endif %}
-                        {% elif prod.oferta_programada %}
-                            <span class="estado-publicacion programada">Programada desde {{ prod.oferta_inicio|date:"d/m" }}</span>
-                        {% elif prod.en_oferta and prod.oferta_fin and not prod.oferta_pendiente_pago %}
-                            <span class="badge bg-light text-secondary border">Oferta terminada</span>
-                        {% else %}
-                            <span class="badge bg-light text-secondary border">Precio Regular</span>
-                        {% endif %}
-                        {% if prod.acepta_ofertas %}
-                            <div class="small text-success mt-1">Acepta ofertas</div>
-                        {% endif %}
-                    </td>
-                    <td class="fw-semibold">{{ prod.stock }} {{ prod.nombre_unidad_stock }}</td>
-                    <td>
-                        {% if prod.oferta_pendiente_pago %}
-                            <span class="estado-publicacion pendiente">Pendiente de pago</span>
-                        {% elif prod.esta_vencida %}
-                            <span class="estado-publicacion vencida">Vencida</span>
-                        {% elif prod.stock == 0 %}
-                            <span class="estado-publicacion pausada">Agotado</span>
-                        {% elif not prod.disponible %}
-                            <span class="estado-publicacion pausada">Pausada</span>
-                        {% else %}
-                            <span class="estado-publicacion activa">Activa</span>
-                        {% endif %}
-                        <div class="mt-2" style="min-width: 170px;">
-                            {% if prod.esta_vencida %}
-                                <span class="small text-muted">Venció el {{ prod.fecha_vencimiento|date:"d/m/Y" }}</span>
-                            {% else %}
-                                {% include 'includes/barra_tiempo.html' with prod=prod compacta=True %}
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td class="text-end">
-                        <div class="d-inline-flex gap-1">
-                            {% if prod.oferta_pendiente_pago %}
-                            <a href="{% url 'pagar_comision_oferta' prod.id %}" class="btn btn-success btn-sm">
-                                Pagar comisión
-                            </a>
-                            {% endif %}
-                            {% if prod.esta_vencida %}
-                            <form action="{% url 'renovar_producto' prod.id %}" method="post">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success btn-sm">Renovar</button>
-                            </form>
-                            {% elif not prod.oferta_pendiente_pago and prod.stock > 0 %}
-                            <form action="{% url 'pausar_producto' prod.id %}" method="post">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-secondary btn-sm">{% if prod.disponible %}Pausar{% else %}Activar{% endif %}</button>
-                            </form>
-                            {% endif %}
-                            <a href="{% url 'editar_producto' prod.id %}" class="btn btn-outline-secondary btn-sm">
-                                Editar
-                            </a>
-                            <form action="{% url 'eliminar_producto' prod.id %}" method="post" onsubmit="return confirm('¿Seguro que deseas eliminar este producto?');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-danger btn-sm">Eliminar</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="text-center py-4 text-muted">
-        <p class="mb-2">Aún no has publicado ningún producto agrícola.</p>
-        <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm">Publicar mi primer producto</a>
-    </div>
-    {% endif %}
-</div>
+<section class="mt-4" aria-labelledby="tituloVentas">
+    <h2 class="h5 fw-bold" id="tituloVentas">Ventas de hoy</h2>
+    <ul class="ventas-hoy list-unstyled mb-0" id="ventasHoy">
+        {% for venta in ventas_hoy %}
+        <li><span>{{ venta.fecha|time:"H:i" }}</span><strong>{{ venta.producto.nombre }}</strong><span>{{ venta.cantidad }} × S/ {{ venta.precio_unitario }}</span><span class="text-success fw-semibold">S/ {{ venta.total|floatformat:2 }}</span></li>
+        {% empty %}
+        <li class="text-muted small" data-sin-ventas>Todavía no registraste ventas hoy.</li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+{% endblock %}
 
-<!-- Seccion 2: Ofertas de Negociacion Recibidas -->
-<div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
-    <h2 class="h5 fw-bold mb-3">2. Ofertas de Precio Recibidas de Compradores</h2>
-    {% if ofertas_recibidas %}
-    <div class="table-responsive">
-        <table class="table align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>#</th>
-                    <th>Producto</th>
-                    <th>Comprador</th>
-                    <th>Cantidad</th>
-                    <th>Precio Ofrecido</th>
-                    <th>Total</th>
-                    <th>Estado</th>
-                    <th>Decisión del Vendedor</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for of in ofertas_recibidas %}
-                <tr>
-                    <td class="fw-bold">#{{ of.id }}</td>
-                    <td>{{ of.producto.nombre }}</td>
-                    <td>
-                        <strong>{{ of.comprador.first_name|default:of.comprador.username }}</strong>
-                        {% if of.mensaje %}
-                            <div class="text-muted small fst-italic">"{{ of.mensaje }}"</div>
-                        {% endif %}
-                    </td>
-                    <td>{{ of.cantidad }}</td>
-                    <td class="fw-bold text-dark">S/ {{ of.precio_unitario_ofrecido }}</td>
-                    <td class="fw-bold text-success">S/ {{ of.total_ofrecido }}</td>
-                    <td>
-                        {% if of.estado == 'PENDIENTE' %}
-                            <span class="badge bg-light text-secondary border">Pendiente</span>
-                        {% elif of.estado == 'ACEPTADA' %}
-                            <span class="badge bg-success">Aceptada</span>
-                        {% else %}
-                            <span class="badge bg-light text-muted border">{{ of.get_estado_display }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if of.estado == 'PENDIENTE' %}
-                        <form action="{% url 'responder_oferta' of.id %}" method="post" class="d-flex gap-1">
-                            {% csrf_token %}
-                            <input type="hidden" name="respuesta_vendedor" value="Oferta aprobada por el productor.">
-                            <button type="submit" name="decision" value="ACEPTAR" class="btn btn-success btn-sm">Aceptar</button>
-                            <button type="submit" name="decision" value="RECHAZAR" class="btn btn-outline-danger btn-sm">Rechazar</button>
-                        </form>
-                        {% else %}
-                            <span class="small text-muted">Respondida</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="text-muted small mb-0">No tienes ofertas pendientes en este momento.</p>
-    {% endif %}
-</div>
-
-<!-- Seccion 3: Pedidos Recibidos y Despachos -->
-<div class="bg-white border rounded-3 p-4 shadow-sm">
-    <h2 class="h5 fw-bold mb-3">3. Pedidos Recibidos y Estado de Envío</h2>
-    {% if pedidos_recibidos %}
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th># Pedido</th>
-                    <th>Producto</th>
-                    <th>Comprador y Destino</th>
-                    <th>Cant. / Total</th>
-                    <th>Modalidad Pago</th>
-                    <th>Estado Envío</th>
-                    <th>Actualizar Despacho</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ped in pedidos_recibidos %}
-                <tr>
-                    <td class="fw-bold">
-                        #{{ ped.id }}
-                        {% if ped.codigo_transaccion %}
-                            <div class="text-muted small">{{ ped.codigo_transaccion }}</div>
-                        {% endif %}
-                    </td>
-                    <td>{{ ped.producto.nombre }}</td>
-                    <td>
-                        <div><strong>{{ ped.comprador.first_name|default:ped.comprador.username }} {{ ped.comprador.last_name }}</strong></div>
-                        <div class="text-muted small">{{ ped.direccion_entrega }} ({{ ped.ciudad_destino }})</div>
-                    </td>
-                    <td>
-                        <div>{{ ped.cantidad }} unid.</div>
-                        <strong class="text-success">S/ {{ ped.total }}</strong>
-                    </td>
-                    <td>
-                        <div class="small fw-semibold">{{ ped.get_metodo_pago_display }}</div>
-                        <span class="badge bg-success-subtle text-success border border-success-subtle">{{ ped.get_estado_pago_display }}</span>
-                    </td>
-                    <td>
-                        <span class="badge bg-light text-dark border">{{ ped.get_estado_display }}</span>
-                    </td>
-                    <td>
-                        <form action="{% url 'cambiar_estado_pedido' ped.id %}" method="post" class="d-flex gap-1">
-                            {% csrf_token %}
-                            <select name="estado" class="form-select form-select-sm" style="min-width: 150px;">
-                                {% for cod, nombre_est in estados_pedido %}
-                                    <option value="{{ cod }}" {% if ped.estado == cod %}selected{% endif %}>
-                                        {{ nombre_est }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            <button type="submit" class="btn btn-success btn-sm">Guardar</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="text-center py-4 text-muted small">
-        Aún no has recibido pedidos de tus productos.
-    </div>
-    {% endif %}
-</div>
+{% block extra_js %}
+<script src="{% static 'js/panel-puesto.js' %}?v={{ version_estaticos }}"></script>
 {% endblock %}
