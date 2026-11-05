@@ -1,42 +1,61 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Productores | AgroComercial{% endblock %}
+{% block title %}Puestos | AgroComercial{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
 
 {% block content %}
 <div class="encabezado-seccion entrar">
     <div>
-        <span class="antetitulo"><i class="bi bi-people-fill" aria-hidden="true"></i>Directo del campo</span>
-        <h1 class="h2 fw-bold mb-1">Productores de Arequipa</h1>
-        <p class="text-muted mb-0">Agricultores y asociaciones que venden en la plataforma. Entra a su página para ver sus productos y calificaciones.</p>
+        <span class="antetitulo"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Dónde comprar</span>
+        <h1 class="h2 fw-bold mb-1">Puestos en el mapa</h1>
+        <p class="text-muted mb-0">Toca un puesto para ver lo que tiene hoy o cómo llegar.</p>
     </div>
     {% if not user.is_authenticated %}
-        <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-outline-success"><i class="bi bi-person-plus me-1" aria-hidden="true"></i>Vender en AgroComercial</a>
+        <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-outline-success"><i class="bi bi-shop me-1" aria-hidden="true"></i>Tengo un puesto</a>
     {% endif %}
 </div>
 
-<div class="row g-3 g-lg-4" data-escalonado>
-    {% for perfil in perfiles_productores %}
-    <div class="col-md-6 col-xl-4">
-        <a href="{% url 'perfil_productor' perfil.usuario.id %}" class="tarjeta-productor h-100">
-            <span class="avatar-inicial">{{ perfil.usuario.first_name|default:perfil.usuario.username|slice:":1"|upper }}</span>
-            <span class="flex-grow-1 min-w-0">
-                <strong class="d-block text-truncate">{{ perfil.usuario.get_full_name|default:perfil.usuario.username }} {% if perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% elif perfil.vendedor_verificado %}{% include 'includes/etiqueta_verificado.html' with p=perfil %}{% endif %}</strong>
-                <span class="small text-muted d-block text-truncate">{{ perfil.nombre_finca|default:"Productor independiente" }}</span>
-                <span class="small text-muted d-block text-truncate"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ perfil.ubicacion|default:"Arequipa" }}</span>
-                <span class="small text-success fw-semibold">{{ perfil.total_publicados }} producto{{ perfil.total_publicados|pluralize }} publicado{{ perfil.total_publicados|pluralize }}</span>
-            </span>
-            <i class="bi bi-arrow-right text-muted" aria-hidden="true"></i>
-        </a>
-    </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="estado-vacio">
-            <i class="bi bi-people" aria-hidden="true"></i>
-            <h2 class="h5 fw-bold">Aún no hay productores registrados</h2>
-            <p class="text-muted">Si cultivas en Arequipa, crea tu cuenta de vendedor y publica tu primera cosecha.</p>
-            <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-success">Crear cuenta de vendedor</a>
-        </div>
-    </div>
+{% if puestos %}
+<div id="mapaPuestos" class="mapa-puestos entrar entrar-2" aria-label="Mapa de puestos"></div>
+{{ puntos|json_script:"datosPuestos" }}
+<div class="row g-3 g-lg-4 mt-1" data-escalonado>
+    {% for puesto in puestos %}
+    <div class="col-sm-6 col-xl-4">{% include 'includes/tarjeta_puesto.html' with puesto=puesto %}</div>
     {% endfor %}
 </div>
+{% else %}
+<div class="estado-vacio">
+    <i class="bi bi-shop" aria-hidden="true"></i>
+    <h2 class="h5 fw-bold">Todavía no hay puestos con productos</h2>
+    <p class="text-muted">Cuando los vendedores marquen su puesto y publiquen, aparecerán aquí.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script>
+(function () {
+    var nodo = document.getElementById('datosPuestos');
+    if (!nodo || !window.L) return;
+    var puntos = JSON.parse(nodo.textContent);
+    var mapa = L.map('mapaPuestos', { scrollWheelZoom: false });
+    L.Icon.Default.imagePath = '{% static "vendor/leaflet/images/" %}';
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapa);
+    var grupo = [];
+    puntos.forEach(function (p) {
+        var div = document.createElement('div');
+        var titulo = document.createElement('strong'); titulo.textContent = p.nombre; div.appendChild(titulo);
+        var sub = document.createElement('div'); sub.className = 'small text-muted'; sub.textContent = p.puesto + ' · ' + p.productos + ' producto(s)'; div.appendChild(sub);
+        var ver = document.createElement('a'); ver.href = p.url; ver.textContent = 'Ver productos'; ver.className = 'd-block mt-1';
+        var ir = document.createElement('a'); ir.href = p.llegar; ir.target = '_blank'; ir.rel = 'noopener'; ir.textContent = 'Cómo llegar ↗';
+        div.appendChild(ver); div.appendChild(ir);
+        L.marker([p.lat, p.lng], { title: p.nombre }).addTo(mapa).bindPopup(div);
+        grupo.push([p.lat, p.lng]);
+    });
+    if (grupo.length === 1) mapa.setView(grupo[0], 16); else mapa.fitBounds(grupo, { padding: [30, 30], maxZoom: 16 });
+})();
+</script>
 {% endblock %}
