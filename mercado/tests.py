@@ -11,13 +11,19 @@ import tempfile
 from django.urls import reverse
 from django.utils import timezone
 from .forms import ProductoForm
-from .models import Categoria, PerfilUsuario, Producto, Conversacion, Mensaje, Notificacion, Favorito, OfertaNegociacion, ItemCarrito, Pedido, LUGAR_POR_DEFECTO
+from .models import Puesto, Categoria, PerfilUsuario, Producto, Conversacion, Mensaje, Notificacion, Favorito, OfertaNegociacion, ItemCarrito, Pedido, LUGAR_POR_DEFECTO
+
+
+def dar_puesto(usuario, nombre='Mercado de prueba'):
+    """Los productos solo se muestran si el vendedor marco su puesto en el mapa."""
+    return Puesto.objects.create(vendedor=usuario, nombre=nombre, numero='1', latitud=Decimal('-16.40'), longitud=Decimal('-71.53'))
 
 
 class PruebasOfertasYVencimiento(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('vendedor', password='clave12345', first_name='Ana')
         PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
+        dar_puesto(self.vendedor)
         self.categoria = Categoria.objects.create(nombre='Frutas de Estación')
 
     def crear(self, **datos):
@@ -113,7 +119,7 @@ class PruebasOfertasYVencimiento(TestCase):
         self.client.login(username='vendedor', password='clave12345')
         for nombre in ('ventas_por_oferta', 'catalogo'):
             respuesta = self.client.get(reverse(nombre))
-            self.assertContains(respuesta, 'Disponibles ahora')
+            self.assertContains(respuesta, 'Ofertas de hoy' if nombre == 'ventas_por_oferta' else 'Productos disponibles')
             self.assertContains(respuesta, 'data-stock-id')
         respuesta = self.client.get(reverse('catalogo'), {'precio_max': '9', 'ofertas': '1', 'ubicacion': 'Cayma, Arequipa'})
         self.assertContains(respuesta, 'Palta')
@@ -131,6 +137,7 @@ class PruebasChatYFavoritos(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('vendedor', password='clave12345', first_name='Ana')
         PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
+        dar_puesto(self.vendedor)
         self.comprador = User.objects.create_user('comprador', password='clave12345', first_name='Luis')
         PerfilUsuario.objects.create(usuario=self.comprador, rol='COMPRADOR')
         self.intruso = User.objects.create_user('intruso', password='clave12345')
@@ -214,6 +221,7 @@ class PruebasFotosExtra(TestCase):
         self.addCleanup(shutil.rmtree, self.carpeta, ignore_errors=True)
         self.vendedor = User.objects.create_user('vendedor', password='clave12345')
         PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
+        dar_puesto(self.vendedor)
         self.producto = Producto.objects.create(
             productor=self.vendedor, nombre='Palta', descripcion='Palta Hass',
             precio=Decimal('6.00'), stock=80, origen='Cayma, Arequipa',
@@ -303,8 +311,10 @@ class PruebasCuentasSeparadas(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('vendedor', password='clave12345')
         PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
+        dar_puesto(self.vendedor)
         self.otro = User.objects.create_user('otro_vendedor', password='clave12345')
         PerfilUsuario.objects.create(usuario=self.otro, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
+        dar_puesto(self.otro)
         self.producto = Producto.objects.create(
             productor=self.otro, nombre='Ajo', descripcion='Ajo morado',
             precio=Decimal('8.00'), stock=100, origen='Yarabamba, Arequipa',
@@ -419,6 +429,7 @@ class PruebasVerificacionVendedor(TestCase):
         self.perfil.refresh_from_db()
         self.assertEqual(self.perfil.estado_verificacion, 'VERIFICADO')
         self.assertFalse(self.perfil.organico_verificado)
+        dar_puesto(self.vendedor)
         self.assertIn(self.producto, Producto.objects.publicados())
         self.assertTrue(Notificacion.objects.filter(usuario=self.vendedor, texto__icontains='verificada').exists())
         self.client.logout()
