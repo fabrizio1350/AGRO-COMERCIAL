@@ -16,6 +16,7 @@
 <form method="post" action="{% url 'pasarela_pago' %}" id="formPasarelaCulqi">
     {% csrf_token %}
     <input type="hidden" name="culqi_token" id="inputCulqiToken" value="">
+    <input type="hidden" name="cotizacion" value="{{ cotizacion }}">
 
     <div class="row g-4">
         <div class="col-lg-8">
@@ -204,7 +205,7 @@
     }
 
     // Si el usuario configuro una llave publica real de Culqi (pk_test_...), habilita el tokenizador de Culqi
-    const culqiPublicKey = "{{ culqi_public_key }}";
+    const culqiPublicKey = "{{ culqi_public_key|escapejs }}";
     const formPago = document.getElementById('formPasarelaCulqi');
 
     if (typeof Culqi !== 'undefined' && culqiPublicKey && culqiPublicKey !== 'pk_test_0000000000000000') {

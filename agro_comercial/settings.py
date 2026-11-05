@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -13,24 +14,28 @@ if env_path.exists():
                 clave, valor = linea.split('=', 1)
                 os.environ.setdefault(clave.strip(), valor.strip().strip('"').strip("'"))
 
-# Clave secreta protegida por variable de entorno
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-agro-comercial-universidad-2026-clave-segura')
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+SECRET_KEY = os.environ.get('SECRET_KEY', '')
+if DEBUG:
+    SECRET_KEY = SECRET_KEY or 'django-insecure-solo-desarrollo-local-agro-comercial'
+elif len(SECRET_KEY) < 50 or len(set(SECRET_KEY)) < 5 or SECRET_KEY.startswith('django-insecure-'):
+    raise ImproperlyConfigured('Configura una SECRET_KEY aleatoria de al menos 50 caracteres.')
 
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-
-ALLOWED_HOSTS = ['*']
-
-CSRF_TRUSTED_ORIGINS = [
-    'http://proyects.site',
-    'https://proyects.site',
-    'http://*.proyects.site',
-    'https://*.proyects.site',
-    'http://149.34.50.121',
-    'http://149.34.50.121:8000',
+ALLOWED_HOSTS = [
+    host.strip() for host in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,[::1]').split(',')
+    if host.strip()
 ]
+if not DEBUG and (not ALLOWED_HOSTS or '*' in ALLOWED_HOSTS):
+    raise ImproperlyConfigured('Configura ALLOWED_HOSTS con los dominios del sitio.')
 
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+if os.environ.get('TRUST_PROXY_HTTPS', '').lower() == 'true':
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+DATOS_DEMO_AUTOMATICOS = DEBUG and os.environ.get('DATOS_DEMO_AUTOMATICOS', '').lower() == 'true'
 
 # Permite que la ventana emergente de Google Sign-In se comunique con la pagina
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
@@ -82,6 +87,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {'transaction_mode': 'IMMEDIATE'},
     }
 }
 
@@ -152,6 +158,7 @@ PUBLICACION_DIAS_MAXIMO = int(os.environ.get('PUBLICACION_DIAS_MAXIMO', '90'))
 # ==============================================================================
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
 
 # Llaves de prueba (Sandbox) de Culqi
 CULQI_PUBLIC_KEY = os.environ.get('CULQI_PUBLIC_KEY', 'pk_test_0000000000000000')

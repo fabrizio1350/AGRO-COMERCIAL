@@ -3,11 +3,14 @@ import urllib.request
 import urllib.parse
 import urllib.error
 import uuid
+from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.utils import timezone
 from django.core.mail import send_mail
+from django.core import signing
+from django.db import transaction
 from django.http import JsonResponse, HttpResponseForbidden, FileResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -16,6 +19,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.html import escape
 from django.core.paginator import Paginator
 from django.db.models import Q, F, Case, When, Count, Avg, DecimalField, ExpressionWrapper
 from .models import (
@@ -51,7 +55,7 @@ from .forms import (
 
 def asegurar_datos_iniciales():
     """Crea datos de prueba iniciales si la base de datos esta vacia."""
-    if Producto.objects.exists():
+    if not settings.DATOS_DEMO_AUTOMATICOS or Producto.objects.exists():
         return
 
     for nombre_cat, descripcion_cat in CATEGORIAS_AGRICOLAS:
@@ -322,6 +326,8 @@ def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
     monto_centimos = int(Decimal(str(total_soles)) * 100)
     secret_key = getattr(settings, 'CULQI_SECRET_KEY', '').strip()
 
+    if secret_key and not secret_key.startswith('sk_test_'):
+        return False, None, "El cobro con tarjeta solo admite el entorno de pruebas."
     if secret_key:
         if not culqi_token.startswith('tkn_'):
             return False, None, "No se recibió la tarjeta. Vuelve a ingresar los datos de pago."
@@ -345,8 +351,10 @@ def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 datos_resp = json.loads(resp.read().decode('utf-8'))
-                charge_id = datos_resp.get('id', f"chr_test_{uuid.uuid4().hex[:8]}")
-                return True, charge_id, "Cobro procesado en Culqi API"
+                charge_id = datos_resp.get('id')
+                if not isinstance(charge_id, str) or not charge_id.startswith('chr_') or len(charge_id) > 40:
+                    return False, None, "Culqi no confirmó el cargo de prueba."
+                return True, charge_id, "Cargo de prueba procesado en Culqi"
         except urllib.error.HTTPError as e:
             try:
                 err_body = json.loads(e.read().decode('utf-8'))
@@ -354,8 +362,8 @@ def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
             except Exception:
                 msg_err = "No se pudo completar el cargo en Culqi."
             return False, None, msg_err
-        except Exception as e:
-            return False, None, f"Error de conexión con Culqi: {e}"
+        except (OSError, ValueError, AttributeError):
+            return False, None, "No se pudo confirmar la respuesta de Culqi."
 
     # Sin clave secreta la plataforma esta en version de prueba: el pago es simulado y no se cobra nada
     codigo_culqi = f"SIMULADO-{uuid.uuid4().hex[:6].upper()}"
@@ -367,7 +375,6 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
     Envía por correo Gmail la Boleta de Venta Electrónica formal de la compra procesada.
     Usa smtplib directo con las credenciales de .env para que funcione al instante.
     """
-    import os
     import smtplib
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
@@ -407,8 +414,8 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
             f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;text-align:center;'>{p.cantidad}</td>"
             f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;text-align:center;'>{p.producto.nombre_unidad_stock().upper()}</td>"
             f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;'>"
-            f"<strong>{p.producto.nombre}</strong><br>"
-            f"<span style='color:#666;font-size:11px;'>Origen: {p.producto.origen} | Productor: {p.producto.productor.first_name or p.producto.productor.username}</span>"
+            f"<strong>{escape(p.producto.nombre)}</strong><br>"
+            f"<span style='color:#666;font-size:11px;'>Origen: {escape(p.producto.origen)} | Productor: {escape(p.producto.productor.first_name or p.producto.productor.username)}</span>"
             f"</td>"
             f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;text-align:right;'>S/ {p.precio_unitario}</td>"
             f"<td style='padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;text-align:right;font-weight:bold;'>S/ {p.total}</td>"
@@ -437,12 +444,14 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
         f"OP. EXONERADA (RÉGIMEN AGRARIO) : S/ {subtotal_productos}\n"
         f"SERVICIO DE DESPACHO Y ACOPIO   : S/ 15.00\n"
         f"I.G.V. (0.00% EXONERADO)        : S/ 0.00\n"
-        f"IMPORTE TOTAL PAGADO            : S/ {total_pagar}\n"
+        f"IMPORTE TOTAL                   : S/ {total_pagar}\n"
+        f"ESTADO DE PAGO                  : {primer_ped.get_estado_pago_display() if primer_ped else '-'}\n"
         f"====================================================\n"
         f"Representación impresa de la Boleta de Venta Electrónica.\n"
         f"Gracias por su preferencia en AgroComercial."
     )
 
+    estado_pago = primer_ped.get_estado_pago_display() if primer_ped else 'Pendiente de verificación'
     cuerpo_html = f"""
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 680px; margin: 0 auto; border: 1px solid #cfd6cf; background-color: #ffffff; color: #222222;">
         <!-- Cabecera Formal tipo SUNAT -->
@@ -471,19 +480,19 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
             <table style="width: 100%; border-collapse: collapse; font-size: 12px; background-color: #fafafa; border: 1px solid #e2e5e2;">
                 <tr>
                     <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; width: 22%; color: #555;"><strong>SEÑOR(ES):</strong></td>
-                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; width: 33%;">{nombre_cliente}</td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; width: 33%;">{escape(nombre_cliente)}</td>
                     <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; width: 20%; color: #555;"><strong>FECHA EMISIÓN:</strong></td>
                     <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; width: 25%;">{fecha_emision}</td>
                 </tr>
                 <tr>
                     <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; color: #555;"><strong>CORREO CLIENTE:</strong></td>
-                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;">{correo_destino}</td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;">{escape(correo_destino)}</td>
                     <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; color: #555;"><strong>CÓD. OPERACIÓN:</strong></td>
-                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;"><strong>{codigo_tx}</strong></td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;"><strong>{escape(codigo_tx)}</strong></td>
                 </tr>
                 <tr>
                     <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; color: #555;"><strong>DIRECCIÓN ENTREGA:</strong></td>
-                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;">{direccion_cliente}</td>
+                    <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;">{escape(direccion_cliente)}</td>
                     <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea; color: #555;"><strong>MONEDA:</strong></td>
                     <td style="padding: 7px 12px; border-bottom: 1px solid #eaeaea;">SOLES (PEN)</td>
                 </tr>
@@ -491,7 +500,7 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
                     <td style="padding: 7px 12px; color: #555;"><strong>MEDIO DE PAGO:</strong></td>
                     <td style="padding: 7px 12px;">{metodo_pago}</td>
                     <td style="padding: 7px 12px; color: #555;"><strong>TELÉFONO:</strong></td>
-                    <td style="padding: 7px 12px;">{telefono_cliente}</td>
+                    <td style="padding: 7px 12px;">{escape(telefono_cliente)}</td>
                 </tr>
             </table>
         </div>
@@ -534,7 +543,7 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
                             <strong>OBSERVACIONES LEGALES:</strong><br>
                             • Bienes agrícolas exonerados del IGV según Apéndice I de la Ley del IGV.<br>
                             • Representación impresa de la <strong>Boleta de Venta Electrónica {serie_boleta}</strong>.<br>
-                            • Código de autorización pasarela: <strong>{codigo_tx}</strong>
+                            • Estado de pago: <strong>{estado_pago}</strong> · Referencia: <strong>{escape(codigo_tx)}</strong>
                         </div>
                     </td>
                     <td style="width: 45%; vertical-align: top;">
@@ -563,17 +572,8 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
     </div>
     """
 
-    # Recargar .env en caliente por si se acaba de actualizar sin reiniciar el servidor
-    env_file = settings.BASE_DIR / '.env'
-    if env_file.exists():
-        for lin in env_file.read_text(encoding='utf-8').splitlines():
-            if '=' in lin and not lin.strip().startswith('#'):
-                k, v = lin.split('=', 1)
-                if v.strip():
-                    os.environ[k.strip()] = v.strip().strip('"').strip("'")
-
-    remitente_gmail = (os.environ.get('EMAIL_HOST_USER') or getattr(settings, 'EMAIL_HOST_USER', '') or correo_destino).strip()
-    clave_app_gmail = (os.environ.get('EMAIL_HOST_PASSWORD') or getattr(settings, 'EMAIL_HOST_PASSWORD', '')).strip().replace(' ', '')
+    remitente_gmail = settings.EMAIL_HOST_USER.strip()
+    clave_app_gmail = settings.EMAIL_HOST_PASSWORD.strip().replace(' ', '')
 
     if remitente_gmail and clave_app_gmail:
         try:
@@ -1051,6 +1051,7 @@ def eliminar_del_carrito(request, item_id):
 
 
 @login_required
+@transaction.atomic
 def pasarela_pago(request):
     """Apartado de Pasarela de Pago con Culqi vinculado al Gmail del comprador."""
     perfil = obtener_o_crear_perfil(request.user)
@@ -1058,34 +1059,52 @@ def pasarela_pago(request):
         messages.warning(request, "La pasarela de pago es exclusiva para cuentas de Comprador.")
         return redirect('panel_productor')
 
-    items = ItemCarrito.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')
+    items = ItemCarrito.objects.filter(comprador=request.user).select_related('producto', 'producto__productor').order_by('pk')
     # Quitar del carrito lo que vencio o se pauso mientras estaba guardado
     no_disponibles = [i for i in items if not i.producto.esta_publicado()]
     if no_disponibles:
         nombres = ", ".join(i.producto.nombre for i in no_disponibles)
         ItemCarrito.objects.filter(id__in=[i.id for i in no_disponibles]).delete()
         messages.warning(request, f"Quitamos de tu carrito productos que ya no están disponibles: {nombres}.")
-        items = ItemCarrito.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')
-    if not items.exists():
+        if request.method == 'POST':
+            return redirect('pasarela_pago')
+    lineas = [(item, item.precio_aplicado()) for item in items if item not in no_disponibles]
+    if not lineas:
         messages.warning(request, "Tu carrito está vacío. Agrega productos antes de ir a pagar.")
         return redirect('catalogo')
 
-    subtotal = sum(i.subtotal() for i in items)
+    subtotal = sum(item.cantidad * precio for item, precio in lineas)
     costo_logistica = Decimal("15.00")
     total_pagar = subtotal + costo_logistica
-    correo_gmail_usuario = request.user.email or f"{request.user.username}@gmail.com"
+    correo_gmail_usuario = request.user.email
+    resumen = [
+        request.user.pk,
+        [[item.pk, item.producto_id, item.cantidad, str(precio)] for item, precio in lineas],
+        str(total_pagar),
+    ]
+    salt_cotizacion = 'mercado.pasarela_pago'
 
     if request.method == 'POST':
         form = PasarelaPagoForm(request.POST)
         if form.is_valid():
-            metodo = form.cleaned_data['metodo_pago']
-            correo_culqi = request.POST.get('correo_culqi', '').strip() or correo_gmail_usuario
-            culqi_token = request.POST.get('culqi_token', '').strip()
+            try:
+                cotizacion = signing.loads(request.POST.get('cotizacion', ''), salt=salt_cotizacion, max_age=900)
+            except signing.BadSignature:
+                cotizacion = None
+            if cotizacion != resumen:
+                messages.warning(request, "El carrito cambió o la cotización venció. Revisa el total antes de confirmar.")
+                return redirect('pasarela_pago')
 
-            # Actualizar el Gmail en el usuario si estaba vacio
-            if correo_culqi and request.user.email != correo_culqi:
-                request.user.email = correo_culqi
-                request.user.save()
+            cantidades = Counter()
+            for item, _ in lineas:
+                cantidades[item.producto_id] += item.cantidad
+            if any(item.cantidad <= 0 or cantidades[item.producto_id] > item.producto.stock for item, _ in lineas):
+                messages.warning(request, "El stock cambió. Ajusta las cantidades del carrito antes de confirmar.")
+                return redirect('carrito')
+
+            metodo = form.cleaned_data['metodo_pago']
+            correo_culqi = form.cleaned_data['correo_culqi']
+            culqi_token = request.POST.get('culqi_token', '').strip()
 
             if metodo == 'TARJETA':
                 exito_culqi, codigo_tx, mensaje_culqi = procesar_cobro_culqi(
@@ -1094,16 +1113,15 @@ def pasarela_pago(request):
                 if not exito_culqi:
                     messages.error(request, f"Error en Pasarela Culqi: {mensaje_culqi}")
                     return redirect('pasarela_pago')
-                estado_pago = 'PAGADO'
+                estado_pago = 'SIMULADO'
             else:
                 codigo_tx = f"AGRO-2026-{uuid.uuid4().hex[:6].upper()}"
-                estado_pago = 'PENDIENTE_VERIFICACION' if metodo == 'CONTRAENTREGA' else 'PAGADO'
+                estado_pago = 'PENDIENTE_VERIFICACION'
 
             pedidos_creados = []
-            for item in items:
+            for item, precio_unit in lineas:
                 prod = item.producto
-                cant = min(item.cantidad, prod.stock) if prod.stock > 0 else item.cantidad
-                precio_unit = item.precio_aplicado()
+                cant = item.cantidad
                 ped = Pedido.objects.create(
                     comprador=request.user,
                     producto=prod,
@@ -1122,35 +1140,20 @@ def pasarela_pago(request):
                 Notificacion.avisar(prod.productor, f"Nuevo pedido: {cant} {prod.nombre_unidad_stock()} de {prod.nombre}.",
                                     reverse('panel_productor'), 'bi-bag-check')
                 pedidos_creados.append(ped)
-                if prod.stock >= cant:
-                    prod.stock -= cant
-                    if prod.stock == 0:
-                        prod.disponible = False
-                    prod.save()
-
-            items.delete()
-
-            # Enviar comprobante al correo Gmail del comprador
-            enviado_ok = enviar_comprobante_gmail(
-                request.user,
-                correo_culqi,
-                codigo_tx,
-                pedidos_creados,
-                total_pagar,
-                dict(Pedido.METODOS_PAGO).get(metodo, metodo)
-            )
-
-            if enviado_ok:
-                messages.success(
-                    request,
-                    f"¡Compra registrada ({codigo_tx})! La boleta fue enviada a tu correo ({correo_culqi})."
+            for producto_id, cantidad in cantidades.items():
+                Producto.objects.filter(pk=producto_id).update(
+                    disponible=Case(When(stock=cantidad, then=False), default=F('disponible')),
+                    stock=F('stock') - cantidad,
                 )
-            else:
-                messages.success(
-                    request,
-                    f"¡Compra registrada ({codigo_tx})! No pudimos enviar la boleta por correo, pero puedes verla e imprimirla aquí."
-                )
+
+            items.filter(pk__in=[item.pk for item, _ in lineas]).delete()
+            transaction.on_commit(lambda: enviar_comprobante_gmail(
+                request.user, correo_culqi, codigo_tx, pedidos_creados,
+                total_pagar, dict(Pedido.METODOS_PAGO)[metodo],
+            ), robust=True)
+            messages.success(request, f"Compra registrada ({codigo_tx}). Puedes consultar el comprobante aquí.")
             return redirect('comprobante_pago', codigo=codigo_tx)
+        messages.error(request, "Revisa los datos de entrega y el correo del comprobante.")
     else:
         form = PasarelaPagoForm(initial={
             'ciudad_destino': perfil.ubicacion if perfil.ubicacion in LUGARES_AREQUIPA else LUGAR_POR_DEFECTO,
@@ -1165,7 +1168,8 @@ def pasarela_pago(request):
         for i in items
     )
     contexto = {
-        'items': items,
+        'items': [item for item, _ in lineas],
+        'cotizacion': signing.dumps(resumen, salt=salt_cotizacion),
         'subtotal': subtotal,
         'costo_logistica': costo_logistica,
         'total_pagar': total_pagar,
@@ -1173,7 +1177,7 @@ def pasarela_pago(request):
         'correo_gmail_usuario': correo_gmail_usuario,
         'tiene_smtp_gmail': tiene_smtp_gmail,
         'algun_vendedor_tiene_cuenta': algun_vendedor_tiene_cuenta,
-        'culqi_public_key': getattr(settings, 'CULQI_PUBLIC_KEY', 'pk_test_0000000000000000'),
+        'culqi_public_key': settings.CULQI_PUBLIC_KEY if settings.CULQI_PUBLIC_KEY.startswith('pk_test_') else '',
         'form': form,
     }
     return render(request, 'pasarela_pago.html', contexto)
@@ -1263,7 +1267,7 @@ def registro_vista(request):
             messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Cuenta creada con contraseña encriptada.")
             if form.cleaned_data['rol'] == 'PRODUCTOR':
                 # El vendedor nuevo completa su verificacion antes de que sus productos se muestren
-                return redirect('verificacion_vendedor')
+                return redirect('configurar_puesto')
             # Lo primero que ve el comprador nuevo son las ofertas vigentes
             return redirect('ventas_por_oferta')
     else:
@@ -1295,6 +1299,9 @@ def login_vista(request):
         usuario = authenticate(request, username=username_real, password=password)
         if usuario is not None:
             perfil = obtener_o_crear_perfil(usuario)
+            if perfil.es_demo and not settings.DATOS_DEMO_AUTOMATICOS:
+                messages.error(request, "Las cuentas de demostración solo están disponibles en el entorno de prueba.")
+                return redirect('login')
             if modo_elegido in ['PRODUCTOR', 'COMPRADOR'] and perfil.rol != modo_elegido:
                 rol_nombre = "Vendedor" if modo_elegido == 'PRODUCTOR' else "Comprador"
                 messages.error(request, f"La cuenta '{identificador}' no pertenece al perfil de {rol_nombre}. Usa la pestaña correspondiente.")
@@ -1306,8 +1313,12 @@ def login_vista(request):
             login(request, usuario)
             messages.success(request, f"Sesión iniciada con {usuario.email or usuario.username} ({perfil.get_rol_display()}).")
             siguiente = request.POST.get('next') or request.GET.get('next', '')
-            if siguiente and url_has_allowed_host_and_scheme(siguiente, allowed_hosts={request.get_host()}):
+            if siguiente and url_has_allowed_host_and_scheme(
+                siguiente, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+            ):
                 return redirect(siguiente)
+            if perfil.rol == 'PRODUCTOR':
+                return redirect('panel_productor')
             return redirect('ventas_por_oferta')
         else:
             messages.error(request, "Correo/usuario o contraseña incorrectos. Verifica tus datos.")
@@ -1419,57 +1430,51 @@ def login_google_callback(request):
             info_google = json.loads(resp_user.read().decode('utf-8'))
 
         email_google = info_google.get('email', '').strip().lower()
+        google_sub = info_google.get('sub')
+        email_verificado = info_google.get('email_verified') is True
         nombre_google = info_google.get('given_name', '')
         apellido_google = info_google.get('family_name', '')
-    except Exception as e:
-        messages.error(request, f"Error al validar tu cuenta con Google OAuth: {e}")
+    except (OSError, ValueError, AttributeError):
+        messages.error(request, "No se pudo validar tu cuenta con Google.")
         return redirect('login')
 
-    if not email_google:
-        messages.error(request, "Google no devolvió una dirección de correo electrónico.")
+    if not email_google or not email_verificado or not isinstance(google_sub, str) or not 0 < len(google_sub) <= 255:
+        messages.error(request, "Google no confirmó una identidad con correo verificado.")
         return redirect('login')
 
-    usuario = User.objects.filter(email__iexact=email_google).first()
-    if not usuario:
-        base_username = email_google.split('@')[0][:20]
-        username_final = base_username
-        contador = 1
-        while User.objects.filter(username=username_final).exists():
-            username_final = f"{base_username}{contador}"
-            contador += 1
+    with transaction.atomic():
+        perfil = PerfilUsuario.objects.select_related('usuario').filter(google_sub=google_sub).first()
+        if perfil is None:
+            if User.objects.filter(email__iexact=email_google).exists():
+                messages.error(request, "Ya existe una cuenta con ese correo. Ingresa con tu contraseña o solicita ayuda para vincular tu cuenta.")
+                return redirect('login')
+            base_username = email_google.split('@')[0][:20]
+            username_final = base_username
+            contador = 1
+            while User.objects.filter(username=username_final).exists():
+                username_final = f"{base_username}{contador}"
+                contador += 1
+            usuario = User.objects.create_user(
+                username=username_final, email=email_google,
+                first_name=nombre_google or base_username.capitalize(), last_name=apellido_google,
+            )
+            perfil = PerfilUsuario.objects.create(
+                usuario=usuario, google_sub=google_sub, rol=rol_elegido, ubicacion=LUGAR_POR_DEFECTO,
+            )
 
-        usuario = User(
-            username=username_final,
-            email=email_google,
-            first_name=nombre_google or base_username.capitalize(),
-            last_name=apellido_google,
-        )
-        usuario.set_unusable_password()
-        usuario.save()
-
-        PerfilUsuario.objects.create(
-            usuario=usuario,
-            rol=rol_elegido,
-            ubicacion=LUGAR_POR_DEFECTO,
-            telefono="",
-        )
-    else:
-        if nombre_google and not usuario.first_name:
-            usuario.first_name = nombre_google
-            usuario.last_name = apellido_google
-            usuario.save()
-        perfil = obtener_o_crear_perfil(usuario)
-        if perfil.rol != rol_elegido:
-            # Cada cuenta es solo de comprador o solo de vendedor: no se cambia al ingresar
-            tipo = "vendedor" if perfil.rol == 'PRODUCTOR' else "comprador"
-            messages.error(request, f"Tu cuenta de Google ({usuario.email}) está registrada como {tipo}. Ingresa por la pestaña de {tipo}.")
-            return redirect(f"{reverse('login')}?modo={'vendedor' if perfil.rol == 'PRODUCTOR' else 'comprador'}")
-
+    usuario = perfil.usuario
+    if not usuario.is_active:
+        messages.error(request, "La cuenta no está activa.")
+        return redirect('login')
+    if perfil.rol != rol_elegido:
+        tipo = 'vendedor' if perfil.rol == 'PRODUCTOR' else 'comprador'
+        messages.error(request, f"Ingresa por la pestaña de {tipo}.")
+        return redirect(f"{reverse('login')}?modo={tipo}")
     login(request, usuario)
     messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Ingresaste con tu cuenta oficial de Google ({usuario.email}).")
     perfil = obtener_o_crear_perfil(usuario)
-    if perfil.rol == 'PRODUCTOR' and perfil.estado_verificacion == 'SIN_ENVIAR' and not perfil.es_demo:
-        return redirect('verificacion_vendedor')
+    if perfil.rol == 'PRODUCTOR':
+        return redirect('panel_productor' if hasattr(usuario, 'puesto') else 'configurar_puesto')
     return redirect('ventas_por_oferta')
 
 
@@ -1717,6 +1722,7 @@ def pausar_producto(request, producto_id):
 
 
 @login_required
+@transaction.atomic
 def cambiar_estado_pedido(request, pedido_id):
     perfil = obtener_o_crear_perfil(request.user)
     pedido = get_object_or_404(Pedido, id=pedido_id)
@@ -1724,25 +1730,28 @@ def cambiar_estado_pedido(request, pedido_id):
         nuevo_estado = request.POST.get('estado')
         estados_validos = dict(Pedido.ESTADOS).keys()
 
-        if perfil.rol == 'PRODUCTOR' and pedido.producto.productor == request.user and nuevo_estado in estados_validos:
+        es_vendedor = perfil.rol == 'PRODUCTOR' and pedido.producto.productor == request.user
+        es_comprador = perfil.rol == 'COMPRADOR' and pedido.comprador == request.user
+        if (es_vendedor or es_comprador) and pedido.estado in ('PENDIENTE', 'CONFIRMADO') and nuevo_estado == 'CANCELADO':
+            pedido.estado = 'CANCELADO'
+            pedido.save(update_fields=['estado'])
+            Producto.objects.filter(pk=pedido.producto_id).update(
+                disponible=Case(When(stock=0, then=True), default=F('disponible')),
+                stock=F('stock') + pedido.cantidad,
+            )
+            destinatario = pedido.comprador if es_vendedor else pedido.producto.productor
+            enlace = reverse('mis_pedidos' if es_vendedor else 'panel_productor')
+            Notificacion.avisar(destinatario, f"Se canceló el pedido #{pedido.id}.", enlace, 'bi-x-octagon')
+            messages.info(request, f"El pedido #{pedido.id} fue cancelado y el stock fue repuesto.")
+            return redirect('panel_productor' if es_vendedor else 'mis_pedidos')
+
+        if es_vendedor and pedido.estado not in ('CANCELADO', 'ENTREGADO') and nuevo_estado in estados_validos and nuevo_estado != 'CANCELADO':
             pedido.estado = nuevo_estado
             pedido.save()
             Notificacion.avisar(pedido.comprador, f"Tu pedido #{pedido.id} de {pedido.producto.nombre} ahora está: {pedido.get_estado_display()}.",
                                 reverse('mis_pedidos'), 'bi-truck')
             messages.success(request, f"Estado del pedido #{pedido.id} actualizado a '{pedido.get_estado_display()}'.")
             return redirect('panel_productor')
-
-        if perfil.rol == 'COMPRADOR' and pedido.comprador == request.user and pedido.estado in ['PENDIENTE', 'CONFIRMADO'] and nuevo_estado == 'CANCELADO':
-            pedido.estado = 'CANCELADO'
-            pedido.estado_pago = 'REEMBOLSADO'
-            pedido.save()
-            pedido.producto.stock += pedido.cantidad
-            pedido.producto.disponible = True
-            pedido.producto.save()
-            Notificacion.avisar(pedido.producto.productor, f"{request.user.username} canceló el pedido #{pedido.id} de {pedido.producto.nombre}.",
-                                reverse('panel_productor'), 'bi-x-octagon')
-            messages.info(request, f"El pedido #{pedido.id} fue cancelado y el stock fue repuesto.")
-            return redirect('mis_pedidos')
 
     return redirect('inicio')
 
@@ -2038,13 +2047,18 @@ CAMPOS_ARCHIVO_VERIFICACION = ('foto_documento', 'foto_chacra', 'documento_organ
 @login_required
 def archivo_verificacion(request, verificacion_id, campo):
     """Entrega un documento privado solo al personal administrador (nunca es publico)."""
-    if not request.user.is_staff or campo not in CAMPOS_ARCHIVO_VERIFICACION:
+    if (not request.user.is_staff
+            or not request.user.has_perm('mercado.view_verificacionvendedor')
+            or campo not in CAMPOS_ARCHIVO_VERIFICACION):
         raise Http404()
     verificacion = get_object_or_404(VerificacionVendedor, id=verificacion_id)
     archivo = getattr(verificacion, campo)
     if not archivo:
         raise Http404()
-    respuesta = FileResponse(archivo.open('rb'))
+    try:
+        respuesta = FileResponse(archivo.open('rb'), as_attachment=True)
+    except FileNotFoundError as exc:
+        raise Http404() from exc
     respuesta['X-Content-Type-Options'] = 'nosniff'
     respuesta['Cache-Control'] = 'private, no-store'
     return respuesta

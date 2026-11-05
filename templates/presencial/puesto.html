@@ -1,0 +1,32 @@
+{% extends "presencial/base.html" %}
+{% load static %}
+{% block title %}Configurar mi puesto · AgroComercial{% endblock %}
+{% block content %}
+<a class="volver" href="{% url 'panel_productor' %}">← Mi puesto</a>
+<div class="formulario">
+  <p class="etiqueta">TU PUNTO DE VENTA</p><h1>Configura tu puesto</h1>
+  <p>Estos datos serán públicos. Coloca el punto donde recibes a tus compradores.</p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}{{ form.non_field_errors }}
+    {% for campo in form %}
+      {% if campo.name == 'latitud' %}
+        <fieldset class="ubicacion"><legend>Ubicación en el mapa</legend>
+          {% if maps_key %}<div id="mapa-puesto" class="mapa" aria-label="Mapa para ubicar tu puesto"></div>
+            <p class="ayuda">Toca en el mapa para marcar el puesto. También puedes pegar sus coordenadas.</p>{% endif %}
+          <a href="https://www.google.com/maps/@?api=1&amp;map_action=map&amp;center=-16.409,-71.537&amp;zoom=14" target="_blank" rel="noopener noreferrer">Abrir Google Maps ↗</a>
+          <label for="coordenadas">Pegar coordenadas de Google Maps</label>
+          <input id="coordenadas" placeholder="-16.409000, -71.537000" autocomplete="off">
+          <p class="ayuda">En Google Maps, haz clic derecho en tu ubicación y copia las coordenadas.</p>
+      {% endif %}
+      <div>{{ campo.errors }}{{ campo.label_tag }}{{ campo }}{% if campo.help_text %}<p class="ayuda">{{ campo.help_text }}</p>{% endif %}</div>
+      {% if campo.name == 'longitud' %}</fieldset><h2>Formas de pago en el puesto</h2>{% endif %}
+    {% endfor %}
+    {% if puesto.pk %}<p>Si no eliges otra foto, conservaremos la actual.</p>{% endif %}
+    <button class="boton">Guardar mi puesto</button>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/mapa-puesto.js' %}?v={{ version_estaticos }}" defer></script>
+{% if maps_key %}<script src="https://maps.googleapis.com/maps/api/js?key={{ maps_key|urlencode }}&amp;callback=iniciarMapaPuesto&amp;loading=async&amp;v=weekly" defer></script>{% endif %}
+{% endblock %}

@@ -224,6 +224,7 @@ class OfertaNegociacionForm(forms.ModelForm):
 
 
 class PasarelaPagoForm(forms.Form):
+    correo_culqi = forms.EmailField(max_length=254)
     direccion_entrega = forms.CharField(
         label="Dirección exacta de entrega o almacén",
         max_length=200,
@@ -290,9 +291,8 @@ class PerfilForm(forms.ModelForm):
 
     class Meta:
         model = PerfilUsuario
-        fields = ['rol', 'ruc_dni', 'telefono', 'ubicacion', 'nombre_finca', 'cuenta_bancaria']
+        fields = ['ruc_dni', 'telefono', 'ubicacion', 'nombre_finca', 'cuenta_bancaria']
         widgets = {
-            'rol': forms.Select(attrs={'class': 'form-select'}),
             'ruc_dni': forms.TextInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
             'nombre_finca': forms.TextInput(attrs={'class': 'form-control'}),

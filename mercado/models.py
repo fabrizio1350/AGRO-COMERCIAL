@@ -1,7 +1,9 @@
 from decimal import Decimal
+from urllib.parse import urlencode
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
-from django.core.validators import FileExtensionValidator
+from django.utils.deconstruct import deconstructible
+from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 from datetime import timedelta
 from django.db import models
 from django.db.models import F, Q
@@ -65,6 +67,7 @@ class PerfilUsuario(models.Model):
     ]
 
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    google_sub = models.CharField(max_length=255, null=True, blank=True, unique=True, editable=False)
     rol = models.CharField(max_length=15, choices=ROLES, default='COMPRADOR')
     telefono = models.CharField(max_length=20, blank=True)
     ubicacion = models.CharField(max_length=120, blank=True)
@@ -91,6 +94,28 @@ class PerfilUsuario(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} ({self.get_rol_display()})"
+
+
+class Puesto(models.Model):
+    vendedor = models.OneToOneField(User, on_delete=models.CASCADE, related_name='puesto')
+    nombre = models.CharField(max_length=100)
+    referencia = models.CharField(max_length=150)
+    foto = models.FileField(upload_to='puestos/', validators=[FileExtensionValidator(['jpg', 'jpeg', 'png', 'webp'])])
+    latitud = models.DecimalField(max_digits=8, decimal_places=6, validators=[MinValueValidator(-90), MaxValueValidator(90)])
+    longitud = models.DecimalField(max_digits=9, decimal_places=6, validators=[MinValueValidator(-180), MaxValueValidator(180)])
+    efectivo = models.BooleanField(default=True)
+    tarjeta = models.BooleanField(default=False)
+    yape_plin = models.BooleanField(default=False)
+
+    def como_llegar(self):
+        return 'https://www.google.com/maps/dir/?' + urlencode({
+            'api': 1, 'destination': f'{self.latitud},{self.longitud}',
+        })
+
+    def metodos_pago(self):
+        return [nombre for acepta, nombre in (
+            (self.efectivo, 'Efectivo'), (self.tarjeta, 'Tarjeta'), (self.yape_plin, 'Yape / Plin'),
+        ) if acepta]
 
 
 class Categoria(models.Model):
@@ -151,6 +176,7 @@ class ProductoQuerySet(models.QuerySet):
             Q(fecha_vencimiento__isnull=True) | Q(fecha_vencimiento__gt=ahora)
         ).filter(
             Q(productor__perfil__estado_verificacion='VERIFICADO') | Q(productor__perfil__es_demo=True)
+            | Q(productor__puesto__isnull=False, productor__perfil__rol='PRODUCTOR', productor__is_active=True)
         )
 
     def ofertas_activas(self):
@@ -170,6 +196,7 @@ class ProductoQuerySet(models.QuerySet):
 
 class Producto(models.Model):
     UNIDADES = [
+        ('UNIDAD', 'Unidad'),
         ('KG', 'Kilogramo (kg)'),
         ('SACO', 'Saco (50 kg)'),
         ('CAJA', 'Caja (20 kg)'),
@@ -232,7 +259,9 @@ class Producto(models.Model):
 
     def vendedor_habilitado(self):
         perfil = getattr(self.productor, 'perfil', None)
-        return bool(perfil and perfil.puede_vender_publicamente())
+        return bool(perfil and (perfil.puede_vender_publicamente() or (
+            perfil.rol == 'PRODUCTOR' and self.productor.is_active and hasattr(self.productor, 'puesto')
+        )))
 
     def esta_publicado(self):
         return self.disponible and self.stock > 0 and not self.esta_vencida() and self.vendedor_habilitado()
@@ -464,6 +493,7 @@ class Pedido(models.Model):
     ESTADOS_PAGO = [
         ('PAGADO', 'Pago Verificado en Pasarela'),
         ('PENDIENTE_VERIFICACION', 'Pendiente de Verificación'),
+        ('SIMULADO', 'Pago de prueba'),
         ('REEMBOLSADO', 'Reembolsado'),
     ]
 
@@ -601,7 +631,16 @@ class Notificacion(models.Model):
 
 
 # Los documentos de verificacion NO van a la carpeta media (que es publica): solo los ve el administrador
-almacen_privado = FileSystemStorage(location=settings.BASE_DIR / 'privado', base_url=None)
+@deconstructible
+class AlmacenVerificaciones(FileSystemStorage):
+    def __init__(self):
+        super().__init__(location=settings.BASE_DIR / 'privado')
+
+    def url(self, name):
+        raise NotImplementedError('Los documentos de verificación no tienen URL pública.')
+
+
+almacen_privado = AlmacenVerificaciones()
 EXTENSIONES_DOCUMENTO = ['jpg', 'jpeg', 'png', 'webp', 'pdf']
 
 

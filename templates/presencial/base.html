@@ -1,0 +1,38 @@
+{% load static %}
+<!doctype html>
+<html lang="es-PE">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#193b2a">
+  <title>{% block title %}AgroComercial · Mercado local{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/presencial.css' %}?v={{ version_estaticos }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <a class="salto" href="#contenido">Saltar al contenido</a>
+  <header class="barra"><div class="marco navegacion">
+    <a class="marca" href="{% url 'inicio' %}"><span aria-hidden="true">✦</span> AgroComercial</a>
+    <nav aria-label="Navegación principal">
+      <a href="{% url 'catalogo' %}">Productos</a>
+      <a href="{% url 'ventas_por_oferta' %}">Ofertas</a>
+      {% if user.is_authenticated %}
+        {% if user.perfil.rol == 'PRODUCTOR' %}<a href="{% url 'panel_productor' %}">Mi puesto</a>
+        {% else %}<a href="{% url 'carrito' %}">Mi lista</a>{% endif %}
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="enlace">Salir</button></form>
+      {% else %}
+        <a href="{% url 'login' %}">Ingresar</a>
+        <a class="nav-vender" href="{% url 'registro' %}?rol=PRODUCTOR">Vender</a>
+      {% endif %}
+    </nav>
+  </div></header>
+  <main class="marco" id="contenido">
+    {% for message in messages %}<p class="aviso" role="status">{{ message }}</p>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="marco pie"><strong>AgroComercial</strong><span>Encuentra productos de mercados de Arequipa.</span></footer>
+  <script src="{% static 'js/stock-presencial.js' %}?v={{ version_estaticos }}" defer></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
+

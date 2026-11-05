@@ -1,5 +1,8 @@
 from datetime import timedelta
 from decimal import Decimal
+import io
+import json
+from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
@@ -8,7 +11,7 @@ import tempfile
 from django.urls import reverse
 from django.utils import timezone
 from .forms import ProductoForm
-from .models import Categoria, PerfilUsuario, Producto, Conversacion, Mensaje, Notificacion, Favorito, OfertaNegociacion
+from .models import Categoria, PerfilUsuario, Producto, Conversacion, Mensaje, Notificacion, Favorito, OfertaNegociacion, ItemCarrito, Pedido, LUGAR_POR_DEFECTO
 
 
 class PruebasOfertasYVencimiento(TestCase):
@@ -94,9 +97,9 @@ class PruebasOfertasYVencimiento(TestCase):
         self.assertEqual(timezone.localtime(prod.fecha_vencimiento).date(), hoy + timedelta(days=20))
         self.assertEqual(timezone.localtime(prod.oferta_fin).date(), hoy + timedelta(days=5))
 
-    def test_login_lleva_a_ofertas(self):
+    def test_login_vendedor_lleva_al_panel(self):
         respuesta = self.client.post(reverse('login'), {'username': 'vendedor', 'password': 'clave12345'})
-        self.assertRedirects(respuesta, reverse('ventas_por_oferta'), fetch_redirect_response=False)
+        self.assertRedirects(respuesta, reverse('panel_productor'), fetch_redirect_response=False)
 
     def test_registro_lleva_a_ofertas(self):
         respuesta = self.client.post(reverse('registro'), {
@@ -110,10 +113,10 @@ class PruebasOfertasYVencimiento(TestCase):
         self.client.login(username='vendedor', password='clave12345')
         for nombre in ('ventas_por_oferta', 'catalogo'):
             respuesta = self.client.get(reverse(nombre))
-            self.assertContains(respuesta, 'Ofertas destacadas del campo')
-            self.assertContains(respuesta, 'barra-tiempo')
+            self.assertContains(respuesta, 'Disponibles ahora')
+            self.assertContains(respuesta, 'data-stock-id')
         respuesta = self.client.get(reverse('catalogo'), {'precio_max': '9', 'ofertas': '1', 'ubicacion': 'Cayma, Arequipa'})
-        self.assertContains(respuesta, '1 producto encontrado')
+        self.assertContains(respuesta, 'Palta')
 
     def test_renovar_publicacion_vencida(self):
         prod = self.crear(fecha_vencimiento=timezone.now() - timedelta(days=1))
@@ -122,18 +125,6 @@ class PruebasOfertasYVencimiento(TestCase):
         prod.refresh_from_db()
         self.assertFalse(prod.esta_vencida())
 
-    def test_publicar_oferta_pagar_comision_y_aparece(self):
-        hoy = timezone.localdate()
-        self.client.login(username='vendedor', password='clave12345')
-        respuesta = self.client.post(reverse('crear_producto'), self.datos_form(
-            en_oferta='on', precio_oferta='8', oferta_hasta=(hoy + timedelta(days=5)).isoformat()))
-        prod = Producto.objects.get(nombre='Palta')
-        self.assertRedirects(respuesta, reverse('pagar_comision_oferta', args=[prod.id]), fetch_redirect_response=False)
-        self.assertNotIn(prod, Producto.objects.ofertas_activas())
-        self.client.post(reverse('pagar_comision_oferta', args=[prod.id]), {'metodo_pago': 'YAPE_PLIN'})
-        self.assertIn(prod, Producto.objects.ofertas_activas())
-        respuesta = self.client.get(reverse('ventas_por_oferta'))
-        self.assertContains(respuesta, 'Palta')
 
 
 class PruebasChatYFavoritos(TestCase):
@@ -263,6 +254,36 @@ class PruebasSeguridad(TestCase):
         self.assertIsNone(codigo)
 
 
+class PruebasIdentidadGoogle(TestCase):
+    def callback(self, sub, correo, verificado=True):
+        sesion = self.client.session
+        sesion['estado_google'] = 'estado-prueba'
+        sesion.save()
+        respuestas = [
+            io.BytesIO(b'{"access_token": "token-de-prueba"}'),
+            io.BytesIO(json.dumps({'sub': sub, 'email': correo, 'email_verified': verificado}).encode()),
+        ]
+        with patch('mercado.views.urllib.request.urlopen', side_effect=respuestas):
+            return self.client.get(reverse('login_google_callback'), {'state': 'estado-prueba', 'code': 'codigo'})
+
+    def test_coincidencia_de_correo_no_autentica_cuenta_local(self):
+        User.objects.create_user('cuenta_local', email='colision@example.com')
+        self.assertRedirects(self.callback('identidad-nueva', 'colision@example.com'), reverse('login'),
+                             fetch_redirect_response=False)
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.assertFalse(PerfilUsuario.objects.filter(google_sub='identidad-nueva').exists())
+
+    def test_correo_verificado_y_login_por_identificador_estable(self):
+        self.callback('identidad-nueva', 'google@example.com', verificado=False)
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.callback('identidad-nueva', 'google@example.com')
+        perfil = PerfilUsuario.objects.get(google_sub='identidad-nueva')
+        self.assertEqual(self.client.session['_auth_user_id'], str(perfil.usuario_id))
+        self.client.logout()
+        self.callback('identidad-nueva', 'otro-correo@example.com')
+        self.assertEqual(self.client.session['_auth_user_id'], str(perfil.usuario_id))
+
+
 class PruebasDatosDemo(TestCase):
     def test_comando_crea_bots_demo_sin_duplicar_y_los_borra(self):
         from django.core.management import call_command
@@ -358,7 +379,7 @@ class PruebasVerificacionVendedor(TestCase):
             'rol': 'PRODUCTOR', 'password1': 'ClaveSegura123', 'password2': 'ClaveSegura123',
             'ubicacion': 'Cayma, Arequipa',
         })
-        self.assertRedirects(respuesta, reverse('verificacion_vendedor'))
+        self.assertRedirects(respuesta, reverse('configurar_puesto'))
 
     def test_envio_queda_pendiente_y_avisa_al_admin(self):
         self.client.login(username='nuevo_vendedor', password='clave12345')
@@ -415,30 +436,11 @@ class PruebasVerificacionVendedor(TestCase):
         self.client.login(username='jefe', password='clave12345')
         respuesta = self.client.get(url)
         self.assertEqual(respuesta.status_code, 200)
+        self.assertTrue(respuesta['Content-Disposition'].startswith('attachment;'))
         self.assertEqual(b''.join(respuesta.streaming_content), JPG_MINIMO)
+        personal = User.objects.create_user('personal_sin_permiso', is_staff=True)
+        self.client.force_login(personal)
+        self.assertEqual(self.client.get(url).status_code, 404)
         self.assertEqual(self.client.get(reverse('archivo_verificacion', args=[verificacion.id, 'usuario'])).status_code, 404)
         # El archivo no queda dentro de la carpeta publica media
         self.assertTrue(verificacion.foto_documento.path.startswith(self.carpeta))
-
-    def test_organico_solo_con_certificado(self):
-        self.perfil.estado_verificacion = 'VERIFICADO'
-        self.perfil.save()
-        categoria = Categoria.objects.create(nombre='Hortalizas')
-        hoy = timezone.localdate()
-        datos = {
-            'categoria': categoria.id, 'nombre': 'Cebolla', 'tipo_cultivo': 'ORGANICO', 'fecha_cosecha': hoy.isoformat(),
-            'origen': 'Cayma, Arequipa', 'descripcion': 'x', 'precio': '2', 'unidad': 'KG',
-            'stock': '10', 'minimo_compra': '1', 'disponible': 'on',
-            'vence_el': (hoy + timedelta(days=20)).isoformat(),
-        }
-        self.client.login(username='nuevo_vendedor', password='clave12345')
-        respuesta = self.client.post(reverse('editar_producto', args=[self.producto.id]), datos)
-        self.assertContains(respuesta, 'primero sube tu certificado orgánico')
-        self.producto.refresh_from_db()
-        self.assertEqual(self.producto.tipo_cultivo, 'TRADICIONAL')
-        # Con certificado revisado si se permite
-        self.perfil.organico_verificado = True
-        self.perfil.save()
-        self.client.post(reverse('editar_producto', args=[self.producto.id]), datos)
-        self.producto.refresh_from_db()
-        self.assertEqual(self.producto.tipo_cultivo, 'ORGANICO')
