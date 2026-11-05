@@ -1,40 +1,46 @@
 {% comment %}
-Tarjeta de producto de la tienda. Uso: {% include 'includes/tarjeta_producto.html' with prod=producto %}
-La foto lleva un nombre de transicion para que "vuele" hasta el detalle en Chrome/Edge.
+Tarjeta de producto. Uso: {% include 'includes/tarjeta_producto.html' with prod=producto %}
+El stock se refresca solo (static/js/stock-vivo.js) si un contenedor padre tiene data-stock-url.
 {% endcomment %}
-<article class="tarjeta-producto">
+<article class="tarjeta-producto" data-stock-id="{{ prod.id }}">
     <div class="foto">
-        <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" loading="lazy" style="view-transition-name: foto-producto-{{ prod.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+        <a href="{% url 'detalle_producto' prod.id %}" tabindex="-1" aria-hidden="true">
+            <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" loading="lazy" style="view-transition-name: foto-producto-{{ prod.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+        </a>
         <div class="chip-foto">
             {% if prod.oferta_activa %}<span class="chip chip-descuento">-{{ prod.porcentaje_descuento }}%</span>{% endif %}
             {% if prod.productor.perfil.es_demo %}<span class="chip chip-demo" title="Publicación de prueba con datos de ejemplo"><i class="bi bi-robot" aria-hidden="true"></i>Demo</span>{% endif %}
-            {% if prod.tipo_cultivo == 'ORGANICO' %}<span class="chip"><i class="bi bi-leaf" aria-hidden="true"></i>Orgánico</span>{% endif %}
         </div>
-        {% if rol_actual == 'COMPRADOR' %}{% include 'includes/boton_favorito.html' with prod=prod %}{% endif %}
+        <span class="stock-vivo {% if prod.stock <= 5 %}poco{% endif %}" data-existencias>
+            <span class="punto" aria-hidden="true"></span><span data-texto-stock>{% if prod.stock %}Quedan {{ prod.stock }} {{ prod.nombre_unidad_stock }}{% else %}Agotado{% endif %}</span>
+        </span>
     </div>
     <div class="cuerpo">
-        <div class="meta text-truncate">{{ prod.categoria.nombre|default:"Agrícola" }} · {{ prod.origen|cut:", Arequipa" }}</div>
+        <div class="meta text-truncate"><i class="bi bi-shop me-1" aria-hidden="true"></i>{{ prod.productor.puesto.nombre|default:"Mercado local" }}{% if prod.productor.puesto.numero %} · Puesto {{ prod.productor.puesto.numero }}{% endif %}</div>
         <h3><a href="{% url 'detalle_producto' prod.id %}">{{ prod.nombre }}</a></h3>
-        <div class="small text-muted mb-2 text-truncate vendedor"><i class="bi bi-person me-1" aria-hidden="true"></i>{{ prod.productor.get_full_name|default:prod.productor.username }} · mín. {{ prod.minimo_compra }} {{ prod.nombre_unidad_minimo }}</div>
-        {% include 'includes/barra_tiempo.html' with prod=prod compacta=True %}
+        {% with pagos=prod.productor.puesto.iconos_pago %}
+        {% if pagos %}<div class="pagos-mini" aria-label="Pagos en el puesto">{% for icono, nombre in pagos %}<span title="{{ nombre }}"><i class="bi {{ icono }}" aria-hidden="true"></i><span class="visually-hidden">{{ nombre }}</span></span>{% endfor %}</div>{% endif %}
+        {% endwith %}
         <div class="pie">
             <div>
                 {% if prod.oferta_activa %}
                     <span class="precio-anterior d-block">S/ {{ prod.precio }}</span>
-                    <span class="precio en-oferta">S/ {{ prod.precio_oferta }}</span>
+                    <span class="precio en-oferta">S/ <span data-precio>{{ prod.precio_oferta }}</span></span>
                 {% else %}
-                    <span class="precio">S/ {{ prod.precio }}</span>
+                    <span class="precio">S/ <span data-precio>{{ prod.precio }}</span></span>
                 {% endif %}
                 <span class="small text-muted">/ {{ prod.unidad_corta }}</span>
             </div>
             {% if rol_actual == 'COMPRADOR' %}
                 <form action="{% url 'agregar_al_carrito' prod.id %}" method="post" class="m-0" data-carrito-rapido>
                     {% csrf_token %}
-                    <input type="hidden" name="cantidad" value="{{ prod.minimo_compra }}">
-                    <button type="submit" class="boton-circular boton-carrito" aria-label="Agregar {{ prod.minimo_compra }} {{ prod.nombre_unidad_minimo }} de {{ prod.nombre }} al carrito" title="Agregar al carrito"><i class="bi bi-bag-plus" aria-hidden="true"></i></button>
+                    <input type="hidden" name="cantidad" value="1">
+                    <button type="submit" class="boton-circular boton-carrito" data-guardar aria-label="Agregar {{ prod.nombre }} a mi lista" title="Agregar a mi lista"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
                 </form>
+            {% elif not user.is_authenticated %}
+                <a href="{% url 'login' %}?modo=comprador&next={{ request.get_full_path|urlencode }}" class="boton-circular boton-carrito" aria-label="Ingresa para agregar {{ prod.nombre }} a tu lista" title="Agregar a mi lista"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
             {% else %}
-                <span class="boton-circular" aria-hidden="true"><i class="bi bi-arrow-up-right"></i></span>
+                <a href="{% url 'detalle_producto' prod.id %}" class="boton-circular" aria-label="Ver {{ prod.nombre }}"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
             {% endif %}
         </div>
     </div>
