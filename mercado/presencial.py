@@ -1,17 +1,27 @@
+"""Vistas del mercado presencial: el vendedor publica lo que tiene en su puesto y el comprador
+arma su lista, ve el stock en tiempo real y va al puesto a comprar (no hay pago en linea)."""
+from decimal import Decimal
+
 from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, F, Q, Sum
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from .models import ItemCarrito, Producto, Puesto, fecha_vencimiento_por_defecto
-from .views import asegurar_datos_iniciales, obtener_o_crear_perfil
+from .models import (
+    Categoria, ItemCarrito, Producto, Puesto, VentaPuesto, fecha_vencimiento_por_defecto,
+)
+from .views import asegurar_datos_iniciales, obtener_o_crear_perfil, ofertas_destacadas, con_precio_vigente
+
+UNIDADES_MERCADO = ['UNIDAD', 'KG', 'DOCENA', 'ATADO', 'BOLSA', 'CAJA', 'SACO']
 
 
 def validar_foto(archivo):
@@ -30,11 +40,30 @@ def validar_foto(archivo):
 class PuestoForm(forms.ModelForm):
     class Meta:
         model = Puesto
-        fields = ('nombre', 'referencia', 'foto', 'latitud', 'longitud', 'efectivo', 'tarjeta', 'yape_plin')
-        labels = {'nombre': 'Nombre del mercado o local', 'referencia': 'Puesto y referencia',
-                  'foto': 'Foto del puesto', 'yape_plin': 'Yape / Plin'}
-        help_texts = {'referencia': 'Ejemplo: puesto 24, pasillo de frutas.'}
-        widgets = {'foto': forms.FileInput(attrs={'accept': 'image/jpeg,image/png,image/webp'})}
+        fields = ('nombre', 'numero', 'referencia', 'direccion', 'horario', 'foto', 'latitud', 'longitud',
+                  'efectivo', 'tarjeta', 'yape_plin')
+        labels = {'nombre': 'Nombre del lugar', 'numero': 'N.º de puesto', 'foto': 'Foto de tu puesto'}
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Mercado San Camilo'}),
+            'numero': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 24'}),
+            'referencia': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. pasillo de frutas, frente a la puerta 2'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Se llena sola al marcar el mapa'}),
+            'horario': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Lunes a sábado, 6 a. m. a 2 p. m.'}),
+            'foto': forms.FileInput(attrs={'class': 'd-none', 'accept': 'image/jpeg,image/png,image/webp'}),
+            'latitud': forms.HiddenInput(),
+            'longitud': forms.HiddenInput(),
+            'efectivo': forms.CheckboxInput(attrs={'class': 'btn-check'}),
+            'tarjeta': forms.CheckboxInput(attrs={'class': 'btn-check'}),
+            'yape_plin': forms.CheckboxInput(attrs={'class': 'btn-check'}),
+        }
+        error_messages = {
+            'latitud': {'required': 'Marca en el mapa dónde está tu puesto.'},
+            'longitud': {'required': 'Marca en el mapa dónde está tu puesto.'},
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['foto'].required = not (self.instance and self.instance.foto)
 
     def clean_foto(self):
         return validar_foto(self.cleaned_data['foto'])
@@ -42,7 +71,7 @@ class PuestoForm(forms.ModelForm):
     def clean(self):
         datos = super().clean()
         if not any(datos.get(campo) for campo in ('efectivo', 'tarjeta', 'yape_plin')):
-            raise forms.ValidationError('Elige al menos una forma de pago en el puesto.')
+            raise forms.ValidationError('Elige al menos una forma de pago.')
         return datos
 
 
@@ -51,12 +80,31 @@ class PublicacionForm(forms.ModelForm):
         model = Producto
         fields = ('nombre', 'categoria', 'descripcion', 'imagen', 'unidad', 'stock', 'precio',
                   'precio_oferta', 'disponible')
-        labels = {'imagen': 'Foto del producto', 'precio': 'Precio habitual (S/)',
-                  'precio_oferta': 'Precio de oferta (S/, opcional)', 'disponible': 'Visible en el catálogo'}
+        labels = {'nombre': '¿Qué vendes?', 'imagen': 'Foto del producto', 'precio': 'Precio normal (S/)',
+                  'precio_oferta': 'Precio de oferta (S/)', 'disponible': 'Mostrar en la web',
+                  'stock': 'Cantidad que tienes', 'unidad': 'Se vende por', 'descripcion': 'Descripción corta'}
         widgets = {
-            'descripcion': forms.Textarea(attrs={'rows': 3}),
-            'imagen': forms.FileInput(attrs={'accept': 'image/jpeg,image/png,image/webp'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Palta fuerte'}),
+            'categoria': forms.Select(attrs={'class': 'form-select'}),
+            'descripcion': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': 'Ej. Palta madura para hoy, de Majes.'}),
+            'imagen': forms.FileInput(attrs={'accept': 'image/jpeg,image/png,image/webp', 'class': 'd-none'}),
+            'unidad': forms.Select(attrs={'class': 'form-select'}),
+            'stock': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'inputmode': 'numeric'}),
+            'precio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'inputmode': 'decimal'}),
+            'precio_oferta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'inputmode': 'decimal', 'placeholder': 'Opcional'}),
+            'disponible': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['categoria'].empty_label = 'Elige una categoría'
+        self.fields['categoria'].queryset = Categoria.objects.order_by('nombre')
+        self.fields['descripcion'].required = False
+        actual = self.instance.unidad if self.instance and self.instance.pk else None
+        self.fields['unidad'].choices = [c for c in Producto.UNIDADES if c[0] in UNIDADES_MERCADO or c[0] == actual]
+        if not self.instance.pk:
+            self.initial.setdefault('unidad', 'KG')
+            self.initial.setdefault('disponible', True)
 
     def clean_imagen(self):
         return validar_foto(self.cleaned_data['imagen'])
@@ -68,7 +116,7 @@ class PublicacionForm(forms.ModelForm):
         if precio is not None and precio <= 0:
             self.add_error('precio', 'Ingresa un precio mayor a cero.')
         if oferta is not None and (precio is None or not 0 < oferta < precio):
-            self.add_error('precio_oferta', 'Ingresa un precio mayor a cero y menor al precio habitual.')
+            self.add_error('precio_oferta', 'El precio de oferta debe ser menor al precio normal.')
         return datos
 
 
@@ -76,37 +124,189 @@ def es_vendedor(usuario):
     return obtener_o_crear_perfil(usuario).rol == 'PRODUCTOR'
 
 
-def vitrina(request, ofertas=False, portada=False):
+def puestos_con_productos():
+    publicados = Producto.objects.publicados()
+    return (Puesto.objects.select_related('vendedor__perfil')
+            .annotate(total_productos=Count('vendedor__productos', filter=Q(vendedor__productos__in=publicados)))
+            .filter(total_productos__gt=0)
+            .order_by('-total_productos', 'nombre'))
+
+
+def datos_stock(producto):
+    return {
+        'stock': producto.stock,
+        'unidad': producto.nombre_unidad_stock(),
+        'precio': str(producto.precio_actual()),
+        'disponible': producto.esta_publicado(),
+        'actualizado': timezone.localtime(producto.stock_actualizado).strftime('%H:%M') if producto.stock_actualizado else '',
+    }
+
+
+# ---------------------------------------------------------------- comprador
+
+def inicio(request):
     asegurar_datos_iniciales()
-    productos = Producto.objects.ofertas_activas() if ofertas else Producto.objects.publicados()
-    productos = productos.select_related('productor__perfil', 'productor__puesto', 'categoria')
-    consulta = request.GET.get('q', '').strip()[:100]
-    if consulta:
-        productos = productos.filter(Q(nombre__icontains=consulta) | Q(productor__puesto__nombre__icontains=consulta))
-    productos = productos.order_by('-en_oferta', '-fecha_publicacion', '-pk')
-    return render(request, 'presencial/vitrina.html', {
-        'pagina': Paginator(productos, 24).get_page(request.GET.get('page')),
-        'consulta': consulta, 'ofertas': ofertas, 'portada': portada,
+    publicados = Producto.objects.publicados().select_related('categoria', 'productor__puesto', 'productor__perfil')
+    ofertas = ofertas_destacadas()
+    puestos = puestos_con_productos()
+    return render(request, 'inicio.html', {
+        'categorias': Categoria.objects.annotate(total=Count('productos', filter=Q(productos__in=Producto.objects.publicados())))
+                      .filter(total__gt=0).order_by('-total', 'nombre')[:8],
+        'productos_destacados': publicados.order_by('-en_oferta', '-fecha_publicacion')[:8],
+        'ofertas_carrusel': ofertas,
+        'mejor_oferta': ofertas[0] if ofertas else None,
+        'puestos_destacados': puestos[:6],
+        'total_productos': publicados.count(),
+        'total_ofertas': Producto.objects.ofertas_activas().count(),
+        'total_puestos': puestos.count(),
     })
 
 
+def catalogo(request, ofertas=False):
+    asegurar_datos_iniciales()
+    base = Producto.objects.ofertas_activas() if ofertas else Producto.objects.publicados()
+    productos = con_precio_vigente(base.select_related('categoria', 'productor__puesto', 'productor__perfil'))
+    busqueda = request.GET.get('q', '').strip()[:100]
+    categoria_id = request.GET.get('categoria', '').strip()
+    puesto_id = request.GET.get('puesto', '').strip()
+    orden = request.GET.get('orden', 'recientes')
+    if busqueda:
+        productos = productos.filter(
+            Q(nombre__icontains=busqueda) | Q(descripcion__icontains=busqueda)
+            | Q(productor__puesto__nombre__icontains=busqueda) | Q(categoria__nombre__icontains=busqueda)
+        )
+    if categoria_id.isdigit():
+        productos = productos.filter(categoria_id=int(categoria_id))
+    if puesto_id.isdigit():
+        productos = productos.filter(productor__puesto__id=int(puesto_id))
+    if orden == 'precio_asc':
+        productos = productos.order_by('precio_vigente')
+    elif orden == 'precio_desc':
+        productos = productos.order_by('-precio_vigente')
+    elif orden == 'stock':
+        productos = productos.order_by('-stock')
+    else:
+        orden = 'recientes'
+        productos = productos.order_by('-en_oferta', '-fecha_publicacion')
+
+    pagina = Paginator(productos, 12).get_page(request.GET.get('pagina'))
+    parametros = request.GET.copy()
+    parametros.pop('pagina', None)
+    contexto = {
+        'productos': pagina, 'pagina': pagina, 'parametros_filtro': parametros.urlencode(),
+        'total_resultados': pagina.paginator.count, 'ofertas': ofertas,
+        'ofertas_carrusel': ofertas_destacadas() if ofertas else None,
+        'categorias': Categoria.objects.filter(productos__in=Producto.objects.publicados()).distinct().order_by('nombre'),
+        'puestos': puestos_con_productos(),
+        'busqueda': busqueda, 'categoria_seleccionada': categoria_id, 'puesto_seleccionado': puesto_id,
+        'orden_seleccionado': orden,
+    }
+    return render(request, 'catalogo.html', contexto)
+
+
 def ficha(request, producto_id):
-    producto = get_object_or_404(Producto.objects.select_related('productor__puesto', 'productor__perfil'), pk=producto_id)
+    producto = get_object_or_404(
+        Producto.objects.select_related('productor__puesto', 'productor__perfil', 'categoria'), pk=producto_id)
     if request.user != producto.productor and not producto.vendedor_habilitado():
         raise Http404()
-    return render(request, 'presencial/ficha.html', {'producto': producto})
+    en_lista = None
+    if request.user.is_authenticated:
+        en_lista = ItemCarrito.objects.filter(comprador=request.user, producto=producto,
+                                              precio_unitario_acordado__isnull=True).first()
+    mas_del_puesto = (Producto.objects.publicados().filter(productor=producto.productor)
+                      .exclude(pk=producto.pk).select_related('categoria', 'productor__puesto')[:4])
+    return render(request, 'detalle_producto.html', {
+        'producto': producto, 'puesto': getattr(producto.productor, 'puesto', None),
+        'en_lista': en_lista, 'mas_del_puesto': mas_del_puesto,
+        'extras': producto.fotos.all(),
+    })
+
+
+def puestos(request):
+    lista_puestos = list(puestos_con_productos())
+    puntos = [{
+        'nombre': p.nombre, 'puesto': p.titulo_puesto(), 'productos': p.total_productos,
+        'lat': float(p.latitud), 'lng': float(p.longitud), 'llegar': p.como_llegar(),
+        'url': f"{reverse('catalogo')}?puesto={p.pk}",
+    } for p in lista_puestos]
+    return render(request, 'productores.html', {'puestos': lista_puestos, 'puntos': puntos})
 
 
 @require_GET
 @never_cache
 def stock_publico(request):
-    ids = request.GET.get('ids', '').split(',')
-    if len(ids) > 40 or not all(valor.isascii() and valor.isdecimal() and len(valor) <= 10 for valor in ids):
+    ids = [valor for valor in request.GET.get('ids', '').split(',') if valor]
+    if not ids or len(ids) > 60 or not all(valor.isascii() and valor.isdecimal() and len(valor) <= 10 for valor in ids):
         return JsonResponse({'error': 'Publicaciones inválidas'}, status=400)
-    productos = Producto.objects.publicados().filter(pk__in=ids).select_related('productor__puesto', 'productor__perfil')
-    return JsonResponse({p.pk: {'stock': p.stock, 'unidad': p.nombre_unidad_stock(),
-                               'precio': str(p.precio_actual())} for p in productos})
+    productos = Producto.objects.filter(pk__in=ids).select_related('productor__puesto', 'productor__perfil')
+    return JsonResponse({p.pk: datos_stock(p) for p in productos if p.vendedor_habilitado()})
 
+
+def total_lista(usuario):
+    return ItemCarrito.objects.filter(comprador=usuario, precio_unitario_acordado__isnull=True).count()
+
+
+@login_required
+def lista(request):
+    if es_vendedor(request.user):
+        return redirect('panel_productor')
+    items = list(ItemCarrito.objects.filter(comprador=request.user, precio_unitario_acordado__isnull=True)
+                 .select_related('producto__productor__puesto', 'producto__productor__perfil', 'producto__categoria')
+                 .order_by('producto__productor_id', '-fecha_agregado'))
+    grupos = {}
+    for item in items:
+        puesto = getattr(item.producto.productor, 'puesto', None)
+        grupo = grupos.setdefault(item.producto.productor_id, {'puesto': puesto, 'items': [], 'total': Decimal('0')})
+        grupo['items'].append(item)
+        if item.producto.esta_publicado():
+            grupo['total'] += item.subtotal()
+    return render(request, 'carrito.html', {
+        'grupos': list(grupos.values()),
+        'total_items': len(items),
+        'total_estimado': sum((g['total'] for g in grupos.values()), Decimal('0')),
+    })
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def guardar_lista(request, producto_id):
+    rapido = request.headers.get('X-Carrito-Rapido') == '1'
+    if es_vendedor(request.user):
+        if rapido:
+            return JsonResponse({'ok': False, 'mensaje': 'Las cuentas de vendedor no arman listas de compra.'}, status=403)
+        raise Http404()
+    producto = get_object_or_404(Producto.objects.publicados(), pk=producto_id)
+    try:
+        cantidad = forms.IntegerField(min_value=1, max_value=max(producto.stock, 1)).clean(request.POST.get('cantidad') or 1)
+    except forms.ValidationError:
+        if rapido:
+            return JsonResponse({'ok': False, 'mensaje': f'Solo quedan {producto.stock} {producto.nombre_unidad_stock()}.'}, status=400)
+        messages.warning(request, f'Solo quedan {producto.stock} {producto.nombre_unidad_stock()}. Ajusta la cantidad.')
+        return redirect('detalle_producto', producto_id=producto.pk)
+    ItemCarrito.objects.update_or_create(
+        comprador=request.user, producto=producto, precio_unitario_acordado=None, defaults={'cantidad': cantidad},
+    )
+    texto = f'{producto.nombre}: {cantidad} {producto.unidad_corta()} en tu lista'
+    if rapido:
+        return JsonResponse({'ok': True, 'total_carrito': total_lista(request.user), 'mensaje': texto})
+    messages.success(request, texto)
+    if request.POST.get('volver') == 'detalle':
+        return redirect('detalle_producto', producto_id=producto.pk)
+    return redirect('carrito')
+
+
+@login_required
+@require_POST
+def quitar_de_lista(request, item_id):
+    item = get_object_or_404(ItemCarrito, pk=item_id, comprador=request.user)
+    nombre = item.producto.nombre
+    item.delete()
+    messages.info(request, f'Quitaste {nombre} de tu lista.')
+    return redirect('carrito')
+
+
+# ---------------------------------------------------------------- vendedor
 
 @login_required
 @require_http_methods(['GET', 'POST'])
@@ -114,21 +314,45 @@ def configurar_puesto(request):
     if not es_vendedor(request.user):
         raise Http404()
     puesto = Puesto.objects.filter(vendedor=request.user).first() or Puesto(vendedor=request.user)
-    form = PuestoForm(request.POST if request.method == 'POST' else None, request.FILES, instance=puesto)
+    nuevo = puesto.pk is None
+    form = PuestoForm(request.POST if request.method == 'POST' else None, request.FILES or None, instance=puesto)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        messages.success(request, 'Guardaste la ubicación y los datos de tu puesto.')
+        if nuevo:
+            messages.success(request, '¡Listo! Tu puesto ya aparece en el mapa. Ahora publica tu primer producto.')
+            return redirect('crear_producto')
+        messages.success(request, 'Guardaste los datos de tu puesto.')
         return redirect('panel_productor')
-    return render(request, 'presencial/puesto.html', {'form': form, 'puesto': puesto, 'maps_key': settings.GOOGLE_MAPS_API_KEY})
+    return render(request, 'puesto_vendedor.html', {
+        'form': form, 'puesto': puesto, 'nuevo': nuevo, 'maps_key': settings.GOOGLE_MAPS_API_KEY,
+        'foto_actual': puesto.foto.url if puesto.foto else '',
+        'campos_pago': [(form['efectivo'], 'bi-cash-coin'), (form['tarjeta'], 'bi-credit-card'), (form['yape_plin'], 'bi-phone')],
+    })
 
 
 @login_required
 def panel(request):
     if not es_vendedor(request.user):
         return redirect('carrito')
-    return render(request, 'presencial/panel.html', {
-        'puesto': Puesto.objects.filter(vendedor=request.user).first(),
-        'productos': Producto.objects.filter(productor=request.user),
+    puesto = Puesto.objects.filter(vendedor=request.user).first()
+    productos = list(Producto.objects.filter(productor=request.user).select_related('categoria', 'productor__puesto', 'productor__perfil').order_by('-disponible', 'nombre'))
+    hoy = timezone.localdate()
+    ventas_hoy = VentaPuesto.objects.filter(vendedor=request.user, fecha__date=hoy)
+    resumen = ventas_hoy.aggregate(unidades=Sum('cantidad'), monto=Sum(F('cantidad') * F('precio_unitario')))
+    interesados = (ItemCarrito.objects.filter(producto__productor=request.user, precio_unitario_acordado__isnull=True)
+                   .values('producto_id').annotate(total=Count('id')))
+    por_producto = {fila['producto_id']: fila['total'] for fila in interesados}
+    for producto in productos:
+        producto.interesados = por_producto.get(producto.pk, 0)
+    return render(request, 'panel_productor.html', {
+        'puesto': puesto,
+        'productos': productos,
+        'total_publicados': sum(1 for p in productos if p.esta_publicado()),
+        'total_agotados': sum(1 for p in productos if p.stock == 0),
+        'ventas_hoy': ventas_hoy.select_related('producto')[:8],
+        'vendido_hoy': resumen['monto'] or Decimal('0'),
+        'unidades_hoy': ventas_hoy.count(),
+        'total_interesados': sum(por_producto.values()),
     })
 
 
@@ -139,12 +363,13 @@ def publicar(request, producto_id=None):
         raise Http404()
     puesto = Puesto.objects.filter(vendedor=request.user).first()
     if not puesto:
-        messages.info(request, 'Configura tu puesto para que los compradores sepan dónde encontrarte.')
+        messages.info(request, 'Primero marca en el mapa dónde está tu puesto.')
         return redirect('configurar_puesto')
     producto = (get_object_or_404(Producto, pk=producto_id, productor=request.user)
                 if producto_id is not None else Producto(productor=request.user))
-    form = PublicacionForm(request.POST if request.method == 'POST' else None, request.FILES, instance=producto)
+    form = PublicacionForm(request.POST if request.method == 'POST' else None, request.FILES or None, instance=producto)
     if request.method == 'POST' and form.is_valid():
+        stock_antes = Producto.objects.filter(pk=producto.pk).values_list('stock', flat=True).first()
         producto = form.save(commit=False)
         producto.en_oferta = producto.precio_oferta is not None
         producto.oferta_pendiente_pago = False
@@ -153,57 +378,71 @@ def publicar(request, producto_id=None):
         producto.minimo_compra = 1
         producto.origen = puesto.nombre
         producto.fecha_vencimiento = fecha_vencimiento_por_defecto()
+        if stock_antes != producto.stock:
+            producto.stock_actualizado = timezone.now()
         producto.save()
-        messages.success(request, 'Guardaste el producto.')
+        messages.success(request, f'Guardaste {producto.nombre}. Ya se ve en la web.' if producto.esta_publicado()
+                         else f'Guardaste {producto.nombre}.')
         return redirect('panel_productor')
-    return render(request, 'presencial/publicar.html', {'form': form, 'producto': producto})
-
-
-@login_required
-@require_POST
-def actualizar_stock(request, producto_id):
-    if not es_vendedor(request.user):
-        raise Http404()
-    producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
-    campo = forms.IntegerField(min_value=0, max_value=2147483647)
-    try:
-        anterior = campo.clean(request.POST.get('stock_anterior'))
-        cantidad = 0 if request.POST.get('agotado') == '1' else campo.clean(request.POST.get('stock'))
-    except forms.ValidationError:
-        messages.error(request, 'Ingresa una cantidad entera igual o mayor a cero.')
-        return redirect('panel_productor')
-    if Producto.objects.filter(pk=producto.pk, productor=request.user, stock=anterior).update(stock=cantidad):
-        messages.success(request, 'Stock actualizado.')
-    else:
-        messages.warning(request, 'El stock cambió en otra pantalla. Revisa el valor actual antes de guardarlo.')
-    return redirect('panel_productor')
-
-
-@login_required
-def lista(request):
-    if es_vendedor(request.user):
-        return redirect('panel_productor')
-    items = ItemCarrito.objects.filter(comprador=request.user, precio_unitario_acordado__isnull=True)
-    return render(request, 'presencial/lista.html', {
-        'pagina': Paginator(items.select_related('producto__productor__puesto', 'producto__productor__perfil')
-                            .order_by('-fecha_agregado'), 24).get_page(request.GET.get('page')),
+    return render(request, 'form_producto.html', {
+        'form': form, 'producto': producto, 'puesto': puesto,
+        'foto_actual': producto.imagen.url if producto.imagen else '',
     })
 
 
 @login_required
 @require_POST
-@transaction.atomic
-def guardar_lista(request, producto_id):
-    if es_vendedor(request.user):
+def actualizar_stock(request, producto_id):
+    """Cambia el stock desde el panel. Acepta formulario normal o fetch (responde JSON).
+    accion: vendi (resta y registra la venta), sumar, fijar, agotado."""
+    rapido = request.headers.get('X-Stock-Rapido') == '1'
+
+    def responder(ok, texto, producto=None, estado=200):
+        if rapido:
+            datos = {'ok': ok, 'mensaje': texto}
+            if producto is not None:
+                producto.refresh_from_db()
+                datos.update(datos_stock(producto))
+            return JsonResponse(datos, status=estado)
+        (messages.success if ok else messages.warning)(request, texto)
+        return redirect('panel_productor')
+
+    if not es_vendedor(request.user):
         raise Http404()
-    producto = get_object_or_404(Producto.objects.publicados(), pk=producto_id)
+    producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
+    accion = request.POST.get('accion') or ('agotado' if request.POST.get('agotado') == '1' else 'fijar')
+    entero = forms.IntegerField(min_value=0, max_value=2147483647)
     try:
-        cantidad = forms.IntegerField(min_value=1, max_value=producto.stock).clean(request.POST.get('cantidad'))
+        cantidad = entero.clean(request.POST.get('cantidad') or request.POST.get('stock') or (0 if accion == 'agotado' else None))
     except forms.ValidationError:
-        messages.warning(request, 'Revisa la cantidad disponible y vuelve a intentarlo.')
-        return redirect('detalle_producto', producto_id=producto.pk)
-    ItemCarrito.objects.update_or_create(
-        comprador=request.user, producto=producto, precio_unitario_acordado=None, defaults={'cantidad': cantidad},
-    )
-    messages.success(request, 'Guardaste el producto en tu lista.')
-    return redirect('carrito')
+        return responder(False, 'Ingresa una cantidad entera igual o mayor a cero.', producto, 400)
+
+    ahora = timezone.now()
+    with transaction.atomic():
+        if accion == 'vendi':
+            if cantidad < 1:
+                return responder(False, 'Indica cuánto vendiste.', producto, 400)
+            vendidos = Producto.objects.filter(pk=producto.pk, stock__gte=cantidad).update(
+                stock=F('stock') - cantidad, stock_actualizado=ahora)
+            if not vendidos:
+                return responder(False, f'No te quedan {cantidad} {producto.nombre_unidad_stock()}.', producto, 409)
+            VentaPuesto.objects.create(producto=producto, vendedor=request.user, cantidad=cantidad,
+                                       precio_unitario=producto.precio_actual())
+            texto = f'Vendiste {cantidad} {producto.unidad_corta()} de {producto.nombre}.'
+        elif accion == 'sumar':
+            Producto.objects.filter(pk=producto.pk).update(stock=F('stock') + cantidad, stock_actualizado=ahora)
+            texto = f'Agregaste {cantidad} a {producto.nombre}.'
+        else:
+            if accion == 'agotado':
+                cantidad = 0
+            anterior = request.POST.get('stock_anterior')
+            filtro = Producto.objects.filter(pk=producto.pk)
+            if anterior not in (None, ''):
+                try:
+                    filtro = filtro.filter(stock=entero.clean(anterior))
+                except forms.ValidationError:
+                    return responder(False, 'Cantidad anterior inválida.', producto, 400)
+            if not filtro.update(stock=cantidad, stock_actualizado=ahora):
+                return responder(False, 'El stock cambió en otra pantalla. Revisa el valor actual antes de guardarlo.', producto, 409)
+            texto = f'{producto.nombre}: marcado como agotado.' if cantidad == 0 else f'{producto.nombre}: quedan {cantidad}.'
+    return responder(True, texto, producto)
