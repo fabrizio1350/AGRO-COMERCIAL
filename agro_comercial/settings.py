@@ -37,6 +37,9 @@ if os.environ.get('TRUST_PROXY_HTTPS', '').lower() == 'true':
 
 DATOS_DEMO_AUTOMATICOS = DEBUG and os.environ.get('DATOS_DEMO_AUTOMATICOS', '').lower() == 'true'
 
+# Si el servidor (nginx) no entrega /static y /media, Django los sirve con SERVIR_ARCHIVOS=True
+SERVIR_ARCHIVOS = DEBUG or os.environ.get('SERVIR_ARCHIVOS', '').lower() == 'true'
+
 # Permite que la ventana emergente de Google Sign-In se comunique con la pagina
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
