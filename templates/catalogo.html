@@ -1,143 +1,91 @@
 {% extends 'base.html' %}
 
-{% block title %}Productos | AgroComercial{% endblock %}
+{% block title %}{% if ofertas %}Ofertas{% else %}Productos{% endif %} | AgroComercial{% endblock %}
 
 {% block content %}
-{% include 'includes/carrusel_ofertas.html' %}
+{% if ofertas %}{% include 'includes/carrusel_ofertas.html' %}{% endif %}
 
+{% if ofertas %}{% url 'ventas_por_oferta' as url_lista %}{% else %}{% url 'catalogo' as url_lista %}{% endif %}
 <div class="encabezado-seccion entrar">
     <div>
-        <span class="antetitulo"><i class="bi bi-grid-fill" aria-hidden="true"></i>Marketplace agrícola</span>
-        <h1 class="h2 fw-bold mb-0">Productos del campo</h1>
+        <span class="antetitulo"><i class="bi {% if ofertas %}bi-lightning-charge-fill{% else %}bi-basket-fill{% endif %}" aria-hidden="true"></i>{% if ofertas %}Mientras dure el stock{% else %}Mercados de Arequipa{% endif %}</span>
+        <h1 class="h2 fw-bold mb-0">{% if ofertas %}Ofertas del mercado{% else %}Productos disponibles{% endif %}</h1>
+        <p class="text-muted mb-0 mt-1">Compras en el puesto: aquí ves el precio y cuánto queda en tiempo real.</p>
     </div>
     {% if rol_actual == 'PRODUCTOR' %}
         <a href="{% url 'crear_producto' %}" class="btn btn-success"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Publicar producto</a>
     {% endif %}
 </div>
 
-<!-- Fichas de categoria deslizables -->
+<form method="get" action="{{ url_lista }}" class="filtros-mercado entrar entrar-2" id="formFiltros"
+      hx-get="{{ url_lista }}" hx-target="#resultados" hx-select="#resultados" hx-swap="outerHTML show:none"
+      hx-push-url="true" hx-indicator="#resultados"
+      hx-trigger="change[target.id != 'filtroTexto'], input changed delay:450ms from:#filtroTexto, submit">
+    <div class="buscador-filtro">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <label class="visually-hidden" for="filtroTexto">Buscar producto o mercado</label>
+        <input type="search" name="q" id="filtroTexto" value="{{ busqueda }}" placeholder="Papa, palta, San Camilo..." autocomplete="off">
+    </div>
+    <label class="visually-hidden" for="filtroPuesto">Puesto</label>
+    <select name="puesto" id="filtroPuesto" class="form-select">
+        <option value="">Todos los puestos</option>
+        {% for p in puestos %}<option value="{{ p.id }}" {% if puesto_seleccionado == p.id|stringformat:"s" %}selected{% endif %}>{{ p.nombre }} · {{ p.titulo_puesto }}</option>{% endfor %}
+    </select>
+    <label class="visually-hidden" for="filtroOrden">Ordenar</label>
+    <select name="orden" id="filtroOrden" class="form-select">
+        <option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Ofertas primero</option>
+        <option value="precio_asc" {% if orden_seleccionado == 'precio_asc' %}selected{% endif %}>Menor precio</option>
+        <option value="precio_desc" {% if orden_seleccionado == 'precio_desc' %}selected{% endif %}>Mayor precio</option>
+        <option value="stock" {% if orden_seleccionado == 'stock' %}selected{% endif %}>Más cantidad</option>
+    </select>
+    <input type="hidden" name="categoria" value="{{ categoria_seleccionada }}" id="filtroCategoria">
+</form>
+
 <div class="fichas-filtro mb-4 entrar entrar-2" role="list">
-    <a href="{% url 'catalogo' %}" class="ficha-filtro {% if not categoria_seleccionada %}activa{% endif %}" role="listitem">Todo</a>
+    <a href="{{ url_lista }}" class="ficha-filtro {% if not categoria_seleccionada %}activa{% endif %}" role="listitem">Todo</a>
     {% for cat in categorias %}
-        <a href="{% url 'catalogo' %}?categoria={{ cat.id }}" class="ficha-filtro {% if categoria_seleccionada == cat.id|stringformat:'s' %}activa{% endif %}" role="listitem">{{ cat.nombre }}</a>
+        <a href="{{ url_lista }}?categoria={{ cat.id }}" class="ficha-filtro {% if categoria_seleccionada == cat.id|stringformat:'s' %}activa{% endif %}" role="listitem">{{ cat.nombre }}</a>
     {% endfor %}
 </div>
 
-<div class="row g-4">
-    <!-- Filtros: columna en PC, panel que sube desde abajo en celular -->
-    <div class="col-lg-3">
-        <button class="btn btn-outline-secondary w-100 d-lg-none mb-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#panelFiltros" aria-controls="panelFiltros">
-            <i class="bi bi-sliders me-1" aria-hidden="true"></i>Filtros y orden
-        </button>
-        <div class="offcanvas-lg offcanvas-bottom panel-filtros" tabindex="-1" id="panelFiltros" aria-labelledby="tituloFiltros">
-            <div class="offcanvas-header">
-                <h2 class="offcanvas-title h5 fw-bold" id="tituloFiltros">Filtros</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#panelFiltros" aria-label="Cerrar"></button>
-            </div>
-            <div class="offcanvas-body">
-                <form method="get" action="{% url 'catalogo' %}" class="filtros-lateral" id="formFiltros"
-                      hx-get="{% url 'catalogo' %}" hx-target="#resultados" hx-select="#resultados" hx-swap="outerHTML show:none"
-                      hx-push-url="true" hx-indicator="#resultados"
-                      hx-trigger="change[target.id != 'filtroTexto'], input changed delay:450ms from:#filtroTexto, submit">
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold" for="filtroTexto">Buscar</label>
-                        <input type="search" name="q" id="filtroTexto" value="{{ busqueda }}" class="form-control" placeholder="Papa, rocoto, Majes...">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold" for="filtroCategoria">Categoría</label>
-                        <select name="categoria" id="filtroCategoria" class="form-select">
-                            <option value="">Todas</option>
-                            {% for cat in categorias %}
-                            <option value="{{ cat.id }}" {% if categoria_seleccionada == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.nombre }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold" for="filtroUbicacion">Ubicación</label>
-                        <select name="ubicacion" id="filtroUbicacion" class="form-select">
-                            <option value="">Todo Arequipa</option>
-                            {% for valor, nombre in lugares %}
-                            <option value="{{ valor }}" {% if ubicacion_seleccionada == valor %}selected{% endif %}>{{ nombre }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <span class="form-label small fw-semibold d-block">Precio (S/)</span>
-                        <div class="d-flex gap-2">
-                            <label class="visually-hidden" for="filtroPrecioMin">Precio mínimo</label>
-                            <input type="number" min="0" step="0.10" name="precio_min" id="filtroPrecioMin" value="{{ precio_min }}" class="form-control" placeholder="Mín.">
-                            <label class="visually-hidden" for="filtroPrecioMax">Precio máximo</label>
-                            <input type="number" min="0" step="0.10" name="precio_max" id="filtroPrecioMax" value="{{ precio_max }}" class="form-control" placeholder="Máx.">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold" for="filtroUnidad">Unidad de venta</label>
-                        <select name="unidad" id="filtroUnidad" class="form-select">
-                            <option value="">Todas</option>
-                            {% for valor, nombre in unidades %}
-                            <option value="{{ valor }}" {% if unidad_seleccionada == valor %}selected{% endif %}>{{ nombre }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold" for="filtroCantidad">Cantidad disponible mínima</label>
-                        <input type="number" min="0" step="1" name="cantidad_min" id="filtroCantidad" value="{{ cantidad_min }}" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold" for="filtroOrden">Ordenar por</label>
-                        <select name="orden" id="filtroOrden" class="form-select">
-                            <option value="recientes" {% if orden_seleccionado == 'recientes' %}selected{% endif %}>Más recientes</option>
-                            <option value="precio_asc" {% if orden_seleccionado == 'precio_asc' %}selected{% endif %}>Menor precio</option>
-                            <option value="precio_desc" {% if orden_seleccionado == 'precio_desc' %}selected{% endif %}>Mayor precio</option>
-                            <option value="stock" {% if orden_seleccionado == 'stock' %}selected{% endif %}>Más cantidad</option>
-                            <option value="vence" {% if orden_seleccionado == 'vence' %}selected{% endif %}>Vencen pronto</option>
-                        </select>
-                    </div>
-                    <div class="form-check form-switch mb-4">
-                        <input class="form-check-input" type="checkbox" role="switch" name="ofertas" value="1" id="filtroOfertas" {% if solo_ofertas == '1' %}checked{% endif %}>
-                        <label class="form-check-label fw-semibold" for="filtroOfertas">Solo productos en oferta</label>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success" data-bs-dismiss="offcanvas" data-bs-target="#panelFiltros">Ver resultados</button>
-                        <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary">Limpiar filtros</a>
-                    </div>
-                </form>
-            </div>
-        </div>
+<div id="resultados" class="resultados" data-stock-url="{% url 'stock_publico' %}">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="text-muted small mb-0" aria-live="polite">{{ total_resultados }} producto{{ total_resultados|pluralize }}</p>
+        <span class="estado-vivo small text-muted" data-estado-stock><span class="punto-vivo" aria-hidden="true"></span>Stock en vivo</span>
+        <span class="cargando-texto small text-muted"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Actualizando...</span>
     </div>
 
-    <!-- Resultados (se reemplazan sin recargar la pagina al filtrar) -->
-    <div class="col-lg-9">
-        <div id="resultados" class="resultados">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <p class="text-muted small mb-0" aria-live="polite">{{ total_resultados }} producto{{ total_resultados|pluralize }} encontrado{{ total_resultados|pluralize }}</p>
-                <span class="cargando-texto small text-muted"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Actualizando...</span>
-            </div>
-
-            <div class="rejilla-esqueleto row g-3 g-lg-4" aria-hidden="true">
-                {% for i in "123456" %}
-                <div class="col-6 col-xl-4"><div class="esqueleto" style="aspect-ratio: 3 / 4;"></div></div>
-                {% endfor %}
-            </div>
-
-            <div class="row g-3 g-lg-4 rejilla-productos" data-escalonado>
-                {% for prod in productos %}
-                <div class="col-6 col-xl-4">
-                    {% include 'includes/tarjeta_producto.html' with prod=prod %}
-                </div>
-                {% empty %}
-                <div class="col-12">
-                    <div class="estado-vacio">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                        <h2 class="h5 fw-bold">No encontramos productos con esos filtros</h2>
-                        <p class="text-muted">Prueba con otra categoría, otro distrito o un rango de precio más amplio.</p>
-                        <a href="{% url 'catalogo' %}" class="btn btn-success">Ver todos los productos</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-
-        </div>
+    <div class="rejilla-esqueleto row g-3 g-lg-4" aria-hidden="true">
+        {% for i in "12345678" %}
+        <div class="col-6 col-md-4 col-xl-3"><div class="esqueleto" style="aspect-ratio: 3 / 4;"></div></div>
+        {% endfor %}
     </div>
+
+    <div class="row g-3 g-lg-4 rejilla-productos" data-escalonado>
+        {% for prod in productos %}
+        <div class="col-6 col-md-4 col-xl-3">
+            {% include 'includes/tarjeta_producto.html' with prod=prod %}
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="estado-vacio">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <h2 class="h5 fw-bold">{% if busqueda or categoria_seleccionada or puesto_seleccionado %}No encontramos productos con esa búsqueda{% elif ofertas %}Hoy todavía no hay ofertas{% else %}Todavía no hay productos{% endif %}</h2>
+                <p class="text-muted">{% if ofertas %}Vuelve más tarde o mira todos los productos disponibles.{% else %}Prueba con otro nombre, otra categoría u otro puesto.{% endif %}</p>
+                <a href="{% url 'catalogo' %}" class="btn btn-success">Ver todos los productos</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if pagina.has_other_pages %}
+    <nav class="mt-4 d-flex justify-content-center" aria-label="Páginas">
+        <ul class="pagination">
+            {% if pagina.has_previous %}<li class="page-item"><a class="page-link" href="?{{ parametros_filtro }}{% if parametros_filtro %}&{% endif %}pagina={{ pagina.previous_page_number }}">Anterior</a></li>{% endif %}
+            <li class="page-item disabled"><span class="page-link">{{ pagina.number }} de {{ pagina.paginator.num_pages }}</span></li>
+            {% if pagina.has_next %}<li class="page-item"><a class="page-link" href="?{{ parametros_filtro }}{% if parametros_filtro %}&{% endif %}pagina={{ pagina.next_page_number }}">Siguiente</a></li>{% endif %}
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 {% endblock %}
