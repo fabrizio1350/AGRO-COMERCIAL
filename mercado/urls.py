@@ -3,17 +3,18 @@ from django.views.generic import RedirectView
 from . import presencial, views
 
 urlpatterns = [
-    path('', presencial.vitrina, {'portada': True}, name='inicio'),
-    path('catalogo/', presencial.vitrina, name='catalogo'),
-    path('ofertas/', presencial.vitrina, {'ofertas': True}, name='ventas_por_oferta'),
+    path('', presencial.inicio, name='inicio'),
+    path('catalogo/', presencial.catalogo, name='catalogo'),
+    path('ofertas/', presencial.catalogo, {'ofertas': True}, name='ventas_por_oferta'),
     path('oferta/<int:oferta_id>/responder/', views.responder_oferta, name='responder_oferta'),
     path('producto/<int:producto_id>/', presencial.ficha, name='detalle_producto'),
     path('stock/', presencial.stock_publico, name='stock_publico'),
-    path('productores/', views.lista_productores, name='productores'),
+    path('puestos/', presencial.puestos, name='productores'),
+    path('productores/', RedirectView.as_view(pattern_name='productores', permanent=False)),
     path('informacion/', views.informacion, name='informacion'),
     path('carrito/', presencial.lista, name='carrito'),
     path('carrito/agregar/<int:producto_id>/', presencial.guardar_lista, name='agregar_al_carrito'),
-    path('carrito/eliminar/<int:item_id>/', views.eliminar_del_carrito, name='eliminar_del_carrito'),
+    path('carrito/eliminar/<int:item_id>/', presencial.quitar_de_lista, name='eliminar_del_carrito'),
     path('pasarela-pago/', RedirectView.as_view(pattern_name='carrito'), name='pasarela_pago'),
     path('comprobante/<str:codigo>/', views.comprobante_pago, name='comprobante_pago'),
     path('registro/', views.registro_vista, name='registro'),
