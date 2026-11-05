@@ -1,7 +1,0 @@
-{% if pagina.has_other_pages %}
-<nav class="paginas" aria-label="Paginación">
-  {% if pagina.has_previous %}<a href="?page={{ pagina.previous_page_number }}&q={{ consulta|urlencode }}">← Anterior</a>{% endif %}
-  <span>{{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
-  {% if pagina.has_next %}<a href="?page={{ pagina.next_page_number }}&q={{ consulta|urlencode }}">Siguiente →</a>{% endif %}
-</nav>
-{% endif %}
