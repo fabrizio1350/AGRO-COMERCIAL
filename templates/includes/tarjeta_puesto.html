@@ -1,0 +1,11 @@
+<a href="{% url 'catalogo' %}?puesto={{ puesto.id }}" class="tarjeta-puesto">
+    <span class="foto"><img src="{{ puesto.url_foto }}" alt="Foto de {{ puesto.nombre }}" loading="lazy" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';"></span>
+    <span class="cuerpo">
+        <strong class="d-block text-truncate">{{ puesto.nombre }}{% if puesto.vendedor.perfil.es_demo %} {% include 'includes/etiqueta_demo.html' %}{% endif %}</strong>
+        <span class="small text-muted d-block text-truncate"><i class="bi bi-shop me-1" aria-hidden="true"></i>{{ puesto.titulo_puesto }}{% if puesto.referencia %} · {{ puesto.referencia }}{% endif %}</span>
+        <span class="d-flex justify-content-between align-items-center mt-2">
+            <span class="pagos-mini">{% for icono, nombre in puesto.iconos_pago %}<span title="{{ nombre }}"><i class="bi {{ icono }}" aria-hidden="true"></i><span class="visually-hidden">{{ nombre }}</span></span>{% endfor %}</span>
+            {% if puesto.total_productos %}<span class="small text-success fw-semibold">{{ puesto.total_productos }} producto{{ puesto.total_productos|pluralize }}</span>{% endif %}
+        </span>
+    </span>
+</a>
