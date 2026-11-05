@@ -1,0 +1,15 @@
+{% comment %}Zona para arrastrar o elegir una foto. Uso: include con campo=form.imagen actual=url_actual texto="..."{% endcomment %}
+<div class="zona-foto {% if actual %}con-foto{% endif %}" id="zonaFoto" data-campo="{{ campo.html_name }}" tabindex="0" role="button" aria-label="{{ texto|default:'Subir foto' }}">
+    <img id="vistaFoto" class="vista-foto" alt="Vista previa de la foto" {% if actual %}src="{{ actual }}"{% endif %}>
+    <div class="texto-zona-foto">
+        <i class="bi bi-camera" aria-hidden="true"></i>
+        <span class="fw-semibold">{{ texto|default:'Toma o elige una foto' }}</span>
+        <span class="small text-muted">Desde tu celular o arrastrándola aquí · JPG, PNG o WEBP</span>
+    </div>
+</div>
+<div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+    <button type="button" class="btn btn-outline-success btn-sm" id="btnElegirFoto"><i class="bi bi-image me-1" aria-hidden="true"></i><span id="textoBtnFoto">{% if actual %}Cambiar foto{% else %}Elegir foto{% endif %}</span></button>
+    <span class="small text-muted" id="estadoFoto">{% if actual %}Esta es la foto actual.{% endif %}</span>
+</div>
+{{ campo }}
+{% if campo.errors %}<div class="text-danger small mt-1">{{ campo.errors|striptags }}</div>{% endif %}
