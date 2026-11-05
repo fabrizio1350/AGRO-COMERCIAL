@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if nuevo %}Marca tu puesto{% else %}Editar mi puesto{% endif %} | AgroComercial{% endblock %}
+
+{% block extra_css %}
+{% if not maps_key %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="formulario-simple mx-auto">
+    {% if not nuevo %}<a href="{% url 'panel_productor' %}" class="small text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver a mi puesto</a>{% endif %}
+    <div class="mt-2 mb-4 entrar">
+        <span class="antetitulo"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>{% if nuevo %}Paso 1 de 2{% else %}Mi puesto{% endif %}</span>
+        <h1 class="h3 fw-bold mb-1">{% if nuevo %}¿Dónde está tu puesto?{% else %}Datos de mi puesto{% endif %}</h1>
+        <p class="text-muted mb-0">Esto lo ven los compradores para llegar a comprarte.</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" novalidate class="entrar entrar-2" id="formPuesto">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger small">{{ form.non_field_errors|striptags }}</div>{% endif %}
+
+        <section class="bloque-verificacion">
+            <h2><span class="numero">1</span>Ubícalo en el mapa</h2>
+            <div class="buscador-mapa mb-2">
+                <div id="buscadorLugar" class="flex-grow-1">
+                    <label class="visually-hidden" for="textoLugar">Buscar mercado o dirección</label>
+                    <input type="search" id="textoLugar" class="form-control" placeholder="Busca tu mercado, ej. Mercado San Camilo" autocomplete="off">
+                </div>
+                <button type="button" class="btn btn-outline-success flex-shrink-0" id="btnMiUbicacion"><i class="bi bi-crosshair me-1" aria-hidden="true"></i><span class="d-none d-sm-inline">Usar mi ubicación</span><span class="d-sm-none">Aquí</span></button>
+            </div>
+            <div id="mapaPuesto" class="mapa-puesto" data-proveedor="{% if maps_key %}google{% else %}osm{% endif %}" aria-label="Mapa: toca donde está tu puesto"></div>
+            <p class="small text-muted mt-2 mb-0" id="estadoMapa"><i class="bi bi-hand-index me-1" aria-hidden="true"></i>Toca el mapa o arrastra el marcador hasta tu puesto.</p>
+            {{ form.latitud }}{{ form.longitud }}
+            {% if form.latitud.errors or form.longitud.errors %}<div class="text-danger small mt-1">Marca en el mapa dónde está tu puesto.</div>{% endif %}
+        </section>
+
+        <section class="bloque-verificacion">
+            <h2><span class="numero">2</span>Ponle nombre</h2>
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label small fw-semibold" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+                    {{ form.nombre }}
+                    {% if form.nombre.errors %}<div class="text-danger small mt-1">{{ form.nombre.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold" for="{{ form.numero.id_for_label }}">{{ form.numero.label }}</label>
+                    {{ form.numero }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold" for="{{ form.referencia.id_for_label }}">{{ form.referencia.label }} (opcional)</label>
+                    {{ form.referencia }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold" for="{{ form.horario.id_for_label }}">{{ form.horario.label }} (opcional)</label>
+                    {{ form.horario }}
+                </div>
+                <div class="col-12">
+                    <label class="form-label small fw-semibold" for="{{ form.direccion.id_for_label }}">{{ form.direccion.label }}</label>
+                    {{ form.direccion }}
+                </div>
+            </div>
+        </section>
+
+        <section class="bloque-verificacion">
+            <h2><span class="numero">3</span>Foto de tu puesto</h2>
+            <p class="small text-muted">Que se vea el frente del puesto o el letrero, así te reconocen rápido.</p>
+            {% include 'includes/zona_foto.html' with campo=form.foto actual=foto_actual texto='Toma una foto de tu puesto' %}
+        </section>
+
+        <section class="bloque-verificacion">
+            <h2><span class="numero">4</span>¿Cómo te pueden pagar?</h2>
+            <div class="opciones-pago">
+                {% for campo, icono in campos_pago %}
+                    {{ campo }}
+                    <label class="opcion-pago" for="{{ campo.id_for_label }}"><i class="bi {{ icono }}" aria-hidden="true"></i>{{ campo.label }}</label>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="d-grid d-sm-flex gap-2">
+            <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>{% if nuevo %}Guardar y seguir{% else %}Guardar cambios{% endif %}</button>
+            <a href="{% url 'panel_productor' %}" class="btn btn-link text-muted">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/subir_foto.js' %}?v={{ version_estaticos }}"></script>
+{% if not maps_key %}<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>{% endif %}
+<script src="{% static 'js/mapa-puesto.js' %}?v={{ version_estaticos }}"></script>
+{% if maps_key %}<script async src="https://maps.googleapis.com/maps/api/js?key={{ maps_key|urlencode }}&amp;libraries=places,marker&amp;callback=iniciarMapaPuesto&amp;loading=async&amp;language=es&amp;region=PE"></script>{% endif %}
+{% endblock %}
