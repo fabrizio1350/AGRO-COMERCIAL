@@ -3,9 +3,9 @@ Carrusel de ofertas destacadas (Ofertas y Marketplace): muestra una oferta grand
 y pasa sola a la siguiente. Recibe 'ofertas_carrusel': solo ofertas vigentes del servidor.
 {% endcomment %}
 {% if ofertas_carrusel %}
-<section class="carrusel-ofertas mb-4 entrar{% if ofertas_carrusel|length == 1 %} una-sola{% endif %}" aria-roledescription="carrusel" aria-label="Ofertas destacadas del campo">
+<section class="carrusel-ofertas mb-4 entrar{% if ofertas_carrusel|length == 1 %} una-sola{% endif %}" aria-roledescription="carrusel" aria-label="Ofertas de hoy">
     <div class="carrusel-ofertas-cabecera">
-        <h2><i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Ofertas destacadas del campo</h2>
+        <h2><i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Ofertas de hoy</h2>
         <span class="carrusel-contador" data-carrusel-contador aria-hidden="true">1 / {{ ofertas_carrusel|length }}</span>
     </div>
 
@@ -17,19 +17,18 @@ y pasa sola a la siguiente. Recibe 'ofertas_carrusel': solo ofertas vigentes del
                 <span class="carrusel-descuento">-{{ of.porcentaje_descuento }}%</span>
             </a>
             <div class="carrusel-info">
-                <div class="carrusel-categoria">{{ of.categoria.nombre|default:"Agrícola" }}</div>
+                <div class="carrusel-categoria">{{ of.categoria.nombre|default:"Mercado" }}</div>
                 <h3>{{ of.nombre }}</h3>
                 <div class="carrusel-precios">
                     <span class="precio-oferta">S/ {{ of.precio_oferta }}</span>
                     <span class="precio-anterior">S/ {{ of.precio }}</span>
-                    <span class="text-muted small">/ {{ of.get_unidad_display }}</span>
+                    <span class="text-muted small">/ {{ of.unidad_corta }}</span>
                 </div>
-                <span class="carrusel-ahorro">Ahorras S/ {{ of.ahorro }} por unidad</span>
+                <span class="carrusel-ahorro">Ahorras S/ {{ of.ahorro }} por {{ of.unidad_corta }}</span>
                 <ul class="carrusel-datos">
-                    <li><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ of.origen }}</li>
-                    <li><i class="bi bi-box-seam" aria-hidden="true"></i>{{ of.stock }} {{ of.nombre_unidad_stock }} disponibles · compra mínima {{ of.minimo_compra }} {{ of.nombre_unidad_minimo }}</li>
+                    <li><i class="bi bi-shop" aria-hidden="true"></i>{{ of.productor.puesto.nombre|default:of.origen }}{% if of.productor.puesto.numero %} · Puesto {{ of.productor.puesto.numero }}{% endif %}</li>
+                    <li><i class="bi bi-box-seam" aria-hidden="true"></i>Quedan {{ of.stock }} {{ of.nombre_unidad_stock }}</li>
                 </ul>
-                {% include 'includes/barra_tiempo.html' with prod=of %}
                 <a href="{% url 'detalle_producto' of.id %}" class="btn btn-success mt-2"{% if not forloop.first %} tabindex="-1"{% endif %}>Ver oferta <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
             </div>
         </article>
