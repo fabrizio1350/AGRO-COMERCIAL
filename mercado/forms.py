@@ -29,8 +29,8 @@ class RegistroUsuarioForm(UserCreationForm):
         widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'})
     )
     rol = forms.ChoiceField(
-        label="Tipo de cuenta en la plataforma",
-        choices=PerfilUsuario.ROLES,
+        label="¿Qué quieres hacer?",
+        choices=[('COMPRADOR', 'Comprar en los puestos'), ('PRODUCTOR', 'Vender: tengo un puesto')],
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     ruc_dni = forms.CharField(
