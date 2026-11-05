@@ -1,225 +1,79 @@
 {% extends 'base.html' %}
 
-{% block title %}Carrito de Compras | AgroComercial{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* En PC la foto es chica al costado; en el celular va arriba a todo lo ancho */
-    .img-item-carrito {
-        width: 95px;
-        height: 85px;
-    }
-    @media (max-width: 575.98px) {
-        .img-item-carrito {
-            width: 100%;
-            height: 160px;
-        }
-    }
-</style>
-{% endblock %}
+{% block title %}Mi lista de compras | AgroComercial{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+<div class="encabezado-seccion entrar">
     <div>
-        <h1 class="h4 fw-bold mb-1">Mi Carrito de Compras</h1>
-        <p class="text-muted small mb-0">
-            Revisa el resumen de cada producto, verifica el stock disponible y elige la cantidad exacta antes de ir a la pasarela de pago.
-        </p>
+        <span class="antetitulo"><i class="bi bi-list-check" aria-hidden="true"></i>Para tu visita al mercado</span>
+        <h1 class="h2 fw-bold mb-1">Mi lista de compras</h1>
+        <p class="text-muted mb-0">Lo que elegiste, ordenado por puesto. El stock se actualiza solo mientras miras.</p>
     </div>
-    <div class="mt-2 mt-md-0 d-flex gap-2">
-        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-outline-success btn-sm">
-            Ver Ofertas del Día
-        </a>
-        <a href="{% url 'catalogo' %}" class="btn btn-outline-secondary btn-sm">
-            &larr; Seguir viendo el Marketplace
-        </a>
-    </div>
+    {% if grupos %}<span class="estado-vivo small text-muted" data-estado-stock><span class="punto-vivo" aria-hidden="true"></span>Stock en vivo</span>{% endif %}
 </div>
 
-{% if items %}
+{% if grupos %}
 <div class="row g-4">
-    <div class="col-lg-8">
-        <div class="bg-white border rounded-3 p-4 shadow-sm">
-            <h5 class="h6 fw-bold mb-3">Productos seleccionados en tu carrito ({{ items.count }})</h5>
-
-            <div class="d-flex flex-column gap-3">
-                {% for item in items %}
-                <div class="border rounded-3 p-3 bg-white">
-                    <div class="row g-3 align-items-center">
-                        <!-- Imagen y resumen rápido del producto -->
-                        <div class="col-md-6">
-                            <div class="d-flex flex-column flex-sm-row gap-3 align-items-sm-start">
-                                <img src="{{ item.producto.url_imagen }}" alt="{{ item.producto.nombre }}" class="img-referencia img-item-carrito flex-shrink-0" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
-                                <div>
-                                    <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
-                                        <span class="badge bg-success-subtle text-success">{{ item.producto.categoria.nombre|default:"Agrícola" }}</span>
-                                        {% if item.precio_unitario_acordado %}
-                                            <span class="badge bg-warning text-dark">Oferta Aceptada</span>
-                                        {% elif item.producto.oferta_activa %}
-                                            <span class="etiqueta-oferta small">-{{ item.producto.porcentaje_descuento }}% Oferta</span>
-                                        {% endif %}
-                                    </div>
-
-                                    <h6 class="fw-bold mb-1">
-                                        <a href="{% url 'detalle_producto' item.producto.id %}" class="text-dark text-decoration-none">
-                                            {{ item.producto.nombre }}
-                                        </a>
-                                    </h6>
-
-                                    <div class="text-muted small mb-1">
-                                        Origen: <strong>{{ item.producto.origen }}</strong> • Vendedor: <strong>{{ item.producto.productor.first_name|default:item.producto.productor.username }}</strong>
-                                    </div>
-
-                                    <p class="text-secondary small mb-2">
-                                        {{ item.producto.descripcion|truncatewords:14 }}
-                                    </p>
-
-                                    <div class="d-flex flex-wrap align-items-center gap-2">
-                                        <span class="badge bg-light text-success border border-success-subtle">
-                                            <i class="bi bi-box-seam me-1"></i>Stock disponible: {{ item.producto.stock }} {{ item.producto.nombre_unidad_stock }} disponibles
-                                        </span>
-                                        <span class="text-muted small">
-                                            (Mínimo sugerido: {{ item.producto.minimo_compra }} {{ item.producto.nombre_unidad_minimo }})
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Selector de cantidad interactivo -->
-                        <div class="col-sm-6 col-md-3">
-                            <label class="form-label small fw-semibold mb-1 d-block">
-                                Seleccionar cantidad ({{ item.producto.nombre_unidad_stock }}):
-                            </label>
-                            <form action="{% url 'actualizar_cantidad_carrito' item.id %}" method="post" class="form-cantidad-carrito">
-                                {% csrf_token %}
-                                <div class="input-group input-group-sm mb-1">
-                                    <button type="button" class="btn btn-outline-secondary btn-restar-cant" title="Disminuir">-</button>
-                                    <input
-                                        type="number"
-                                        name="cantidad"
-                                        value="{{ item.cantidad }}"
-                                        min="1"
-                                        max="{{ item.producto.stock }}"
-                                        class="form-control text-center fw-bold input-cant-carrito"
-                                        required
-                                    >
-                                    <button type="button" class="btn btn-outline-secondary btn-sumar-cant" title="Aumentar">+</button>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="text-muted small">
-                                        S/ {{ item.precio_aplicado }} / {{ item.producto.get_unidad_display }}
-                                    </span>
-                                    <button type="submit" class="btn btn-link btn-sm text-success text-decoration-none p-0 fw-semibold">
-                                        Actualizar
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Subtotal del lote y botón quitar -->
-                        <div class="col-sm-6 col-md-3 text-sm-end">
-                            <span class="text-muted small d-block">Subtotal ({{ item.cantidad }} {{ item.producto.nombre_unidad_stock }}):</span>
-                            <span class="fs-5 fw-bold text-success d-block mb-2">S/ {{ item.subtotal }}</span>
-
-                            <div class="d-flex justify-content-sm-end gap-2">
-                                <a href="{% url 'detalle_producto' item.producto.id %}" class="btn btn-outline-secondary btn-sm">
-                                    Ver detalle
-                                </a>
-                                <form action="{% url 'eliminar_del_carrito' item.id %}" method="post">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-danger btn-sm">Quitar</button>
-                                </form>
-                            </div>
-                        </div>
+    <div class="col-lg-8" data-stock-url="{% url 'stock_publico' %}">
+        {% for grupo in grupos %}
+        <section class="grupo-lista revelar" aria-label="{{ grupo.puesto.nombre|default:'Puesto' }}">
+            <header class="grupo-lista-cabecera">
+                <img src="{% if grupo.puesto %}{{ grupo.puesto.url_foto }}{% else %}/static/imagenes/finca_productor.jpg{% endif %}" alt="" class="foto-puesto">
+                <div class="flex-grow-1 min-w-0">
+                    <h2 class="h6 fw-bold mb-0 text-truncate">{{ grupo.puesto.nombre|default:"Puesto sin ubicación" }}</h2>
+                    {% if grupo.puesto %}<div class="small text-muted text-truncate">{{ grupo.puesto.titulo_puesto }}{% if grupo.puesto.referencia %} · {{ grupo.puesto.referencia }}{% endif %}</div>
+                    <div class="d-flex flex-wrap gap-1 mt-1">{% for icono, nombre in grupo.puesto.iconos_pago %}<span class="chip-pago chico"><i class="bi {{ icono }}" aria-hidden="true"></i>{{ nombre }}</span>{% endfor %}</div>{% endif %}
+                </div>
+                {% if grupo.puesto %}<a class="btn btn-warning btn-sm fw-semibold flex-shrink-0" href="{{ grupo.puesto.como_llegar }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right-fill me-1" aria-hidden="true"></i>Cómo llegar</a>{% endif %}
+            </header>
+            {% for item in grupo.items %}
+            <article class="item-lista" data-stock-id="{{ item.producto_id }}">
+                <a href="{% url 'detalle_producto' item.producto_id %}" class="flex-shrink-0"><img src="{{ item.producto.url_imagen }}" alt="" class="foto-item" loading="lazy" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';"></a>
+                <div class="flex-grow-1 min-w-0">
+                    <a href="{% url 'detalle_producto' item.producto_id %}" class="fw-semibold text-reset text-decoration-none d-block text-truncate">{{ item.producto.nombre }}</a>
+                    <div class="small text-muted">S/ <span data-precio>{{ item.producto.precio_actual }}</span> / {{ item.producto.unidad_corta }}{% if item.producto.oferta_activa %} <span class="chip chip-descuento chico">Oferta</span>{% endif %}</div>
+                    <div class="stock-vivo en-linea {% if item.producto.stock < item.cantidad %}insuficiente{% endif %}" data-existencias data-deseada="{{ item.cantidad }}" aria-live="polite">
+                        <span class="punto" aria-hidden="true"></span><span data-texto-stock>{% if item.producto.esta_publicado %}Quedan {{ item.producto.stock }} {{ item.producto.nombre_unidad_stock }}{% else %}Agotado{% endif %}</span>
                     </div>
                 </div>
-                {% endfor %}
-            </div>
-        </div>
+                <form method="post" action="{% url 'agregar_al_carrito' item.producto_id %}" class="cantidad-lista">
+                    {% csrf_token %}
+                    <div class="selector-cantidad chico">
+                        <button type="button" data-restar aria-label="Menos"><i class="bi bi-dash" aria-hidden="true"></i></button>
+                        <input name="cantidad" type="number" min="1" max="{{ item.producto.stock|default:1 }}" value="{{ item.cantidad }}" aria-label="Cantidad de {{ item.producto.nombre }}" data-cantidad onchange="this.form.requestSubmit()">
+                        <button type="button" data-sumar aria-label="Más"><i class="bi bi-plus" aria-hidden="true"></i></button>
+                    </div>
+                    <span class="small text-muted d-block text-center mt-1">S/ {{ item.subtotal|floatformat:2 }}</span>
+                </form>
+                <form method="post" action="{% url 'eliminar_del_carrito' item.pk %}" class="m-0">
+                    {% csrf_token %}
+                    <button class="btn btn-link text-danger p-1" aria-label="Quitar {{ item.producto.nombre }} de mi lista" title="Quitar"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                </form>
+            </article>
+            {% endfor %}
+            <footer class="grupo-lista-pie">Llevas para pagar aquí: <strong>S/ {{ grupo.total|floatformat:2 }}</strong></footer>
+        </section>
+        {% endfor %}
     </div>
 
     <div class="col-lg-4">
-        <div class="bg-white border rounded-3 p-4 shadow-sm">
-            <h5 class="fw-bold mb-3">Resumen de Compra</h5>
-
-            <div class="small text-secondary mb-3">
-                {% for item in items %}
-                <div class="d-flex justify-content-between mb-1">
-                    <span>{{ item.producto.nombre }} ({{ item.cantidad }} {{ item.producto.nombre_unidad_stock }})</span>
-                    <strong>S/ {{ item.subtotal }}</strong>
-                </div>
-                {% endfor %}
-            </div>
-
+        <aside class="resumen-lista entrar entrar-2">
+            <h2 class="h5 fw-bold">Resumen</h2>
+            <div class="d-flex justify-content-between"><span>Productos</span><strong>{{ total_items }}</strong></div>
+            <div class="d-flex justify-content-between"><span>Puestos que visitarás</span><strong>{{ grupos|length }}</strong></div>
             <hr>
-            <div class="d-flex justify-content-between mb-2 text-secondary small">
-                <span>Subtotal de productos:</span>
-                <strong>S/ {{ subtotal }}</strong>
-            </div>
-            <div class="d-flex justify-content-between mb-2 text-secondary small">
-                <span>Gestión logística y envío:</span>
-                <strong>S/ {{ costo_logistica }}</strong>
-            </div>
-            <hr>
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <span class="fw-bold">Total a Pagar:</span>
-                <span class="fs-4 fw-bold text-success">S/ {{ total_pagar }}</span>
-            </div>
-
-            <a href="{% url 'pasarela_pago' %}" class="btn btn-success w-100 py-2 fw-semibold">
-                Ir a la Pasarela de Pago &rarr;
-            </a>
-        </div>
+            <div class="d-flex justify-content-between align-items-baseline"><span>Total aproximado</span><strong class="fs-4 text-success">S/ {{ total_estimado|floatformat:2 }}</strong></div>
+            <p class="small text-muted mt-3 mb-3"><i class="bi bi-cash-coin me-1" aria-hidden="true"></i>No pagas nada aquí. Pagas en cada puesto con efectivo, tarjeta o Yape/Plin, según lo que acepte el vendedor. Los precios y el stock pueden cambiar.</p>
+            <a href="{% url 'catalogo' %}" class="btn btn-outline-success w-100"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Agregar más productos</a>
+        </aside>
     </div>
 </div>
-
-<script>
-    (function() {
-        document.querySelectorAll('.form-cantidad-carrito').forEach(function(form) {
-            const input = form.querySelector('.input-cant-carrito');
-            const btnRestar = form.querySelector('.btn-restar-cant');
-            const btnSumar = form.querySelector('.btn-sumar-cant');
-            if (!input) return;
-
-            const minVal = parseInt(input.getAttribute('min') || '1', 10);
-            const maxVal = parseInt(input.getAttribute('max') || '9999', 10);
-
-            if (btnRestar) {
-                btnRestar.addEventListener('click', function() {
-                    let actual = parseInt(input.value || '1', 10);
-                    if (actual > minVal) {
-                        input.value = actual - 1;
-                        form.submit();
-                    }
-                });
-            }
-            if (btnSumar) {
-                btnSumar.addEventListener('click', function() {
-                    let actual = parseInt(input.value || '1', 10);
-                    if (actual < maxVal) {
-                        input.value = actual + 1;
-                        form.submit();
-                    }
-                });
-            }
-            input.addEventListener('change', function() {
-                let actual = parseInt(input.value || '1', 10);
-                if (actual < minVal) input.value = minVal;
-                if (actual > maxVal) input.value = maxVal;
-                form.submit();
-            });
-        });
-    })();
-</script>
 {% else %}
-<div class="bg-white border rounded-3 p-5 text-center shadow-sm">
-    <h5 class="fw-bold text-secondary">Tu carrito de compras está vacío</h5>
-    <p class="text-muted mb-3">Explora el Marketplace o el apartado de Ventas por Oferta para agregar productos agrícolas.</p>
-    <div class="d-flex justify-content-center gap-2">
-        <a href="{% url 'catalogo' %}" class="btn btn-success">Ir al Marketplace</a>
-        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning text-dark fw-semibold">Ver Ofertas del Día</a>
-    </div>
+<div class="estado-vacio entrar">
+    <i class="bi bi-basket" aria-hidden="true"></i>
+    <h2 class="h5 fw-bold">Tu lista está vacía</h2>
+    <p class="text-muted">Elige los productos que quieres comprar y aquí verás cuánto queda en cada puesto.</p>
+    <a href="{% url 'ventas_por_oferta' %}" class="btn btn-success">Ver ofertas de hoy</a>
 </div>
 {% endif %}
 {% endblock %}
