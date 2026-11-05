@@ -62,8 +62,8 @@ CATEGORIAS_AGRICOLAS = [
 
 class PerfilUsuario(models.Model):
     ROLES = [
-        ('PRODUCTOR', 'Vendedor / Productor Agrícola'),
-        ('COMPRADOR', 'Comprador / Mayorista / Cliente'),
+        ('PRODUCTOR', 'Vendedor'),
+        ('COMPRADOR', 'Comprador'),
     ]
 
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
@@ -97,24 +97,54 @@ class PerfilUsuario(models.Model):
 
 
 class Puesto(models.Model):
+    """Lugar fisico donde el vendedor atiende: se elige en el mapa y el comprador va hasta alli."""
     vendedor = models.OneToOneField(User, on_delete=models.CASCADE, related_name='puesto')
-    nombre = models.CharField(max_length=100)
-    referencia = models.CharField(max_length=150)
-    foto = models.FileField(upload_to='puestos/', validators=[FileExtensionValidator(['jpg', 'jpeg', 'png', 'webp'])])
+    nombre = models.CharField('Nombre del lugar', max_length=100)
+    numero = models.CharField('N.º de puesto', max_length=20, blank=True)
+    referencia = models.CharField('Referencia', max_length=150, blank=True)
+    direccion = models.CharField('Dirección', max_length=200, blank=True)
+    horario = models.CharField('Horario de atención', max_length=80, blank=True)
+    foto = models.FileField('Foto del puesto', upload_to='puestos/', blank=True,
+                            validators=[FileExtensionValidator(['jpg', 'jpeg', 'png', 'webp'])])
     latitud = models.DecimalField(max_digits=8, decimal_places=6, validators=[MinValueValidator(-90), MaxValueValidator(90)])
     longitud = models.DecimalField(max_digits=9, decimal_places=6, validators=[MinValueValidator(-180), MaxValueValidator(180)])
-    efectivo = models.BooleanField(default=True)
-    tarjeta = models.BooleanField(default=False)
-    yape_plin = models.BooleanField(default=False)
+    efectivo = models.BooleanField('Efectivo', default=True)
+    tarjeta = models.BooleanField('Tarjeta (débito o crédito)', default=False)
+    yape_plin = models.BooleanField('Yape / Plin', default=False)
+    actualizado = models.DateTimeField(auto_now=True, null=True)
+
+    def __str__(self):
+        return f"{self.nombre} · {self.titulo_puesto()}"
+
+    def titulo_puesto(self):
+        return f"Puesto {self.numero}" if self.numero else "Puesto"
+
+    def url_foto(self):
+        if self.foto:
+            return self.foto.url
+        return '/static/imagenes/finca_productor.jpg'
 
     def como_llegar(self):
         return 'https://www.google.com/maps/dir/?' + urlencode({
             'api': 1, 'destination': f'{self.latitud},{self.longitud}',
         })
 
+    def mapa_embebido(self):
+        """Mapa de Google para mostrar el punto (no necesita llave de API)."""
+        return 'https://maps.google.com/maps?' + urlencode({
+            'q': f'{self.latitud},{self.longitud}', 'z': 17, 'output': 'embed', 'hl': 'es',
+        })
+
     def metodos_pago(self):
         return [nombre for acepta, nombre in (
             (self.efectivo, 'Efectivo'), (self.tarjeta, 'Tarjeta'), (self.yape_plin, 'Yape / Plin'),
+        ) if acepta]
+
+    def iconos_pago(self):
+        return [(icono, nombre) for acepta, icono, nombre in (
+            (self.efectivo, 'bi-cash-coin', 'Efectivo'),
+            (self.tarjeta, 'bi-credit-card', 'Tarjeta'),
+            (self.yape_plin, 'bi-phone', 'Yape / Plin'),
         ) if acepta]
 
 
@@ -170,13 +200,12 @@ def fecha_vencimiento_por_defecto():
 
 class ProductoQuerySet(models.QuerySet):
     def publicados(self):
-        """Productos que se pueden ver y comprar: activos, con stock, sin vencer y de un vendedor verificado."""
+        """Productos que se ven en la web: activos, con stock, sin vencer y de un vendedor con su puesto en el mapa."""
         ahora = timezone.now()
         return self.filter(disponible=True, stock__gt=0).filter(
             Q(fecha_vencimiento__isnull=True) | Q(fecha_vencimiento__gt=ahora)
         ).filter(
-            Q(productor__perfil__estado_verificacion='VERIFICADO') | Q(productor__perfil__es_demo=True)
-            | Q(productor__puesto__isnull=False, productor__perfil__rol='PRODUCTOR', productor__is_active=True)
+            productor__puesto__isnull=False, productor__perfil__rol='PRODUCTOR', productor__is_active=True,
         )
 
     def ofertas_activas(self):
@@ -198,6 +227,9 @@ class Producto(models.Model):
     UNIDADES = [
         ('UNIDAD', 'Unidad'),
         ('KG', 'Kilogramo (kg)'),
+        ('DOCENA', 'Docena'),
+        ('ATADO', 'Atado'),
+        ('BOLSA', 'Bolsa'),
         ('SACO', 'Saco (50 kg)'),
         ('CAJA', 'Caja (20 kg)'),
         ('ARROBA', 'Arroba (11.5 kg)'),
@@ -230,6 +262,7 @@ class Producto(models.Model):
     acepta_ofertas = models.BooleanField(default=True, help_text="Permite que compradores envíen contraofertas de precio")
     unidad = models.CharField(max_length=15, choices=UNIDADES, default='KG')
     stock = models.PositiveIntegerField(default=1)
+    stock_actualizado = models.DateTimeField(null=True, blank=True)
     minimo_compra = models.PositiveIntegerField(default=1)
     origen = models.CharField(max_length=120, help_text="Región o valle de cosecha")
     imagen = models.FileField(
@@ -258,10 +291,9 @@ class Producto(models.Model):
         return bool(self.fecha_vencimiento and self.fecha_vencimiento <= timezone.now())
 
     def vendedor_habilitado(self):
+        """El comprador va al puesto: solo se muestra si el vendedor ya marco su puesto en el mapa."""
         perfil = getattr(self.productor, 'perfil', None)
-        return bool(perfil and (perfil.puede_vender_publicamente() or (
-            perfil.rol == 'PRODUCTOR' and self.productor.is_active and hasattr(self.productor, 'puesto')
-        )))
+        return bool(perfil and perfil.rol == 'PRODUCTOR' and self.productor.is_active and hasattr(self.productor, 'puesto'))
 
     def esta_publicado(self):
         return self.disponible and self.stock > 0 and not self.esta_vencida() and self.vendedor_habilitado()
@@ -379,6 +411,9 @@ class Producto(models.Model):
         """Devuelve la unidad en formato corto y claro según la cantidad en stock (ej. 'kg', 'cajas', 'sacos', 'toneladas')."""
         unidades_cortas = {
             'KG': ('kg', 'kg'),
+            'DOCENA': ('docena', 'docenas'),
+            'ATADO': ('atado', 'atados'),
+            'BOLSA': ('bolsa', 'bolsas'),
             'SACO': ('saco', 'sacos'),
             'CAJA': ('caja', 'cajas'),
             'ARROBA': ('arroba', 'arrobas'),
@@ -389,12 +424,15 @@ class Producto(models.Model):
 
     def unidad_corta(self):
         """Unidad en singular para mostrar junto al precio (ej. 'S/ 3.20 / kg')."""
-        return {'KG': 'kg', 'SACO': 'saco', 'CAJA': 'caja', 'ARROBA': 'arroba', 'TONELADA': 'tonelada'}.get(self.unidad, 'unidad')
+        return {'KG': 'kg', 'DOCENA': 'docena', 'ATADO': 'atado', 'BOLSA': 'bolsa', 'SACO': 'saco', 'CAJA': 'caja', 'ARROBA': 'arroba', 'TONELADA': 'tonelada'}.get(self.unidad, 'unidad')
 
     def nombre_unidad_minimo(self):
         """Devuelve la unidad según la cantidad mínima de compra."""
         unidades_cortas = {
             'KG': ('kg', 'kg'),
+            'DOCENA': ('docena', 'docenas'),
+            'ATADO': ('atado', 'atados'),
+            'BOLSA': ('bolsa', 'bolsas'),
             'SACO': ('saco', 'sacos'),
             'CAJA': ('caja', 'cajas'),
             'ARROBA': ('arroba', 'arrobas'),
@@ -456,6 +494,21 @@ class OfertaNegociacion(models.Model):
 
     def __str__(self):
         return f"Oferta #{self.id} de {self.comprador.username} por {self.producto.nombre}"
+
+
+class VentaPuesto(models.Model):
+    """Cada vez que el vendedor marca 'vendí' en su panel: sirve para el resumen del dia."""
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='ventas_puesto')
+    vendedor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ventas_puesto')
+    cantidad = models.PositiveIntegerField()
+    precio_unitario = models.DecimalField(max_digits=8, decimal_places=2)
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha']
+
+    def total(self):
+        return self.cantidad * self.precio_unitario
 
 
 class ItemCarrito(models.Model):
