@@ -1,5 +1,5 @@
 """
-Crea cuentas bot de prueba (productores y compradores) marcadas como Demo.
+Crea vendedores de mercado y compradores de prueba (con su puesto en el mapa), marcados como Demo.
 
 Uso:
     python manage.py crear_datos_demo          # crea o actualiza los bots
@@ -16,58 +16,74 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from mercado.models import Categoria, PerfilUsuario, Producto, ResenaProducto, CATEGORIAS_AGRICOLAS
+from django.conf import settings
+from django.core.files import File
+
+from mercado.models import Categoria, PerfilUsuario, Producto, Puesto, ResenaProducto, CATEGORIAS_AGRICOLAS
 
 # Cuentas de prueba que ya existian: tambien se marcan como Demo
 CUENTAS_DEMO_ANTERIORES = ['productor_mantaro', 'productor_huaral', 'comprador_lima']
 
+# Vendedores de mercado de ejemplo. Los puestos y coordenadas son aproximados y se ven como "Demo".
 PRODUCTORES = [
     {
         'usuario': 'demo_productor_characato', 'nombre': 'Rosa', 'apellido': 'Quispe',
-        'ubicacion': 'Characato, Arequipa', 'finca': 'Huerta Demo Characato',
+        'ubicacion': 'Arequipa (Cercado), Arequipa', 'finca': 'Verduras Rosita (Demo)',
+        'puesto': dict(nombre='Mercado San Camilo', numero='112', referencia='Pasillo de verduras, entrada por calle Perú',
+                       horario='Lunes a domingo, 6 a. m. a 6 p. m.', lat='-16.401750', lng='-71.533180',
+                       foto='tomate.jpg', efectivo=True, tarjeta=False, yape_plin=True),
         'productos': [
-            dict(nombre='Tomate Italiano de Huerta', categoria='Hortalizas y Verduras', precio='32.00', unidad='CAJA',
-                 stock=40, minimo=2, imagen='/static/imagenes/tomate.jpg',
-                 descripcion='Tomate italiano firme, ideal para salsas y restaurantes. Caja de 20 kg.'),
-            dict(nombre='Zanahoria Chantenay', categoria='Hortalizas y Verduras', precio='48.00', oferta='42.00', unidad='SACO',
-                 stock=25, minimo=1, imagen='/static/imagenes/zanahoria.jpg',
-                 descripcion='Zanahoria dulce y de buen color, lavada y seleccionada en sacos de 50 kg.'),
+            dict(nombre='Tomate italiano', categoria='Hortalizas y Verduras', precio='3.50', oferta='2.80', unidad='KG',
+                 stock=35, imagen='/static/imagenes/tomate.jpg',
+                 descripcion='Tomate firme y maduro, ideal para ensalada y salsa. Llegó hoy temprano.'),
+            dict(nombre='Zanahoria', categoria='Hortalizas y Verduras', precio='2.00', unidad='KG',
+                 stock=40, imagen='/static/imagenes/zanahoria.jpg',
+                 descripcion='Zanahoria dulce y lavada.'),
         ],
     },
     {
         'usuario': 'demo_productor_chivay', 'nombre': 'Julián', 'apellido': 'Condori',
-        'ubicacion': 'Chivay (Caylloma), Arequipa', 'finca': 'Granos Andinos Demo del Colca',
+        'ubicacion': 'Arequipa (Cercado), Arequipa', 'finca': 'Granos Don Julián (Demo)',
+        'puesto': dict(nombre='Mercado San Camilo', numero='48', referencia='Zona de abarrotes y granos',
+                       horario='Lunes a sábado, 7 a. m. a 5 p. m.', lat='-16.401420', lng='-71.532760',
+                       foto='quinua_blanca.jpg', efectivo=True, tarjeta=True, yape_plin=True),
         'productos': [
-            dict(nombre='Quinua Roja del Colca', categoria='Granos y Cereales', precio='11.50', unidad='KG',
-                 stock=300, minimo=10, imagen='/static/imagenes/quinua_blanca.jpg', organico=True,
-                 descripcion='Quinua roja lavada y venteada, cosechada sobre los 3600 m s. n. m.'),
-            dict(nombre='Papa Nativa Huayro', categoria='Tubérculos y Raíces', precio='3.40', oferta='2.90', unidad='KG',
-                 stock=600, minimo=20, imagen='/static/imagenes/papa_amarilla.jpg',
-                 descripcion='Papa huayro harinosa, perfecta para sancochado y puré.'),
+            dict(nombre='Quinua roja del Colca', categoria='Granos y Cereales', precio='12.00', unidad='KG',
+                 stock=25, imagen='/static/imagenes/quinua_blanca.jpg',
+                 descripcion='Quinua lavada y lista para cocinar. Se vende por kilo.'),
+            dict(nombre='Papa huayro', categoria='Tubérculos y Raíces', precio='3.80', oferta='3.20', unidad='KG',
+                 stock=60, imagen='/static/imagenes/papa_amarilla.jpg',
+                 descripcion='Papa harinosa, perfecta para sancochado y puré.'),
         ],
     },
     {
         'usuario': 'demo_productor_majes', 'nombre': 'Hugo', 'apellido': 'Valdivia',
-        'ubicacion': 'Majes (Caylloma), Arequipa', 'finca': 'Fundo Demo Pampa Majes',
+        'ubicacion': 'José Luis Bustamante y Rivero, Arequipa', 'finca': 'Frutas Hugo (Demo)',
+        'puesto': dict(nombre='Mercado Avelino Cáceres', numero='305', referencia='Nave de frutas, frente a la puerta 3',
+                       horario='Todos los días, 5 a. m. a 4 p. m.', lat='-16.423650', lng='-71.520790',
+                       foto='palta_hass.jpg', efectivo=True, tarjeta=True, yape_plin=False),
         'productos': [
-            dict(nombre='Palta Fuerte Calibre 16', categoria='Frutas de Estación', precio='7.20', unidad='KG',
-                 stock=400, minimo=15, imagen='/static/imagenes/palta_hass.jpg',
-                 descripcion='Palta fuerte de pulpa cremosa, calibre parejo para venta en mercado.'),
-            dict(nombre='Mandarina Murcott', categoria='Frutas de Estación', precio='45.00', unidad='CAJA',
-                 stock=60, minimo=2, imagen='/static/imagenes/mandarina.jpg',
-                 descripcion='Mandarina jugosa y dulce en cajas de 20 kg, recién cosechada.'),
+            dict(nombre='Palta fuerte', categoria='Frutas de Estación', precio='8.00', oferta='6.50', unidad='KG',
+                 stock=18, imagen='/static/imagenes/palta_hass.jpg',
+                 descripcion='Palta cremosa, madura para hoy y mañana.'),
+            dict(nombre='Mandarina', categoria='Frutas de Estación', precio='4.00', unidad='KG',
+                 stock=45, imagen='/static/imagenes/mandarina.jpg',
+                 descripcion='Mandarina jugosa y dulce.'),
         ],
     },
     {
         'usuario': 'demo_productor_tiabaya', 'nombre': 'Marisol', 'apellido': 'Flores',
-        'ubicacion': 'Tiabaya, Arequipa', 'finca': 'Chacra Demo Tiabaya',
+        'ubicacion': 'Cerro Colorado, Arequipa', 'finca': 'Puesto Marisol (Demo)',
+        'puesto': dict(nombre='Mercado Río Seco', numero='17', referencia='Al lado de las juguerías',
+                       horario='Lunes a domingo, 6 a. m. a 2 p. m.', lat='-16.360800', lng='-71.567900',
+                       foto='banner_agro.jpg', efectivo=True, tarjeta=False, yape_plin=True),
         'productos': [
-            dict(nombre='Tomate Redondo para Mercado', categoria='Hortalizas y Verduras', precio='29.00', oferta='25.50', unidad='CAJA',
-                 stock=50, minimo=2, imagen='/static/imagenes/tomate.jpg',
-                 descripcion='Tomate redondo de buen color, en cajas de 20 kg para puestos de mercado.'),
-            dict(nombre='Papa Amarilla para Restaurante', categoria='Tubérculos y Raíces', precio='3.10', unidad='KG',
-                 stock=800, minimo=50, imagen='/static/imagenes/papa_amarilla.jpg',
-                 descripcion='Papa amarilla de calibre mediano, ideal para causa y frituras.'),
+            dict(nombre='Tomate redondo', categoria='Hortalizas y Verduras', precio='3.00', oferta='2.50', unidad='KG',
+                 stock=8, imagen='/static/imagenes/tomate.jpg',
+                 descripcion='Tomate redondo de buen color. Quedan pocos kilos.'),
+            dict(nombre='Papa amarilla', categoria='Tubérculos y Raíces', precio='4.50', unidad='KG',
+                 stock=30, imagen='/static/imagenes/papa_amarilla.jpg',
+                 descripcion='Papa amarilla para causa y frituras.'),
         ],
     },
 ]
@@ -83,12 +99,12 @@ COMPRADORES = [
 
 # Comentarios de los compradores bot: (comprador, nombre del producto, estrellas, texto)
 COMENTARIOS = [
-    (0, 'Tomate Italiano de Huerta', 5, 'Buen calibre y llegó firme, nos sirve para las salsas de la semana.'),
-    (1, 'Papa Nativa Huayro', 4, '¿Tienen disponibilidad para la próxima semana? Revisé el lote y se ve bien.'),
-    (2, 'Palta Fuerte Calibre 16', 5, 'Calibre parejo como dice la publicación. Consultaré por volumen mayor.'),
-    (0, 'Quinua Roja del Colca', 4, 'Grano limpio. Me gustaría saber si la entregan en bolsas de 25 kg.'),
-    (1, 'Tomate Redondo para Mercado', 5, 'Buen color, justo lo que piden en el mercado.'),
-    (2, 'Mandarina Murcott', 4, 'Revisando precios para pedido de fin de mes.'),
+    (0, 'Tomate italiano', 5, 'Fui temprano y estaba tal cual la foto.'),
+    (1, 'Papa huayro', 4, 'Buena papa, la señora atiende rápido.'),
+    (2, 'Palta fuerte', 5, 'Madura justo para el almuerzo.'),
+    (0, 'Quinua roja del Colca', 4, 'Grano limpio, aceptan Yape.'),
+    (1, 'Tomate redondo', 5, 'Buen precio en oferta.'),
+    (2, 'Mandarina', 4, 'Dulces, volveré.'),
 ]
 
 
@@ -115,6 +131,8 @@ class Command(BaseCommand):
         productos = {}
         for datos in PRODUCTORES:
             usuario = self.crear_usuario(datos, 'PRODUCTOR', datos['finca'])
+            self.crear_puesto(usuario, datos['puesto'])
+            datos['ubicacion'] = datos['puesto']['nombre']
             for prod in datos['productos']:
                 valores = dict(
                     categoria=Categoria.objects.get(nombre=prod['categoria']),
@@ -122,20 +140,23 @@ class Command(BaseCommand):
                     precio=Decimal(prod['precio']),
                     unidad=prod['unidad'],
                     stock=prod['stock'],
-                    minimo_compra=prod['minimo'],
+                    minimo_compra=1,
+                    stock_actualizado=ahora,
                     origen=datos['ubicacion'],
                     imagen_url=prod['imagen'],
-                    tipo_cultivo='ORGANICO' if prod.get('organico') else 'TRADICIONAL',
+                    tipo_cultivo='TRADICIONAL',
                     disponible=True,
                     oferta_pendiente_pago=False,
                     fecha_vencimiento=ahora + timedelta(days=30),
                     en_oferta='oferta' in prod,
                     precio_oferta=Decimal(prod['oferta']) if 'oferta' in prod else None,
                     oferta_inicio=ahora if 'oferta' in prod else None,
-                    oferta_fin=ahora + timedelta(days=10) if 'oferta' in prod else None,
+                    oferta_fin=None,
                 )
                 producto, _ = Producto.objects.update_or_create(productor=usuario, nombre=prod['nombre'], defaults=valores)
                 productos[prod['nombre']] = producto
+            # Quita las publicaciones viejas de mayorista de este bot
+            Producto.objects.filter(productor=usuario).exclude(nombre__in=[p['nombre'] for p in datos['productos']]).delete()
 
         compradores = [self.crear_usuario(datos, 'COMPRADOR', datos['empresa']) for datos in COMPRADORES]
         for indice, nombre_producto, estrellas, texto in COMENTARIOS:
@@ -149,6 +170,19 @@ class Command(BaseCommand):
             f'{len(compradores)} compradores Demo y {len(COMENTARIOS)} comentarios. '
             f'Cuentas anteriores marcadas como Demo: {marcados}.'
         ))
+
+    def crear_puesto(self, usuario, datos):
+        puesto, _ = Puesto.objects.update_or_create(vendedor=usuario, defaults=dict(
+            nombre=datos['nombre'], numero=datos['numero'], referencia=datos['referencia'], horario=datos['horario'],
+            latitud=Decimal(datos['lat']), longitud=Decimal(datos['lng']),
+            efectivo=datos['efectivo'], tarjeta=datos['tarjeta'], yape_plin=datos['yape_plin'],
+            direccion=f"{datos['nombre']}, Arequipa",
+        ))
+        if not puesto.foto:
+            origen = settings.BASE_DIR / 'static' / 'imagenes' / datos['foto']
+            with open(origen, 'rb') as archivo:
+                puesto.foto.save(f"demo_{usuario.username}.jpg", File(archivo), save=True)
+        return puesto
 
     def crear_usuario(self, datos, rol, nombre_negocio):
         usuario, creado = User.objects.update_or_create(
