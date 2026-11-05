@@ -14,7 +14,7 @@
     <link href="{% static 'css/estilos.css' %}?v={{ version_estaticos }}" rel="stylesheet">
     <link href="{% static 'css/tema.css' %}?v={{ version_estaticos }}" rel="stylesheet">
     <meta name="theme-color" content="#15803d">
-    <meta name="description" content="AgroComercial: marketplace agrícola de Arequipa que conecta productores con compradores.">
+    <meta name="description" content="AgroComercial: ofertas y stock en tiempo real de los puestos de mercado de Arequipa.">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -24,12 +24,12 @@
     <header class="cabecera" id="cabecera">
         <div class="barra-superior">
             <div class="container-xxl d-flex justify-content-between align-items-center gap-2">
-                <span class="text-truncate"><i class="bi bi-flower2 me-1" aria-hidden="true"></i>Conectamos el campo con nuevas oportunidades de negocio<span class="d-none d-md-inline"> · Arequipa, Perú</span></span>
+                <span class="text-truncate"><i class="bi bi-shop me-1" aria-hidden="true"></i>Ofertas de los mercados de Arequipa<span class="d-none d-md-inline"> · Compras y pagas en el puesto</span></span>
                 <div class="d-flex align-items-center gap-3 flex-shrink-0">
                     {% if user.is_authenticated %}
                         <span><i class="bi {% if rol_actual == 'PRODUCTOR' %}bi-shop{% else %}bi-bag{% endif %} me-1" aria-hidden="true"></i>Cuenta de <strong>{% if rol_actual == 'PRODUCTOR' %}vendedor{% else %}comprador{% endif %}</strong></span>
                     {% else %}
-                        <a href="{% url 'login' %}?modo=vendedor" class="d-none d-sm-inline"><i class="bi bi-shop-window me-1" aria-hidden="true"></i>Soy productor</a>
+                        <a href="{% url 'login' %}?modo=vendedor" class="d-none d-sm-inline"><i class="bi bi-shop-window me-1" aria-hidden="true"></i>Tengo un puesto</a>
                     {% endif %}
                 </div>
             </div>
@@ -45,7 +45,7 @@
                 <form class="buscador d-none d-md-flex flex-grow-1" action="{% url 'catalogo' %}" method="get" role="search">
                     <label for="buscadorGlobal" class="visually-hidden">Buscar productos</label>
                     <i class="bi bi-search" aria-hidden="true"></i>
-                    <input type="search" id="buscadorGlobal" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Busca papa, palta, quinua, rocoto..." autocomplete="off">
+                    <input type="search" id="buscadorGlobal" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Busca papa, palta, pollo, San Camilo..." autocomplete="off">
                     <button type="submit" class="btn btn-success">Buscar</button>
                 </form>
 
@@ -63,8 +63,8 @@
                             {% if notificaciones_sin_leer %}<span class="contador-icono">{{ notificaciones_sin_leer }}</span>{% endif %}
                         </a>
                         {% if rol_actual == 'COMPRADOR' %}
-                            <a href="{% url 'carrito' %}" class="icono-cabecera" aria-label="Mi carrito, {{ total_items_carrito }} productos" title="Mi carrito">
-                                <i class="bi bi-bag" aria-hidden="true"></i>
+                            <a href="{% url 'carrito' %}" class="icono-cabecera" aria-label="Mi lista de compras, {{ total_items_carrito }} productos" title="Mi lista de compras">
+                                <i class="bi bi-list-check" aria-hidden="true"></i>
                                 <span class="contador-icono {% if not total_items_carrito %}d-none{% endif %}" id="contadorCarrito">{{ total_items_carrito }}</span>
                             </a>
                         {% else %}
@@ -84,18 +84,15 @@
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 {% if rol_actual == 'PRODUCTOR' %}
-                                    <li><a class="dropdown-item" href="{% url 'panel_productor' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Panel del vendedor</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'panel_productor' %}"><i class="bi bi-shop" aria-hidden="true"></i>Mi puesto</a></li>
                                     <li><a class="dropdown-item" href="{% url 'crear_producto' %}"><i class="bi bi-plus-circle" aria-hidden="true"></i>Publicar producto</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'configurar_puesto' %}"><i class="bi bi-geo-alt" aria-hidden="true"></i>Ubicación y pagos</a></li>
                                 {% else %}
-                                    <li><a class="dropdown-item" href="{% url 'panel_comprador' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Panel del comprador</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'mis_pedidos' %}"><i class="bi bi-bag-check" aria-hidden="true"></i>Mis compras</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'carrito' %}"><i class="bi bi-list-check" aria-hidden="true"></i>Mi lista de compras</a></li>
                                 {% endif %}
                                 <li><a class="dropdown-item" href="{% url 'mensajes' %}"><i class="bi bi-chat-dots" aria-hidden="true"></i>Mensajes{% if mensajes_sin_leer %} <span class="badge rounded-pill text-bg-danger ms-auto">{{ mensajes_sin_leer }}</span>{% endif %}</a></li>
                                 {% if rol_actual == 'COMPRADOR' %}
                                     <li><a class="dropdown-item" href="{% url 'mis_favoritos' %}"><i class="bi bi-heart" aria-hidden="true"></i>Favoritos</a></li>
-                                {% endif %}
-                                {% if rol_actual == 'PRODUCTOR' %}
-                                    <li><a class="dropdown-item" href="{% url 'perfil_productor' user.id %}"><i class="bi bi-shop" aria-hidden="true"></i>Mi página pública</a></li>
                                 {% endif %}
                                 <li><a class="dropdown-item" href="{% url 'perfil' %}"><i class="bi bi-person-gear" aria-hidden="true"></i>Mi perfil</a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -144,13 +141,12 @@
                         {% endfor %}
                     </ul>
                 </div>
-                <a class="enlace-nav" href="{% url 'productores' %}">Productores</a>
+                <a class="enlace-nav" href="{% url 'productores' %}">Puestos</a>
                 <a class="enlace-nav" href="{% url 'inicio' %}#como-funciona">Cómo funciona</a>
                 {% if rol_actual == 'PRODUCTOR' %}
-                    <a class="enlace-nav ms-auto" href="{% url 'panel_productor' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Panel del vendedor</a>
+                    <a class="enlace-nav ms-auto" href="{% url 'panel_productor' %}"><i class="bi bi-shop" aria-hidden="true"></i>Mi puesto</a>
                 {% elif rol_actual == 'COMPRADOR' %}
-                    <a class="enlace-nav ms-auto" href="{% url 'panel_comprador' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Mi panel</a>
-                    <a class="enlace-nav" href="{% url 'mis_pedidos' %}"><i class="bi bi-bag-check" aria-hidden="true"></i>Mis compras</a>
+                    <a class="enlace-nav ms-auto" href="{% url 'carrito' %}"><i class="bi bi-list-check" aria-hidden="true"></i>Mi lista de compras</a>
                 {% endif %}
             </div>
         </nav>
@@ -169,15 +165,13 @@
                 <a href="{% url 'inicio' %}"><i class="bi bi-house-door" aria-hidden="true"></i>Inicio</a>
                 <a href="{% url 'catalogo' %}"><i class="bi bi-grid" aria-hidden="true"></i>Productos</a>
                 <a href="{% url 'ventas_por_oferta' %}"><i class="bi bi-lightning-charge" aria-hidden="true"></i>Ofertas</a>
-                <a href="{% url 'productores' %}"><i class="bi bi-people" aria-hidden="true"></i>Productores</a>
+                <a href="{% url 'productores' %}"><i class="bi bi-geo-alt" aria-hidden="true"></i>Puestos</a>
                 <a href="{% url 'inicio' %}#como-funciona"><i class="bi bi-signpost-split" aria-hidden="true"></i>Cómo funciona</a>
                 {% if rol_actual == 'PRODUCTOR' %}
-                    <a href="{% url 'panel_productor' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Panel del vendedor</a>
+                    <a href="{% url 'panel_productor' %}"><i class="bi bi-shop" aria-hidden="true"></i>Mi puesto</a>
                     <a href="{% url 'crear_producto' %}"><i class="bi bi-plus-circle" aria-hidden="true"></i>Publicar producto</a>
                 {% elif rol_actual == 'COMPRADOR' %}
-                    <a href="{% url 'panel_comprador' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i>Mi panel</a>
-                    <a href="{% url 'carrito' %}"><i class="bi bi-bag" aria-hidden="true"></i>Mi carrito ({{ total_items_carrito }})</a>
-                    <a href="{% url 'mis_pedidos' %}"><i class="bi bi-bag-check" aria-hidden="true"></i>Mis compras</a>
+                    <a href="{% url 'carrito' %}"><i class="bi bi-list-check" aria-hidden="true"></i>Mi lista de compras ({{ total_items_carrito }})</a>
                 {% endif %}
                 {% if user.is_authenticated %}
                     <a href="{% url 'mensajes' %}"><i class="bi bi-chat-dots" aria-hidden="true"></i>Mensajes{% if mensajes_sin_leer %} ({{ mensajes_sin_leer }}){% endif %}</a>
@@ -228,7 +222,7 @@
                         <span class="logo-icono"><i class="bi bi-flower1" aria-hidden="true"></i></span>
                         <span class="logo-texto text-white">Agro<span>Comercial</span></span>
                     </a>
-                    <p class="mb-3">Marketplace agrícola que conecta a productores de Arequipa con comerciantes, restaurantes y distribuidores, sin intermediarios.</p>
+                    <p class="mb-3">Las ofertas de los puestos de mercado de Arequipa en un solo lugar. Mira el stock en tiempo real y compra directo en el puesto.</p>
                     <span class="etiqueta-proyecto"><i class="bi bi-mortarboard me-1" aria-hidden="true"></i>Proyecto de Innovación · versión de prueba</span>
                 </div>
                 <div class="col-6 col-lg-2">
@@ -236,7 +230,7 @@
                     <ul class="list-unstyled d-grid gap-2 mb-0">
                         <li><a href="{% url 'catalogo' %}">Productos</a></li>
                         <li><a href="{% url 'ventas_por_oferta' %}">Ofertas</a></li>
-                        <li><a href="{% url 'productores' %}">Productores</a></li>
+                        <li><a href="{% url 'productores' %}">Puestos</a></li>
                         <li><a href="{% url 'inicio' %}#como-funciona">Cómo funciona</a></li>
                     </ul>
                 </div>
@@ -250,8 +244,8 @@
                     </ul>
                 </div>
                 <div class="col-12 col-lg-4">
-                    <h6>¿Eres productor?</h6>
-                    <p class="mb-3">Publica tu cosecha, crea ofertas con fecha límite y recibe pedidos de compradores de toda la región.</p>
+                    <h6>¿Tienes un puesto?</h6>
+                    <p class="mb-3">Marca tu puesto en el mapa, publica tus productos y avisa al instante lo que vendiste.</p>
                     <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-warning btn-sm">Empezar a vender <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
                 </div>
             </div>
@@ -268,12 +262,13 @@
         <a href="{% url 'ventas_por_oferta' %}" data-ruta="/ofertas/"><i class="bi bi-lightning-charge" aria-hidden="true"></i><span>Ofertas</span></a>
         <a href="{% url 'catalogo' %}" data-ruta="/catalogo/"><i class="bi bi-grid" aria-hidden="true"></i><span>Productos</span></a>
         {% if rol_actual == 'PRODUCTOR' %}
-            <a href="{% url 'panel_productor' %}" data-ruta="/panel-productor/"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Panel</span></a>
-            <a href="{% url 'mensajes' %}" data-ruta="/mensajes/"><i class="bi bi-chat-dots" aria-hidden="true"></i><span>Mensajes</span>{% if mensajes_sin_leer %}<b class="contador-icono">{{ mensajes_sin_leer }}</b>{% endif %}</a>
+            <a href="{% url 'panel_productor' %}" data-ruta="/panel-productor/"><i class="bi bi-shop" aria-hidden="true"></i><span>Mi puesto</span></a>
+            <a href="{% url 'crear_producto' %}" data-ruta="/producto/nuevo/"><i class="bi bi-plus-circle" aria-hidden="true"></i><span>Publicar</span></a>
         {% elif rol_actual == 'COMPRADOR' %}
-            <a href="{% url 'carrito' %}" data-ruta="/carrito/"><i class="bi bi-bag" aria-hidden="true"></i><span>Carrito</span><b class="contador-icono {% if not total_items_carrito %}d-none{% endif %}">{{ total_items_carrito }}</b></a>
-            <a href="{% url 'mensajes' %}" data-ruta="/mensajes/"><i class="bi bi-chat-dots" aria-hidden="true"></i><span>Mensajes</span>{% if mensajes_sin_leer %}<b class="contador-icono">{{ mensajes_sin_leer }}</b>{% endif %}</a>
+            <a href="{% url 'carrito' %}" data-ruta="/carrito/"><i class="bi bi-list-check" aria-hidden="true"></i><span>Mi lista</span><b class="contador-icono {% if not total_items_carrito %}d-none{% endif %}">{{ total_items_carrito }}</b></a>
+            <a href="{% url 'productores' %}" data-ruta="/puestos/"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Puestos</span></a>
         {% else %}
+            <a href="{% url 'productores' %}" data-ruta="/puestos/"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Puestos</span></a>
             <a href="{% url 'login' %}?modo=comprador" data-ruta="/login/"><i class="bi bi-person" aria-hidden="true"></i><span>Ingresar</span></a>
         {% endif %}
     </nav>
@@ -291,6 +286,7 @@
     <script src="{% static 'js/animaciones.js' %}?v={{ version_estaticos }}"></script>
     <script src="{% static 'js/carrusel.js' %}?v={{ version_estaticos }}"></script>
     <script src="{% static 'js/tienda.js' %}?v={{ version_estaticos }}"></script>
+    <script src="{% static 'js/stock-vivo.js' %}?v={{ version_estaticos }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
