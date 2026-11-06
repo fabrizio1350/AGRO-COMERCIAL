@@ -40,10 +40,10 @@
             <h2><span class="numero">2</span>Ponle nombre</h2>
             <div class="row g-3">
                 <div class="col-md-8">
-                    <label class="form-label small fw-semibold" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }} (opcional)</label>
+                    <label class="form-label small fw-semibold" for="{{ form.nombre.id_for_label }}">Nombre de esta ubicación (opcional)</label>
                     {{ form.nombre }}
                     {% if form.nombre.errors %}<div class="text-danger small mt-1">{{ form.nombre.errors|striptags }}</div>{% endif %}
-                    <div class="form-text">Si lo dejas vacío, aparecerá como «Puesto de {{ user.first_name|default:user.username }}».</div>
+                    <div class="form-text">Con este nombre la eliges al publicar. Si lo dejas vacío, aparecerá como «Puesto de {{ user.first_name|default:user.username }}».</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-semibold" for="{{ form.numero.id_for_label }}">{{ form.numero.label }} (opcional)</label>
@@ -85,6 +85,29 @@
             <a href="{% url 'panel_productor' %}" class="btn btn-link text-muted">Cancelar</a>
         </div>
     </form>
+
+    {% if otras_ubicaciones %}
+    <section class="bloque-verificacion mt-4" id="otrasUbicaciones" aria-labelledby="tituloOtras">
+        <h2 id="tituloOtras"><i class="bi bi-geo-alt me-2 text-success" aria-hidden="true"></i>Otras ubicaciones guardadas</h2>
+        <p class="small text-muted">Las agregaste al publicar un producto. Si quitas una, sus productos pasan a tu puesto principal.</p>
+        <ul class="list-unstyled mb-0 lista-ubicaciones">
+            {% for u in otras_ubicaciones %}
+            <li>
+                <i class="bi bi-geo-alt-fill text-success" aria-hidden="true"></i>
+                <div class="flex-grow-1 min-w-0">
+                    <strong class="d-block text-truncate">{{ u.nombre }}</strong>
+                    <span class="small text-muted">{% if u.direccion %}{{ u.direccion|truncatechars:70 }} · {% endif %}{{ u.total }} producto{{ u.total|pluralize }}</span>
+                </div>
+                <a href="{{ u.como_llegar }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">Ver en mapa</a>
+                <form method="post" action="{% url 'quitar_ubicacion' u.id %}" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-link text-danger">Quitar</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}
 
