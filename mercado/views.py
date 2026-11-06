@@ -1,3 +1,4 @@
+import os
 import json
 import urllib.request
 import urllib.parse
@@ -53,6 +54,7 @@ from .forms import (
     PerfilForm,
     VerificacionVendedorForm,
 )
+from .seguridad import login_bloqueado, renombrar_imagen, tipo_de_imagen
 
 
 def asegurar_datos_iniciales():
@@ -1322,6 +1324,8 @@ def login_vista(request):
             if perfil.rol == 'PRODUCTOR':
                 return redirect('panel_productor')
             return redirect('ventas_por_oferta')
+        elif login_bloqueado(username_real):
+            messages.error(request, "Hubo demasiados intentos con esa cuenta. Espera 15 minutos e intenta de nuevo.")
         else:
             messages.error(request, "Correo/usuario o contraseña incorrectos. Verifica tus datos.")
 
@@ -1444,11 +1448,20 @@ def login_google_callback(request):
         messages.error(request, "Google no confirmó una identidad con correo verificado.")
         return redirect('login')
 
+    vinculo = request.session.pop('vincular_google', None)
+    if vinculo:
+        return completar_vinculo_google(request, vinculo, google_sub, email_google)
+
     with transaction.atomic():
         perfil = PerfilUsuario.objects.select_related('usuario').filter(google_sub=google_sub).first()
         if perfil is None:
             if User.objects.filter(email__iexact=email_google).exists():
-                messages.error(request, "Ya existe una cuenta con ese correo. Ingresa con tu contraseña o solicita ayuda para vincular tu cuenta.")
+                messages.error(
+                    request,
+                    "Ya tienes una cuenta con ese correo, pero aún no está vinculada con Google. "
+                    "Ingresa con tu contraseña y vincúlala desde Mi perfil. Si tu cuenta no tiene contraseña, "
+                    "pide al administrador un enlace para vincularla."
+                )
                 return redirect('login')
             base_username = email_google.split('@')[0][:20]
             username_final = base_username
@@ -1475,6 +1488,83 @@ def login_google_callback(request):
     login(request, usuario)
     messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Ingresaste con tu cuenta oficial de Google ({usuario.email}).")
     perfil = obtener_o_crear_perfil(usuario)
+    if perfil.rol == 'PRODUCTOR':
+        return redirect('panel_productor' if hasattr(usuario, 'puesto') else 'configurar_puesto')
+    return redirect('ventas_por_oferta')
+
+
+SAL_ENLACE_GOOGLE = 'vincular-google'
+HORAS_ENLACE_GOOGLE = 1
+
+
+def crear_enlace_google(usuario):
+    """Codigo firmado que el administrador entrega a una persona para vincular su Google (dura 1 hora)."""
+    return signing.dumps({'usuario': usuario.pk}, salt=SAL_ENLACE_GOOGLE)
+
+
+@login_required
+def vincular_google(request):
+    """Desde Mi perfil: la persona ya entro con su contraseña y quiere poder entrar tambien con Google."""
+    if request.method != 'POST':
+        return redirect('perfil')
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.google_sub:
+        messages.info(request, "Tu cuenta ya está vinculada con Google.")
+        return redirect('perfil')
+    request.session['vincular_google'] = {'usuario': request.user.pk, 'correo': ''}
+    return redirect(f"{reverse('login_google')}?rol={perfil.rol}")
+
+
+def enlace_google(request, codigo):
+    """Enlace que genera el administrador con `manage.py enlace_google` para cuentas sin contraseña."""
+    try:
+        datos = signing.loads(codigo, salt=SAL_ENLACE_GOOGLE, max_age=HORAS_ENLACE_GOOGLE * 3600)
+    except signing.BadSignature:
+        messages.error(request, "El enlace para vincular Google no es válido o ya venció. Pide uno nuevo.")
+        return redirect('login')
+    usuario = User.objects.filter(pk=datos.get('usuario'), is_active=True).first()
+    if usuario is None or not usuario.email:
+        messages.error(request, "El enlace para vincular Google no es válido.")
+        return redirect('login')
+    perfil = obtener_o_crear_perfil(usuario)
+    request.session['vincular_google'] = {'usuario': usuario.pk, 'correo': usuario.email}
+    return redirect(f"{reverse('login_google')}?rol={perfil.rol}")
+
+
+def completar_vinculo_google(request, vinculo, google_sub, email_google):
+    """Guarda el identificador de Google en la cuenta que pidio vincularse y entra con ella."""
+    usuario = User.objects.filter(pk=vinculo.get('usuario'), is_active=True).first()
+    correo_esperado = (vinculo.get('correo') or '').strip().lower()
+    if usuario is None:
+        messages.error(request, "No encontramos la cuenta que querías vincular.")
+        return redirect('login')
+    if correo_esperado:
+        # Enlace del administrador: la cuenta de Google debe tener el mismo correo de la cuenta
+        if correo_esperado != email_google:
+            messages.error(request, f"Ese enlace es para {usuario.email}. Elige esa cuenta en la ventana de Google.")
+            return redirect('login')
+    elif request.user.pk != usuario.pk:
+        # Desde Mi perfil: solo la misma persona que inicio la vinculacion
+        messages.error(request, "Inicia sesión otra vez para vincular tu cuenta de Google.")
+        return redirect('login')
+
+    with transaction.atomic():
+        perfil = PerfilUsuario.objects.select_for_update().get(pk=obtener_o_crear_perfil(usuario).pk)
+        if perfil.es_demo and not settings.DATOS_DEMO_AUTOMATICOS:
+            messages.error(request, "Las cuentas de demostración no se pueden vincular con Google.")
+            return redirect('login')
+        if PerfilUsuario.objects.filter(google_sub=google_sub).exclude(pk=perfil.pk).exists():
+            messages.error(request, "Esa cuenta de Google ya está vinculada a otra cuenta de AgroComercial.")
+            return redirect('perfil' if request.user.is_authenticated else 'login')
+        if perfil.google_sub and perfil.google_sub != google_sub:
+            messages.error(request, "Tu cuenta ya está vinculada con otra cuenta de Google.")
+            return redirect('perfil' if request.user.is_authenticated else 'login')
+        perfil.google_sub = google_sub
+        perfil.save(update_fields=['google_sub'])
+
+    if request.user.pk != usuario.pk:
+        login(request, usuario)
+    messages.success(request, f"Listo, tu cuenta quedó vinculada con Google ({email_google}). Desde ahora puedes entrar con ese botón.")
     if perfil.rol == 'PRODUCTOR':
         return redirect('panel_productor' if hasattr(usuario, 'puesto') else 'configurar_puesto')
     return redirect('ventas_por_oferta')
@@ -1755,7 +1845,10 @@ def perfil_vista(request):
             'email': request.user.email,
         })
 
-    return render(request, 'perfil.html', {'form': form, 'perfil': perfil})
+    return render(request, 'perfil.html', {
+        'form': form, 'perfil': perfil,
+        'google_configurado': bool((os.environ.get('GOOGLE_CLIENT_ID') or settings.GOOGLE_CLIENT_ID).strip()),
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -1778,10 +1871,11 @@ def guardar_fotos_extra(request, producto):
     espacio = MAXIMO_FOTOS_EXTRA - producto.fotos.count()
     omitidas = 0
     for archivo in request.FILES.getlist('fotos_extra'):
-        extension = archivo.name.rsplit('.', 1)[-1].lower()
-        if espacio <= 0 or extension not in ('jpg', 'jpeg', 'png', 'webp') or archivo.size > TAMANO_MAXIMO_FOTO:
+        extension = tipo_de_imagen(archivo)
+        if espacio <= 0 or not extension or archivo.size > TAMANO_MAXIMO_FOTO:
             omitidas += 1
             continue
+        renombrar_imagen(archivo, extension)
         FotoProducto.objects.create(producto=producto, imagen=archivo, orden=producto.fotos.count())
         espacio -= 1
     if omitidas:
