@@ -250,8 +250,7 @@ def total_lista(usuario):
 
 @login_required
 def lista(request):
-    if es_vendedor(request.user):
-        return redirect('panel_productor')
+    # Cualquier cuenta puede comprar, tambien la de un vendedor
     items = list(ItemCarrito.objects.filter(comprador=request.user, precio_unitario_acordado__isnull=True)
                  .select_related('producto__productor__puesto', 'producto__productor__perfil', 'producto__categoria')
                  .order_by('producto__productor_id', '-fecha_agregado'))
@@ -274,11 +273,13 @@ def lista(request):
 @transaction.atomic
 def guardar_lista(request, producto_id):
     rapido = request.headers.get('X-Carrito-Rapido') == '1'
-    if es_vendedor(request.user):
-        if rapido:
-            return JsonResponse({'ok': False, 'mensaje': 'Las cuentas de vendedor no arman listas de compra.'}, status=403)
-        raise Http404()
     producto = get_object_or_404(Producto.objects.publicados(), pk=producto_id)
+    if producto.productor_id == request.user.id:
+        texto = 'Este producto es de tu puesto: no hace falta agregarlo a tu lista.'
+        if rapido:
+            return JsonResponse({'ok': False, 'mensaje': texto}, status=400)
+        messages.info(request, texto)
+        return redirect('detalle_producto', producto_id=producto.pk)
     try:
         cantidad = forms.IntegerField(min_value=1, max_value=max(producto.stock, 1)).clean(request.POST.get('cantidad') or 1)
     except forms.ValidationError:
@@ -313,22 +314,20 @@ def quitar_de_lista(request, item_id):
 @login_required
 @require_http_methods(['GET', 'POST'])
 def quiero_vender(request):
-    """Un comprador quiere vender: explica las opciones y, si confirma, pasa su cuenta a vendedor."""
+    """Un comprador quiere vender: activa su puesto en la misma cuenta y sigue pudiendo comprar."""
     perfil = obtener_o_crear_perfil(request.user)
     if perfil.rol == 'PRODUCTOR':
         return redirect('panel_productor' if Puesto.objects.filter(vendedor=request.user).exists() else 'configurar_puesto')
     if request.method == 'POST':
-        if request.POST.get('accion') == 'convertir' and request.POST.get('confirmo') == '1':
-            with transaction.atomic():
-                ItemCarrito.objects.filter(comprador=request.user).delete()
-                perfil.rol = 'PRODUCTOR'
-                perfil.save(update_fields=['rol'])
-            messages.success(request, 'Tu cuenta ahora es de vendedor. Marca en el mapa dónde está tu puesto.')
+        if request.POST.get('accion') == 'convertir':
+            # La cuenta queda hibrida: vende en su puesto y conserva su lista, favoritos y mensajes
+            perfil.rol = 'PRODUCTOR'
+            perfil.save(update_fields=['rol'])
+            messages.success(request, 'Listo, ahora puedes vender sin dejar de comprar. Marca en el mapa dónde está tu puesto.')
             return redirect('configurar_puesto')
         if request.POST.get('accion') == 'otra_cuenta':
             logout(request)
             return redirect(f"{reverse('registro')}?rol=PRODUCTOR")
-        messages.warning(request, 'Marca la casilla para confirmar el cambio.')
     return render(request, 'quiero_vender.html', {'total_lista': total_lista(request.user)})
 
 
