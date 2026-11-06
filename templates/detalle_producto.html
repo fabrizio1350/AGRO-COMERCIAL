@@ -39,6 +39,14 @@
         <div class="ficha-compra" id="comprar" data-stock-id="{{ producto.id }}">
             <span class="antetitulo"><i class="bi bi-tag-fill" aria-hidden="true"></i>{{ producto.categoria.nombre|default:"Mercado" }}{% if producto.oferta_activa %} · Oferta{% endif %}</span>
             <h1 class="h2 fw-bold mb-2">{{ producto.nombre }} {% if producto.productor.perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% endif %}</h1>
+            <a href="#opiniones" class="resumen-estrellas mb-2">
+                {% if total_resenas %}
+                    <span class="estrellas" aria-hidden="true">{% for i in "12345" %}<i class="bi {% if forloop.counter <= estrellas_promedio %}bi-star-fill{% else %}bi-star{% endif %}"></i>{% endfor %}</span>
+                    <span>{{ promedio_resenas|floatformat:1 }} · {{ total_resenas }} {% if total_resenas == 1 %}opinión{% else %}opiniones{% endif %}</span>
+                {% else %}
+                    <i class="bi bi-star" aria-hidden="true"></i><span>Sé el primero en opinar</span>
+                {% endif %}
+            </a>
 
             <div class="d-flex align-items-baseline flex-wrap gap-2 mb-2">
                 {% if producto.oferta_activa %}
@@ -60,6 +68,7 @@
 
             {% if not user.is_authenticated %}
                 <a href="{% url 'login' %}?modo=comprador&next={{ request.path|urlencode }}" class="btn btn-success btn-lg w-100"><i class="bi bi-list-check me-1" aria-hidden="true"></i>Ingresa para armar tu lista</a>
+                <a href="{% url 'login' %}?modo=comprador&next={{ request.path|urlencode }}" class="btn btn-outline-success w-100 mt-2"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Ingresa para escribir al vendedor</a>
             {% elif producto.productor == user %}
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="{% url 'editar_producto' producto.id %}" class="btn btn-success"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Editar producto</a>
@@ -84,6 +93,10 @@
                     <p class="small text-muted mt-2 mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Tu lista te ayuda a planear la compra. Pagas en el puesto; agregar a la lista no aparta el producto.</p>
                 </form>
                 {% endif %}
+                <form action="{% url 'iniciar_chat' producto.id %}" method="post" class="d-grid mt-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-success"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Escribir al vendedor</button>
+                </form>
             {% endif %}
         </div>
 
@@ -126,6 +139,55 @@
 {% else %}
 <div class="estado-verificacion estado-espera mb-4"><i class="bi bi-geo" aria-hidden="true"></i><div>El vendedor todavía no marcó su puesto en el mapa.</div></div>
 {% endif %}
+
+<section class="tarjeta-donde tarjeta-opiniones mb-4" id="opiniones" aria-labelledby="tituloOpiniones">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <span class="antetitulo"><i class="bi bi-star-fill" aria-hidden="true"></i>Opiniones de compradores</span>
+            <h2 class="h5 fw-bold mb-3" id="tituloOpiniones">
+                {% if total_resenas %}{{ promedio_resenas|floatformat:1 }} de 5 · {{ total_resenas }} {% if total_resenas == 1 %}opinión{% else %}opiniones{% endif %}{% else %}Todavía no hay opiniones{% endif %}
+            </h2>
+            {% for res in resenas %}
+            <article class="opinion">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                    <strong class="small">{{ res.autor.first_name|default:res.autor.username }}{% if res.autor.perfil.es_demo %} {% include 'includes/etiqueta_demo.html' %}{% endif %}</strong>
+                    <span class="estrellas" role="img" aria-label="{{ res.calificacion }} de 5 estrellas">{% for i in "12345" %}<i class="bi {% if forloop.counter <= res.calificacion %}bi-star-fill{% else %}bi-star{% endif %}" aria-hidden="true"></i>{% endfor %}</span>
+                </div>
+                <p class="small text-secondary mb-1">{{ res.comentario|linebreaksbr }}</p>
+                <span class="small text-muted">{{ res.fecha|date:"j \d\e F Y" }}</span>
+            </article>
+            {% empty %}
+            <p class="text-muted small mb-0">Cuando alguien compre en este puesto puede contar qué tal le fue.</p>
+            {% endfor %}
+        </div>
+        <div class="col-lg-5">
+            {% if not user.is_authenticated %}
+                <div class="opinion-invitar">
+                    <p class="small mb-2">¿Ya compraste este producto? Tu opinión ayuda a otros compradores.</p>
+                    <a href="{% url 'login' %}?modo=comprador&next={{ request.path|urlencode }}%23opiniones" class="btn btn-outline-success">Ingresa para opinar</a>
+                </div>
+            {% elif producto.productor == user %}
+                <div class="opinion-invitar small text-muted">Así califican tus compradores este producto. Las opiniones las escriben ellos.</div>
+            {% else %}
+                <form method="post" action="{% url 'opinar_producto' producto.id %}" class="opinion-invitar">
+                    {% csrf_token %}
+                    <fieldset class="mb-2">
+                        <legend class="form-label small fw-semibold mb-1">{% if mi_resena %}Cambia tu calificación{% else %}¿Qué tal estuvo?{% endif %}</legend>
+                        <div class="elegir-estrellas">
+                            {% for valor in "54321" %}
+                            <input type="radio" name="calificacion" value="{{ valor }}" id="estrella{{ valor }}" {% if mi_resena %}{% if mi_resena.calificacion|stringformat:"s" == valor %}checked{% endif %}{% elif valor == "5" %}checked{% endif %}>
+                            <label for="estrella{{ valor }}" title="{{ valor }} estrella{{ valor|pluralize }}"><i class="bi bi-star-fill" aria-hidden="true"></i><span class="visually-hidden">{{ valor }} estrella{{ valor|pluralize }}</span></label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                    <label for="comentarioOpinion" class="form-label small fw-semibold">Comentario</label>
+                    <textarea name="comentario" id="comentarioOpinion" rows="3" maxlength="1000" class="form-control" required placeholder="¿Estaba fresco? ¿Te atendieron bien?">{{ mi_resena.comentario|default:"" }}</textarea>
+                    <button type="submit" class="btn btn-success w-100 mt-2">{% if mi_resena %}Actualizar mi opinión{% else %}Publicar mi opinión{% endif %}</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</section>
 
 {% if mas_del_puesto %}
 <section class="mt-5">
