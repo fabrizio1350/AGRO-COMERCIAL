@@ -8,10 +8,11 @@
 <section class="bienvenida-vendedor entrar">
     <span class="antetitulo"><i class="bi bi-shop" aria-hidden="true"></i>Empieza aquí</span>
     <h1 class="h2 fw-bold mb-2">Hola, {{ user.first_name|default:user.username }}. Vamos a poner tu puesto en el mapa</h1>
-    <p class="text-muted mb-4">Solo 2 pasos y tus productos ya se ven en la web.</p>
+    <p class="text-muted mb-4">Con los 2 primeros pasos tus productos ya se ven en la web.</p>
     <ol class="pasos-inicio">
         <li class="actual"><span class="numero">1</span><div><strong>Marca tu puesto</strong><span>Ubicación, nombre del lugar, número y foto.</span></div></li>
         <li><span class="numero">2</span><div><strong>Publica tus productos</strong><span>Foto, precio y cuánto tienes.</span></div></li>
+        <li><span class="numero">3</span><div><strong>Verifica tu puesto</strong><span>Con tu DNI y una foto en el puesto, para ganar la insignia.</span></div></li>
     </ol>
     <a href="{% url 'configurar_puesto' %}" class="btn btn-success btn-lg mt-3"><i class="bi bi-geo-alt-fill me-1" aria-hidden="true"></i>Marcar mi puesto en el mapa</a>
 </section>
@@ -30,6 +31,23 @@
         <a href="{% url 'configurar_puesto' %}" class="btn btn-outline-secondary"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Editar puesto</a>
     </div>
 </section>
+
+{% if not perfil_global.es_demo %}
+{% with estado=perfil_global.estado_verificacion %}
+{% if estado == 'VERIFICADO' %}
+<p class="mt-2 mb-0"><span class="insignia-verificado" title="AgroComercial comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span></p>
+{% else %}
+<div class="estado-verificacion {% if estado == 'RECHAZADO' %}estado-error{% else %}estado-espera{% endif %} mt-3">
+    <i class="bi {% if estado == 'PENDIENTE' %}bi-hourglass-split{% elif estado == 'RECHAZADO' %}bi-exclamation-circle{% else %}bi-patch-check{% endif %}" aria-hidden="true"></i>
+    <div class="flex-grow-1">
+        {% if estado == 'PENDIENTE' %}<strong>Estamos revisando tu puesto.</strong> Te avisaremos cuando esté verificado.
+        {% elif estado == 'RECHAZADO' %}<strong>Tu verificación necesita una corrección.</strong> <a href="{% url 'verificacion_vendedor' %}">Ver qué falta</a>
+        {% else %}<strong>Verifica tu puesto</strong> y tus productos llevarán la insignia "Puesto verificado". Solo DNI y una foto tuya en el puesto. <a href="{% url 'verificacion_vendedor' %}" class="fw-semibold">Verificar ahora</a>{% endif %}
+    </div>
+</div>
+{% endif %}
+{% endwith %}
+{% endif %}
 
 <div class="row g-3 my-1" data-escalonado>
     <div class="col-6 col-lg-3"><div class="tarjeta-cifra"><span>Vendido hoy</span><strong class="text-success" id="vendidoHoy">S/ {{ vendido_hoy|floatformat:2 }}</strong></div></div>
@@ -53,7 +71,7 @@
             <div class="info flex-grow-1 min-w-0">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <strong class="text-truncate">{{ producto.nombre }}</strong>
-                    {% if producto.oferta_activa %}<span class="chip chip-descuento chico">-{{ producto.porcentaje_descuento }}%</span>{% endif %}
+                    {% if producto.oferta_activa %}<span class="chip chip-descuento chico">-{{ producto.porcentaje_descuento }}%</span>{% elif producto.en_oferta and producto.oferta_pendiente_pago %}<a href="{% url 'pagar_comision_oferta' producto.id %}" class="chip-pendiente"><i class="bi bi-credit-card" aria-hidden="true"></i>Oferta sin publicar · Pagar S/ {{ tarifa_oferta|floatformat:2 }}</a>{% endif %}
                     {% if not producto.disponible %}<span class="badge text-bg-secondary">Oculto</span>{% endif %}
                 </div>
                 <div class="small text-muted">S/ {{ producto.precio_actual }} / {{ producto.unidad_corta }}{% if producto.interesados %} · <i class="bi bi-people" aria-hidden="true"></i> {{ producto.interesados }} en su lista{% endif %}</div>
