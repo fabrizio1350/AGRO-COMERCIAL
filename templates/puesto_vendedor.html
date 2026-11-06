@@ -27,10 +27,11 @@
                     <label class="visually-hidden" for="textoLugar">Buscar mercado o dirección</label>
                     <input type="search" id="textoLugar" class="form-control" placeholder="Busca tu mercado, ej. Mercado San Camilo" autocomplete="off">
                 </div>
-                <button type="button" class="btn btn-outline-success flex-shrink-0" id="btnMiUbicacion"><i class="bi bi-crosshair me-1" aria-hidden="true"></i><span class="d-none d-sm-inline">Usar mi ubicación</span><span class="d-sm-none">Aquí</span></button>
+                <button type="button" class="btn btn-outline-success flex-shrink-0" id="btnMiUbicacion"><i class="bi bi-crosshair me-1" aria-hidden="true"></i><span class="d-none d-sm-inline">Usar mi ubicación actual</span><span class="d-sm-none">Mi ubicación</span></button>
             </div>
             <div id="mapaPuesto" class="mapa-puesto" data-proveedor="{% if maps_key %}google{% else %}osm{% endif %}" aria-label="Mapa: toca donde está tu puesto"></div>
             <p class="small text-muted mt-2 mb-0" id="estadoMapa"><i class="bi bi-hand-index me-1" aria-hidden="true"></i>Toca el mapa o arrastra el marcador hasta tu puesto.</p>
+            <div class="alert alert-warning small mt-2 mb-0 d-none" id="avisoUbicacion" role="alert" tabindex="-1"></div>
             {{ form.latitud }}{{ form.longitud }}
             {% if form.latitud.errors or form.longitud.errors %}<div class="text-danger small mt-1">Marca en el mapa dónde está tu puesto.</div>{% endif %}
         </section>
@@ -39,12 +40,13 @@
             <h2><span class="numero">2</span>Ponle nombre</h2>
             <div class="row g-3">
                 <div class="col-md-8">
-                    <label class="form-label small fw-semibold" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+                    <label class="form-label small fw-semibold" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }} (opcional)</label>
                     {{ form.nombre }}
                     {% if form.nombre.errors %}<div class="text-danger small mt-1">{{ form.nombre.errors|striptags }}</div>{% endif %}
+                    <div class="form-text">Si lo dejas vacío, aparecerá como «Puesto de {{ user.first_name|default:user.username }}».</div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small fw-semibold" for="{{ form.numero.id_for_label }}">{{ form.numero.label }}</label>
+                    <label class="form-label small fw-semibold" for="{{ form.numero.id_for_label }}">{{ form.numero.label }} (opcional)</label>
                     {{ form.numero }}
                 </div>
                 <div class="col-md-6">
@@ -56,7 +58,7 @@
                     {{ form.horario }}
                 </div>
                 <div class="col-12">
-                    <label class="form-label small fw-semibold" for="{{ form.direccion.id_for_label }}">{{ form.direccion.label }}</label>
+                    <label class="form-label small fw-semibold" for="{{ form.direccion.id_for_label }}">{{ form.direccion.label }} (opcional)</label>
                     {{ form.direccion }}
                 </div>
             </div>
