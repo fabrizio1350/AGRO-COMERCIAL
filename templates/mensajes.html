@@ -30,7 +30,7 @@
             <div class="estado-vacio py-4">
                 <i class="bi bi-chat-square-text" aria-hidden="true"></i>
                 <h2 class="h6 fw-bold">Aún no tienes conversaciones</h2>
-                <p class="text-muted small">Abre un producto y pulsa "Chatear con el productor" para hacer preguntas antes de comprar.</p>
+                <p class="text-muted small">Abre un producto y escríbele al vendedor para hacer preguntas antes de ir al puesto.</p>
                 <a href="{% url 'catalogo' %}" class="btn btn-success btn-sm">Ver productos</a>
             </div>
         {% endfor %}
@@ -58,7 +58,7 @@
             <div class="chat-burbujas" id="burbujas" aria-live="polite"
                  data-nuevos="{% url 'mensajes_nuevos' actual.id %}">
                 {% if not mensajes_chat %}
-                    <p class="chat-vacio">Escribe tu primera pregunta: precio por volumen, fecha de cosecha, recojo o transporte.</p>
+                    <p class="chat-vacio">Escribe tu primera pregunta: si aún le queda, precio por cantidad o a qué hora atiende.</p>
                 {% endif %}
                 {% include 'includes/mensajes_chat.html' %}
             </div>
