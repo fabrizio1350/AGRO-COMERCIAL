@@ -14,7 +14,7 @@
     <link href="{% static 'css/estilos.css' %}?v={{ version_estaticos }}" rel="stylesheet">
     <link href="{% static 'css/tema.css' %}?v={{ version_estaticos }}" rel="stylesheet">
     <meta name="theme-color" content="#15803d">
-    <meta name="description" content="AgroComercial: ofertas y stock en tiempo real de los puestos de mercado de Arequipa.">
+    <meta name="description" content="AgroComercial: encuentra las mejores ofertas de los mercados de Arequipa, compara precios entre puestos y llega directo al puesto.">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -117,7 +117,7 @@
             <form class="buscador buscador-movil d-flex d-md-none" action="{% url 'catalogo' %}" method="get" role="search">
                 <label for="buscadorMovil" class="visually-hidden">Buscar productos</label>
                 <i class="bi bi-search" aria-hidden="true"></i>
-                <input type="search" id="buscadorMovil" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Buscar productos del campo...">
+                <input type="search" id="buscadorMovil" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Busca un producto u oferta...">
             </form>
         </div>
 
@@ -222,7 +222,7 @@
                         <span class="logo-icono"><i class="bi bi-flower1" aria-hidden="true"></i></span>
                         <span class="logo-texto text-white">Agro<span>Comercial</span></span>
                     </a>
-                    <p class="mb-3">Las ofertas de los puestos de mercado de Arequipa en un solo lugar. Mira el stock en tiempo real y compra directo en el puesto.</p>
+                    <p class="mb-3">Tus mercados favoritos, sus mejores ofertas, en un solo lugar. Compara precios, mira el stock en tiempo real y compra directo en el puesto.</p>
                     <span class="etiqueta-proyecto"><i class="bi bi-mortarboard me-1" aria-hidden="true"></i>Proyecto de Innovación · versión de prueba</span>
                 </div>
                 <div class="col-6 col-lg-2">
@@ -245,7 +245,7 @@
                 </div>
                 <div class="col-12 col-lg-4">
                     <h6>¿Tienes un puesto?</h6>
-                    <p class="mb-3">Marca tu puesto en el mapa, publica tus productos y avisa al instante lo que vendiste.</p>
+                    <p class="mb-3">Marca tu puesto en el mapa y publica tus ofertas gratis. No cobramos comisión por tus ventas.</p>
                     <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-warning btn-sm">Empezar a vender <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
                 </div>
             </div>
