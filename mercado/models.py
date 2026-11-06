@@ -777,3 +777,28 @@ def ruc_valido(ruc):
     elif digito == 11:
         digito = 1
     return digito == int(ruc[10])
+
+
+class CuentaSinPagoOferta(models.Model):
+    """Correos de vendedores que publican ofertas sin pagar la publicidad.
+    Se maneja solo por dentro (admin o comando oferta_gratis), nunca desde la web."""
+    correo = models.EmailField('Correo de la cuenta', unique=True)
+    nota = models.CharField('Nota', max_length=120, blank=True, help_text='Ej. socio del proyecto, prueba del docente')
+    agregado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Cuenta sin pago de oferta'
+        verbose_name_plural = 'Cuentas sin pago de oferta'
+        ordering = ['correo']
+
+    def __str__(self):
+        return self.correo
+
+    def save(self, *args, **kwargs):
+        self.correo = (self.correo or '').strip().lower()
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def incluye(cls, usuario):
+        correo = (getattr(usuario, 'email', '') or '').strip()
+        return bool(correo) and cls.objects.filter(correo__iexact=correo).exists()
