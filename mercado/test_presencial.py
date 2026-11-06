@@ -146,6 +146,45 @@ class PanelYListaTests(TestCase):
         datos = self.client.get(reverse('stock_publico'), {'ids': self.producto.pk}).json()
         self.assertEqual(datos[str(self.producto.pk)]['stock'], 10)
 
+    def test_vendi_devuelve_los_totales_del_dia_y_se_puede_quitar(self):
+        from .models import VentaPuesto
+        self.poner_puesto()
+        self.client.force_login(self.vendedor)
+        url = reverse('actualizar_stock', args=[self.producto.pk])
+        datos = self.client.post(url, {'accion': 'vendi', 'cantidad': 2}, HTTP_X_STOCK_RAPIDO='1').json()
+        datos = self.client.post(url, {'accion': 'vendi', 'cantidad': 1}, HTTP_X_STOCK_RAPIDO='1').json()
+        self.assertEqual(datos['vendido_hoy'], '4.50')
+        self.assertEqual(datos['ventas_hoy'], 2)
+        self.assertEqual(datos['total_venta'], '1.50')
+        self.assertContains(self.client.get(reverse('panel_productor')), 'S/ 4,50')
+        # Otra cuenta no puede borrar la venta
+        self.client.force_login(self.comprador)
+        self.assertEqual(self.client.post(reverse('quitar_venta', args=[datos['venta_id']])).status_code, 404)
+        self.client.force_login(self.vendedor)
+        self.client.post(reverse('quitar_venta', args=[datos['venta_id']]))
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 8)
+        self.assertEqual(VentaPuesto.objects.count(), 1)
+
+    def test_opiniones_del_producto(self):
+        from .models import ResenaProducto
+        self.poner_puesto()
+        url = reverse('opinar_producto', args=[self.producto.pk])
+        self.client.force_login(self.comprador)
+        self.assertContains(self.client.get(reverse('detalle_producto', args=[self.producto.pk])), 'Escribir al vendedor')
+        self.client.post(url, {'calificacion': 9, 'comentario': 'Raro'})
+        self.assertFalse(ResenaProducto.objects.exists())
+        self.client.post(url, {'calificacion': 4, 'comentario': 'Choclo tierno y bien atendido'})
+        self.client.post(url, {'calificacion': 5, 'comentario': 'Volví y otra vez muy bueno'})
+        self.assertEqual(ResenaProducto.objects.get().calificacion, 5)
+        pagina = self.client.get(reverse('detalle_producto', args=[self.producto.pk]))
+        self.assertContains(pagina, 'Volví y otra vez muy bueno')
+        self.assertContains(pagina, 'Actualizar mi opinión')
+        # El vendedor no se califica a si mismo
+        self.client.force_login(self.vendedor)
+        self.client.post(url, {'calificacion': 5, 'comentario': 'El mejor'})
+        self.assertEqual(ResenaProducto.objects.count(), 1)
+
     def test_datos_del_puesto_son_opcionales(self):
         puesto = self.poner_puesto()
         puesto.foto = 'puestos/prueba.jpg'
