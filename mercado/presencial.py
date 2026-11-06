@@ -66,12 +66,18 @@ class PuestoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['foto'].required = not (self.instance and self.instance.foto)
+        # No todos los puestos tienen numero o un mercado con nombre: nada de esto es obligatorio
+        self.fields['nombre'].required = False
 
     def clean_foto(self):
         return validar_foto(self.cleaned_data['foto'])
 
     def clean(self):
         datos = super().clean()
+        if not (datos.get('nombre') or '').strip():
+            vendedor = self.instance.vendedor if self.instance.vendedor_id else None
+            nombre = (vendedor.first_name or vendedor.username) if vendedor else ''
+            datos['nombre'] = f'Puesto de {nombre}'[:100] if nombre else 'Mi puesto'
         if not any(datos.get(campo) for campo in ('efectivo', 'tarjeta', 'yape_plin')):
             raise forms.ValidationError('Elige al menos una forma de pago.')
         return datos
