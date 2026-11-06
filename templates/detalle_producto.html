@@ -111,9 +111,13 @@
                 <img src="{{ puesto.url_foto }}" alt="Foto del puesto {{ puesto.nombre }}" class="foto-puesto" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
                 <div class="min-w-0">
                     <span class="antetitulo mb-0"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Dónde comprar</span>
-                    <h2 class="h5 fw-bold mb-0" id="tituloDonde">{{ puesto.nombre }}</h2>
+                    <h2 class="h5 fw-bold mb-0" id="tituloDonde">{{ lugar.nombre }}</h2>
                     {% if producto.productor.perfil.vendedor_verificado %}<span class="insignia-verificado" title="AgroComercial comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span>{% endif %}
+                    {% if lugar == puesto %}
                     <div class="text-muted small">{{ puesto.titulo_puesto }}{% if puesto.referencia %} · {{ puesto.referencia }}{% endif %}</div>
+                    {% else %}
+                    <div class="text-muted small">{% if lugar.referencia %}{{ lugar.referencia }} · {% endif %}Otra ubicación de {{ puesto.nombre }}</div>
+                    {% endif %}
                     {% if puesto.horario %}<div class="small"><i class="bi bi-clock me-1" aria-hidden="true"></i>{{ puesto.horario }}</div>{% endif %}
                 </div>
             </div>
@@ -123,15 +127,15 @@
                     {% for icono, nombre in puesto.iconos_pago %}<span class="chip-pago"><i class="bi {{ icono }}" aria-hidden="true"></i>{{ nombre }}</span>{% endfor %}
                 </div>
             </div>
-            {% if puesto.direccion %}<p class="small text-muted mb-3"><i class="bi bi-signpost me-1" aria-hidden="true"></i>{{ puesto.direccion }}</p>{% endif %}
+            {% if lugar.direccion %}<p class="small text-muted mb-3"><i class="bi bi-signpost me-1" aria-hidden="true"></i>{{ lugar.direccion }}</p>{% endif %}
             <div class="d-flex gap-2 flex-wrap mt-auto">
-                <a class="btn btn-warning fw-semibold" href="{{ puesto.como_llegar }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right-fill me-1" aria-hidden="true"></i>Cómo llegar</a>
+                <a class="btn btn-warning fw-semibold" href="{{ lugar.como_llegar }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right-fill me-1" aria-hidden="true"></i>Cómo llegar</a>
                 <a class="btn btn-outline-success" href="{% url 'catalogo' %}?puesto={{ puesto.id }}">Ver todo el puesto</a>
             </div>
         </div>
         <div class="col-lg-7">
             <div class="mapa-mini mapa-donde">
-                <iframe src="{{ puesto.mapa_embebido }}" title="Mapa de {{ puesto.nombre }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <iframe src="{{ lugar.mapa_embebido }}" title="Mapa de {{ lugar.nombre }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
         </div>
     </div>
