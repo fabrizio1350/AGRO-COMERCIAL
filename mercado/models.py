@@ -200,13 +200,17 @@ def fecha_vencimiento_por_defecto():
 
 class ProductoQuerySet(models.QuerySet):
     def publicados(self):
-        """Productos que se ven en la web: activos, con stock, sin vencer y de un vendedor con su puesto en el mapa."""
+        """Productos que se ven en la web: activos, con stock, sin vencer y de un vendedor con su puesto en el mapa.
+        Con VERIFICACION_OBLIGATORIA solo se muestran los puestos verificados (y los Demo)."""
         ahora = timezone.now()
-        return self.filter(disponible=True, stock__gt=0).filter(
+        consulta = self.filter(disponible=True, stock__gt=0).filter(
             Q(fecha_vencimiento__isnull=True) | Q(fecha_vencimiento__gt=ahora)
         ).filter(
             productor__puesto__isnull=False, productor__perfil__rol='PRODUCTOR', productor__is_active=True,
         )
+        if settings.VERIFICACION_OBLIGATORIA:
+            consulta = consulta.filter(Q(productor__perfil__estado_verificacion='VERIFICADO') | Q(productor__perfil__es_demo=True))
+        return consulta
 
     def ofertas_activas(self):
         """Ofertas pagadas, con precio menor al normal y dentro de sus fechas."""
@@ -293,6 +297,8 @@ class Producto(models.Model):
     def vendedor_habilitado(self):
         """El comprador va al puesto: solo se muestra si el vendedor ya marco su puesto en el mapa."""
         perfil = getattr(self.productor, 'perfil', None)
+        if settings.VERIFICACION_OBLIGATORIA and not (perfil and perfil.puede_vender_publicamente()):
+            return False
         return bool(perfil and perfil.rol == 'PRODUCTOR' and self.productor.is_active and hasattr(self.productor, 'puesto'))
 
     def esta_publicado(self):
@@ -390,11 +396,8 @@ class Producto(models.Model):
         return Decimal('0.00')
 
     def monto_comision_oferta(self):
-        """Comisión que cobra AgroComercial por publicar el producto como oferta."""
-        porcentaje = Decimal(str(settings.COMISION_OFERTA_PORCENTAJE))
-        minimo = Decimal(str(settings.COMISION_OFERTA_MINIMA))
-        monto = (self.valor_oferta() * porcentaje / 100).quantize(Decimal('0.01'))
-        return max(monto, minimo)
+        """Lo que paga el vendedor (publicidad) para que su producto salga como oferta: tarifa fija."""
+        return Decimal(str(settings.TARIFA_OFERTA)).quantize(Decimal('0.01'))
 
     def descuento_configurado(self):
         """Descuento que puso el vendedor, aunque la oferta todavia no este vigente."""
@@ -573,10 +576,10 @@ class Pedido(models.Model):
 
 
 class PagoComision(models.Model):
-    """Registro del pago (simulado) de la comisión por publicar un producto en oferta."""
+    """Registro del pago (demo) que hace el vendedor para publicar un producto como oferta."""
     METODOS = [
         ('YAPE_PLIN', 'Yape / Plin'),
-        ('TARJETA', 'Tarjeta de Crédito / Débito'),
+        ('TARJETA', 'Tarjeta de crédito o débito'),
     ]
 
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='pagos_comision')
@@ -591,7 +594,7 @@ class PagoComision(models.Model):
         ordering = ['-fecha_pago']
 
     def __str__(self):
-        return f"Comisión {self.codigo_transaccion} - {self.producto.nombre} (S/ {self.monto})"
+        return f"Pago de oferta {self.codigo_transaccion} - {self.producto.nombre} (S/ {self.monto})"
 
 
 class ResenaProducto(models.Model):
@@ -698,25 +701,29 @@ EXTENSIONES_DOCUMENTO = ['jpg', 'jpeg', 'png', 'webp', 'pdf']
 
 
 class VerificacionVendedor(models.Model):
-    """Datos y documentos que el vendedor envia una sola vez para que el administrador lo verifique."""
+    """Datos que el vendedor envia una sola vez para comprobar que de verdad atiende un puesto en un mercado.
+    Lo revisa una persona del equipo en /admin/."""
     TIPOS = [
-        ('PERSONA', 'Productor individual'),
-        ('ORGANIZACION', 'Asociación, cooperativa o empresa'),
+        ('PERSONA', 'Persona natural'),
+        ('ORGANIZACION', 'Negocio con RUC'),
     ]
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='verificacion')
     tipo = models.CharField(max_length=15, choices=TIPOS, default='PERSONA')
     dni = models.CharField('DNI', max_length=8, blank=True)
     ruc = models.CharField('RUC', max_length=11, blank=True)
-    nombre_organizacion = models.CharField('Nombre de la organización', max_length=150, blank=True)
+    nombre_organizacion = models.CharField('Nombre comercial', max_length=150, blank=True)
     celular = models.CharField(max_length=9)
-    distrito = models.CharField(max_length=120)
+    distrito = models.CharField('Mercado declarado', max_length=120)
     foto_documento = models.FileField(storage=almacen_privado, upload_to='verificaciones/',
                                       validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)])
-    foto_chacra = models.FileField(storage=almacen_privado, upload_to='verificaciones/',
-                                   validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)])
+    foto_en_puesto = models.FileField(storage=almacen_privado, upload_to='verificaciones/',
+                                      validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)])
+    constancia_puesto = models.FileField(storage=almacen_privado, upload_to='verificaciones/', blank=True,
+                                         validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)],
+                                         help_text="Carnet o recibo de la asociación del mercado, recibo de merced conductiva o licencia municipal")
     documento_organizacion = models.FileField(storage=almacen_privado, upload_to='verificaciones/', blank=True,
                                               validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)])
-    inscrito_padron = models.BooleanField('Declara estar en el Padrón', default=False, help_text="Declara estar en el Padrón de Productores Agrarios")
+    declara_puesto = models.BooleanField('Declara que atiende el puesto', default=False)
     certificado_organico = models.FileField(storage=almacen_privado, upload_to='verificaciones/', blank=True,
                                             validators=[FileExtensionValidator(EXTENSIONES_DOCUMENTO)])
     certificadora = models.CharField(max_length=120, blank=True)
@@ -724,10 +731,10 @@ class VerificacionVendedor(models.Model):
     fecha_envio = models.DateTimeField('Enviado el', auto_now=True)
 
     # Lo que el administrador comprobo (se muestra al comprador sin numeros ni archivos)
-    revisado_identidad = models.BooleanField('Identidad comprobada', default=False, help_text="DNI/RUC coincide con la foto y SUNAT")
-    revisado_padron = models.BooleanField('Está en el Padrón agrario', default=False, help_text="Encontrado en consultapadron.midagri.gob.pe")
-    revisado_organizacion = models.BooleanField('Organización comprobada', default=False, help_text="Partida SUNARP o constancia válida")
-    revisado_chacra = models.BooleanField('Foto en chacra válida', default=False, help_text="La foto muestra al vendedor en su chacra o con su producto")
+    revisado_identidad = models.BooleanField('Identidad comprobada', default=False, help_text="El DNI coincide con la persona de la foto")
+    revisado_constancia = models.BooleanField('Constancia del puesto válida', default=False, help_text="El carnet, recibo o licencia es del mismo mercado y puesto")
+    revisado_organizacion = models.BooleanField('RUC comprobado', default=False, help_text="RUC activo en SUNAT")
+    revisado_puesto = models.BooleanField('Foto en el puesto válida', default=False, help_text="Se ve a la persona en su puesto y coincide con el mercado y número marcados en el mapa")
     revisado_organico = models.BooleanField('Certificado orgánico válido', default=False, help_text="Certificado orgánico vigente de un certificador registrado en SENASA")
     motivo_rechazo = models.CharField('Motivo del rechazo (lo verá el vendedor)', max_length=250, blank=True)
     revisado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verificaciones_revisadas')
@@ -740,16 +747,16 @@ class VerificacionVendedor(models.Model):
         return self.ruc if self.tipo == 'ORGANIZACION' else self.dni
 
     def comprobado_texto(self):
-        """Resumen publico de lo verificado, por ejemplo: 'Identidad, Padrón agrario y Chacra'."""
+        """Resumen publico de lo verificado, por ejemplo: 'identidad (DNI), foto en su puesto'."""
         partes = []
         if self.revisado_identidad:
-            partes.append('identidad (DNI/RUC)')
-        if self.revisado_padron:
-            partes.append('Padrón de Productores Agrarios')
+            partes.append('identidad (DNI)')
+        if self.revisado_puesto:
+            partes.append('foto en su puesto')
+        if self.revisado_constancia:
+            partes.append('constancia del mercado')
         if self.revisado_organizacion:
-            partes.append('registro de la organización')
-        if self.revisado_chacra:
-            partes.append('foto en su chacra')
+            partes.append('RUC activo')
         if self.revisado_organico:
             partes.append('certificado orgánico')
         return ', '.join(partes)
