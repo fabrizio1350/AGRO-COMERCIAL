@@ -2,7 +2,7 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
-from .models import Categoria, ItemCarrito, PerfilUsuario, Producto, Puesto, Pedido
+from .models import Categoria, ItemCarrito, PagoComision, PerfilUsuario, Producto, Puesto, Pedido
 
 
 class MercadoPresencialTests(TestCase):
@@ -52,15 +52,40 @@ class MercadoPresencialTests(TestCase):
         self.assertRedirects(self.client.post(reverse('pasarela_pago')), reverse('carrito'), fetch_redirect_response=False)
         self.assertFalse(Pedido.objects.exists())
 
-    def test_publicar_oferta_sin_comision_y_proteger_propiedad(self):
+    def test_oferta_se_publica_despues_del_pago_demo(self):
         self.client.force_login(self.vendedor)
-        respuesta = self.client.post(reverse('crear_producto'), {
+        datos = {
             'nombre': 'Papa', 'descripcion': 'Por kilo', 'categoria': self.producto.categoria_id,
             'unidad': 'KG', 'stock': 4, 'precio': '5.00', 'precio_oferta': '4.00', 'disponible': 'on',
-        })
-        self.assertRedirects(respuesta, reverse('panel_productor'))
+        }
+        respuesta = self.client.post(reverse('crear_producto'), datos)
         publicado = Producto.objects.get(nombre='Papa')
+        self.assertRedirects(respuesta, reverse('pagar_comision_oferta', args=[publicado.pk]))
+        # Antes de pagar se ve con su precio normal, no como oferta
+        self.assertTrue(publicado.oferta_pendiente_pago)
+        self.assertIn(publicado, Producto.objects.publicados())
+        self.assertNotIn(publicado, Producto.objects.ofertas_activas())
+        pagina = self.client.get(reverse('pagar_comision_oferta', args=[publicado.pk]))
+        self.assertContains(pagina, 'Tarjeta')
+        self.assertContains(pagina, 'Yape o Plin')
+        self.assertContains(pagina, 'S/ 2,00')
+        self.assertContains(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]), {'metodo_pago': 'BITCOIN'}),
+                            'Elige si pagas con tarjeta o con QR')
+        self.assertRedirects(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]), {'metodo_pago': 'YAPE_PLIN'}),
+                             reverse('panel_productor'))
+        publicado.refresh_from_db()
+        self.assertFalse(publicado.oferta_pendiente_pago)
         self.assertIn(publicado, Producto.objects.ofertas_activas())
+        self.assertEqual(PagoComision.objects.get(producto=publicado).monto, Decimal('2.00'))
+        # Pagar otra vez no crea un segundo cobro, y editar una oferta pagada no la vuelve a cobrar
+        self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]), {'metodo_pago': 'TARJETA'})
+        self.assertRedirects(self.client.post(reverse('editar_producto', args=[publicado.pk]), dict(datos, precio_oferta='3.50')),
+                             reverse('panel_productor'))
+        self.assertEqual(PagoComision.objects.filter(producto=publicado).count(), 1)
+        # Quitar el precio de oferta deja el producto normal
+        self.client.post(reverse('editar_producto', args=[publicado.pk]), dict(datos, precio_oferta=''))
+        publicado.refresh_from_db()
+        self.assertFalse(publicado.en_oferta)
         self.assertFalse(publicado.oferta_pendiente_pago)
         self.client.force_login(self.comprador)
         self.assertEqual(self.client.post(reverse('editar_producto', args=[publicado.pk]), {}).status_code, 404)
