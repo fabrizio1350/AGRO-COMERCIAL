@@ -7,32 +7,33 @@
     <div class="col-lg-8 col-xl-7">
         <span class="antetitulo"><i class="bi bi-shop" aria-hidden="true"></i>Para comerciantes</span>
         <h1 class="h3 fw-bold mb-2">¿Quieres vender en AgroComercial?</h1>
-        <p class="text-muted mb-4">Tu cuenta actual es de <strong>comprador</strong>. Para publicar productos necesitas una cuenta de vendedor. Elige cómo prefieres hacerlo.</p>
+        <p class="text-muted mb-4">Con tu misma cuenta puedes comprar y vender a la vez. Solo falta activar tu puesto.</p>
 
         <div class="ficha-compra mb-3">
-            <h2 class="h5 fw-bold mb-1"><i class="bi bi-arrow-repeat me-1 text-success" aria-hidden="true"></i>Usar esta misma cuenta para vender</h2>
+            <h2 class="h5 fw-bold mb-1"><i class="bi bi-shop-window me-1 text-success" aria-hidden="true"></i>Vender con esta misma cuenta</h2>
             <p class="small text-muted mb-3">
-                Sigues entrando con el mismo correo{% if perfil_global.google_sub %} y el mismo botón de Google{% endif %}, pero tu cuenta pasa a ser de vendedor.
-                Ya no podrás armar listas de compra con ella{% if total_lista %} y se borrarán los {{ total_lista }} producto{{ total_lista|pluralize }} que tienes en tu lista{% endif %}.
+                Sigues entrando con el mismo correo{% if perfil_global.google_sub %} y el mismo botón de Google{% endif %}.
+                Conservas tu lista de compras{% if total_lista %} ({{ total_lista }} producto{{ total_lista|pluralize }}){% endif %}, tus favoritos y tus mensajes,
+                y se suma tu puesto para publicar productos y ofertas.
             </p>
+            <ul class="small text-muted ps-3 mb-3">
+                <li>En el menú de tu cuenta verás <strong>Mi puesto</strong> y <strong>Mi lista de compras</strong>.</li>
+                <li>Al ingresar por <strong>Quiero comprar</strong> vas a las ofertas; por <strong>Tengo un puesto</strong>, a tu panel.</li>
+            </ul>
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="accion" value="convertir">
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" name="confirmo" value="1" id="confirmo" required>
-                    <label class="form-check-label small" for="confirmo">Entiendo que mi cuenta dejará de ser de comprador.</label>
-                </div>
-                <button type="submit" class="btn btn-success fw-semibold">Convertir mi cuenta en vendedor</button>
+                <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Activar mi puesto</button>
             </form>
         </div>
 
         <div class="ficha-compra">
-            <h2 class="h5 fw-bold mb-1"><i class="bi bi-person-plus me-1 text-success" aria-hidden="true"></i>Crear otra cuenta solo para vender</h2>
-            <p class="small text-muted mb-3">Conservas esta cuenta para comprar y creas una nueva de vendedor con otro correo o usuario.</p>
+            <h2 class="h6 fw-bold mb-1">¿Prefieres tener cuentas separadas?</h2>
+            <p class="small text-muted mb-3">Cierra sesión y crea otra cuenta solo para vender, con otro correo o usuario.</p>
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="accion" value="otra_cuenta">
-                <button type="submit" class="btn btn-outline-success fw-semibold">Cerrar sesión y crear cuenta de vendedor</button>
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Cerrar sesión y crear otra cuenta</button>
             </form>
         </div>
     </div>
