@@ -68,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'mercado.seguridad.CabecerasSeguridadMiddleware',
 ]
 
 ROOT_URLCONF = 'agro_comercial.urls'
@@ -115,7 +116,24 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
+
+# Login normal de Django con limite de intentos: tras 5 claves equivocadas la cuenta espera 15 minutos
+AUTHENTICATION_BACKENDS = ['mercado.seguridad.BackendConLimite']
+LOGIN_INTENTOS_MAXIMOS = int(os.environ.get('LOGIN_INTENTOS_MAXIMOS', '5'))
+LOGIN_MINUTOS_BLOQUEO = int(os.environ.get('LOGIN_MINUTOS_BLOQUEO', '15'))
+
+# La sesion se cierra sola despues de 7 dias sin entrar
+SESSION_COOKIE_AGE = 7 * 24 * 60 * 60
+
+# Ruta del panel de administracion (cambiala en .env, ej. ADMIN_URL=gestion-agro/, para que no sea /admin/)
+ADMIN_URL = os.environ.get('ADMIN_URL', 'admin/').strip('/') + '/'
 
 LANGUAGE_CODE = 'es-pe'
 
