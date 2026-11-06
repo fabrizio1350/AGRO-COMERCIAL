@@ -18,6 +18,7 @@ from .models import (
     Notificacion,
     VerificacionVendedor,
     CuentaSinPagoOferta,
+    UbicacionVendedor,
 )
 
 
@@ -199,3 +200,9 @@ class CuentaSinPagoOfertaAdmin(admin.ModelAdmin):
         from django.contrib.auth.models import User
         usuario = User.objects.filter(email__iexact=obj.correo).first()
         return usuario.username if usuario else 'Aún nadie se registró con ese correo'
+
+
+@admin.register(UbicacionVendedor)
+class UbicacionVendedorAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'vendedor', 'direccion', 'creada')
+    search_fields = ('nombre', 'vendedor__username', 'vendedor__email', 'direccion')
