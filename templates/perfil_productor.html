@@ -7,11 +7,11 @@
     <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
         <span class="avatar-inicial avatar-grande">{{ productor.first_name|default:productor.username|slice:":1"|upper }}</span>
         <div class="flex-grow-1">
-            <span class="antetitulo text-white-50"><i class="bi bi-shop" aria-hidden="true"></i>Productor</span>
+            <span class="antetitulo text-white-50"><i class="bi bi-shop" aria-hidden="true"></i>Vendedor</span>
             <h1 class="h2 fw-bold mb-1">{{ productor.get_full_name|default:productor.username }} {% if perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% elif perfil.vendedor_verificado %}{% include 'includes/etiqueta_verificado.html' with p=perfil %}{% endif %}</h1>
-            {% if perfil.es_demo %}<p class="small mb-1 opacity-75">Este es un productor de prueba: sus datos, productos y fotos son de ejemplo.</p>{% elif perfil.vendedor_verificado and perfil.usuario.verificacion.comprobado_texto %}<p class="small mb-1 opacity-75"><i class="bi bi-patch-check me-1" aria-hidden="true"></i>AgroComercial comprobó: {{ perfil.usuario.verificacion.comprobado_texto }}.</p>{% endif %}
+            {% if perfil.es_demo %}<p class="small mb-1 opacity-75">Este es un vendedor de prueba: sus datos, productos y fotos son de ejemplo.</p>{% elif perfil.vendedor_verificado and perfil.usuario.verificacion.comprobado_texto %}<p class="small mb-1 opacity-75"><i class="bi bi-patch-check me-1" aria-hidden="true"></i>AgroComercial comprobó: {{ perfil.usuario.verificacion.comprobado_texto }}.</p>{% endif %}
             <p class="mb-0 opacity-75">
-                {% if perfil.nombre_finca %}<strong>{{ perfil.nombre_finca }}</strong> · {% endif %}
+                {% if productor.puesto %}<strong>{{ productor.puesto.nombre }}</strong>{% if productor.puesto.numero %} · Puesto {{ productor.puesto.numero }}{% endif %} · {% elif perfil.nombre_finca %}<strong>{{ perfil.nombre_finca }}</strong> · {% endif %}
                 <i class="bi bi-geo-alt" aria-hidden="true"></i> {{ perfil.ubicacion|default:"Arequipa" }}
                 · En AgroComercial desde {{ productor.date_joined|date:"F Y" }}
             </p>
@@ -25,7 +25,7 @@
     </div>
     <div class="cifras-productor">
         <div><strong>{{ productos|length }}</strong><span>publicados</span></div>
-        <div><strong>{{ total_vendidos }}</strong><span>pedidos recibidos</span></div>
+        <div><strong>{{ total_vendidos }}</strong><span>ventas registradas</span></div>
         <div>
             <strong>{% if promedio %}{{ promedio|floatformat:1 }} <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>{% else %}—{% endif %}</strong>
             <span>{{ total_resenas }} calificaci{{ total_resenas|pluralize:"ón,ones" }}</span>
@@ -38,7 +38,7 @@
     {% for prod in productos %}
         <div class="col-6 col-md-4 col-xl-3">{% include 'includes/tarjeta_producto.html' with prod=prod %}</div>
     {% empty %}
-        <div class="col-12"><div class="estado-vacio py-4"><i class="bi bi-basket" aria-hidden="true"></i><p class="text-muted mb-0">Este productor no tiene publicaciones vigentes ahora.</p></div></div>
+        <div class="col-12"><div class="estado-vacio py-4"><i class="bi bi-basket" aria-hidden="true"></i><p class="text-muted mb-0">Este vendedor no tiene publicaciones vigentes ahora.</p></div></div>
     {% endfor %}
 </div>
 
