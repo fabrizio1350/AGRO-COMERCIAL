@@ -32,16 +32,11 @@ El stock se refresca solo (static/js/stock-vivo.js) si un contenedor padre tiene
                 {% endif %}
                 <span class="small text-muted">/ {{ prod.unidad_corta }}</span>
             </div>
-            {% if rol_actual == 'COMPRADOR' %}
-                <form action="{% url 'agregar_al_carrito' prod.id %}" method="post" class="m-0" data-carrito-rapido>
-                    {% csrf_token %}
-                    <input type="hidden" name="cantidad" value="1">
-                    <button type="submit" class="boton-circular boton-carrito" data-guardar aria-label="Agregar {{ prod.nombre }} a mi lista" title="Agregar a mi lista"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
-                </form>
-            {% elif not user.is_authenticated %}
-                <a href="{% url 'login' %}?modo=comprador&next={{ request.get_full_path|urlencode }}" class="boton-circular boton-carrito" aria-label="Ingresa para agregar {{ prod.nombre }} a tu lista" title="Agregar a mi lista"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
-            {% else %}
+            {% if rol_actual == 'PRODUCTOR' %}
                 <a href="{% url 'detalle_producto' prod.id %}" class="boton-circular" aria-label="Ver {{ prod.nombre }}"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+            {% else %}
+                {# Lleva a la ficha, donde el comprador elige cuánto quiere antes de guardarlo #}
+                <a href="{% url 'detalle_producto' prod.id %}#comprar" class="boton-comprar" aria-label="Comprar {{ prod.nombre }}"><i class="bi bi-bag" aria-hidden="true"></i>Comprar</a>
             {% endif %}
         </div>
     </div>
