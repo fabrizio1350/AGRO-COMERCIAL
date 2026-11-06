@@ -36,7 +36,7 @@
     </div>
 
     <div class="col-lg-6 entrar entrar-2">
-        <div class="ficha-compra" data-stock-id="{{ producto.id }}">
+        <div class="ficha-compra" id="comprar" data-stock-id="{{ producto.id }}">
             <span class="antetitulo"><i class="bi bi-tag-fill" aria-hidden="true"></i>{{ producto.categoria.nombre|default:"Mercado" }}{% if producto.oferta_activa %} · Oferta{% endif %}</span>
             <h1 class="h2 fw-bold mb-2">{{ producto.nombre }} {% if producto.productor.perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% endif %}</h1>
 
