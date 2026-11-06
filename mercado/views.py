@@ -29,6 +29,7 @@ from .models import (
     OfertaNegociacion,
     ItemCarrito,
     Pedido,
+    VentaPuesto,
     ResenaProducto,
     PagoComision,
     FotoProducto,
@@ -1221,7 +1222,7 @@ def lista_productores(request):
 
 
 def perfil_productor(request, usuario_id):
-    """Pagina publica del productor: sus datos de finca, productos publicados y calificaciones."""
+    """Pagina publica del vendedor: su puesto, productos publicados y calificaciones."""
     # Se busca por productos publicados ademas del rol, porque el usuario puede cambiar de modo
     perfil = get_object_or_404(
         PerfilUsuario.objects.select_related('usuario').filter(Q(rol='PRODUCTOR') | Q(usuario__productos__isnull=False)).distinct(),
@@ -1238,7 +1239,7 @@ def perfil_productor(request, usuario_id):
         'resenas': resenas[:6],
         'total_resenas': resenas.count(),
         'promedio': resenas.aggregate(p=Avg('calificacion'))['p'],
-        'total_vendidos': Pedido.objects.filter(producto__productor=perfil.usuario).exclude(estado='CANCELADO').count(),
+        'total_vendidos': VentaPuesto.objects.filter(vendedor=perfil.usuario).count(),
     })
 
 
@@ -1880,7 +1881,7 @@ def iniciar_chat(request, producto_id):
         messages.info(request, "Este producto es tuyo: los compradores te escribirán desde aquí.")
         return redirect('mensajes')
     if obtener_o_crear_perfil(request.user).rol != 'COMPRADOR':
-        messages.warning(request, "Solo las cuentas de comprador pueden escribir a los productores.")
+        messages.warning(request, "Solo las cuentas de comprador pueden escribir a los vendedores.")
         return redirect('detalle_producto', producto_id=producto.id)
     conversacion, _ = Conversacion.objects.get_or_create(
         producto=producto, comprador=request.user, defaults={'vendedor': producto.productor}
