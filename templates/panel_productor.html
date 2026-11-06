@@ -72,7 +72,7 @@
             <div class="info flex-grow-1 min-w-0">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <strong class="text-truncate">{{ producto.nombre }}</strong>
-                    {% if producto.oferta_activa %}<span class="chip chip-descuento chico">-{{ producto.porcentaje_descuento }}%</span>{% elif producto.en_oferta and producto.oferta_pendiente_pago %}<a href="{% url 'pagar_comision_oferta' producto.id %}" class="chip-pendiente"><i class="bi bi-credit-card" aria-hidden="true"></i>Oferta sin publicar · Pagar S/ {{ tarifa_oferta|floatformat:2 }}</a>{% endif %}
+                    {% if producto.oferta_activa %}<span class="chip chip-descuento chico">-{{ producto.porcentaje_descuento }}%</span>{% elif producto.en_oferta and producto.oferta_pendiente_pago %}<a href="{% url 'pagar_comision_oferta' producto.id %}" class="chip-pendiente"><i class="bi bi-credit-card" aria-hidden="true"></i>Oferta sin publicar · Pagar publicidad</a>{% endif %}
                     {% if not producto.disponible %}<span class="badge text-bg-secondary">Oculto</span>{% endif %}
                 </div>
                 <div class="small text-muted">S/ {{ producto.precio_actual }} / {{ producto.unidad_corta }}{% if producto.interesados %} · <i class="bi bi-people" aria-hidden="true"></i> {{ producto.interesados }} en su lista{% endif %}</div>
