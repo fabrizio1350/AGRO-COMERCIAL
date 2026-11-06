@@ -118,7 +118,7 @@
             <div class="bg-white border p-4 text-center">
                 <i class="bi bi-tags fs-2 text-muted d-block mb-2" aria-hidden="true"></i>
                 <p class="text-muted small mb-2">Todavía no hay ofertas vigentes en la plataforma.</p>
-                <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm">Publicar una oferta</a>
+                <a href="{% if rol_actual == 'PRODUCTOR' %}{% url 'crear_producto' %}{% elif user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-success btn-sm">Publicar una oferta</a>
             </div>
         </div>
         {% endfor %}
