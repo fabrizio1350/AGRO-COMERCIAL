@@ -307,7 +307,7 @@ class PruebasDatosDemo(TestCase):
         self.assertFalse(PerfilUsuario.objects.filter(usuario__username__startswith='demo_').exists())
 
 
-class PruebasCuentasSeparadas(TestCase):
+class PruebasCuentaHibrida(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('vendedor', password='clave12345')
         PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', estado_verificacion='VERIFICADO')
@@ -325,12 +325,24 @@ class PruebasCuentasSeparadas(TestCase):
         self.assertEqual(self.client.post('/cambiar-modo/', {'nuevo_rol': 'COMPRADOR'}).status_code, 404)
         self.assertEqual(PerfilUsuario.objects.get(usuario=self.vendedor).rol, 'PRODUCTOR')
 
-    def test_vendedor_no_chatea_ni_guarda_favoritos(self):
+    def test_vendedor_tambien_compra_chatea_y_guarda_favoritos(self):
         self.client.login(username='vendedor', password='clave12345')
         self.client.post(reverse('iniciar_chat', args=[self.producto.id]), {'texto': 'hola'})
         self.client.post(reverse('alternar_favorito', args=[self.producto.id]))
-        self.assertFalse(Conversacion.objects.exists())
+        self.client.post(reverse('agregar_al_carrito', args=[self.producto.id]), {'cantidad': 2})
+        self.assertTrue(Conversacion.objects.filter(comprador=self.vendedor, vendedor=self.otro).exists())
+        self.assertTrue(Favorito.objects.filter(usuario=self.vendedor).exists())
+        self.assertTrue(ItemCarrito.objects.filter(comprador=self.vendedor, producto=self.producto, cantidad=2).exists())
+        self.assertContains(self.client.get(reverse('carrito')), 'Ajo')
+        self.assertEqual(self.client.get(reverse('panel_productor')).status_code, 200)
+
+    def test_vendedor_no_compra_su_propio_producto(self):
+        self.client.login(username='otro_vendedor', password='clave12345')
+        self.client.post(reverse('agregar_al_carrito', args=[self.producto.id]), {'cantidad': 1})
+        self.client.post(reverse('alternar_favorito', args=[self.producto.id]))
+        self.assertFalse(ItemCarrito.objects.exists())
         self.assertFalse(Favorito.objects.exists())
+        self.assertContains(self.client.get(reverse('detalle_producto', args=[self.producto.id])), 'Editar producto')
 
 
 JPG_MINIMO = b'\xff\xd8\xff\xe0' + b'0' * 64
