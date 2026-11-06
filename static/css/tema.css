@@ -2287,3 +2287,45 @@ gmp-place-autocomplete { width: 100%; }
 @media (max-width: 575.98px) { .metodos-pago { grid-template-columns: 1fr 1fr; } .opcion-pago.grande { padding: 0.75rem; } }
 .insignia-verificado.chica { font-size: 0.72rem; }
 .pago-oferta .foto-item { width: 72px; height: 72px; object-fit: cover; border-radius: 12px; flex-shrink: 0; }
+
+/* Boton Comprar de la tarjeta: lleva a la ficha para elegir la cantidad */
+.boton-comprar {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.95rem;
+    border-radius: 999px;
+    background-color: var(--verde-campo);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.25s ease, transform 0.3s var(--curva);
+}
+.boton-comprar:hover,
+.boton-comprar:focus-visible {
+    background-color: var(--verde-oscuro);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+#comprar {
+    scroll-margin-top: calc(var(--alto-cabecera) + 1.5rem);
+}
+.tarjeta-producto .pie .precio,
+.tarjeta-producto .pie .precio-anterior {
+    white-space: nowrap;
+}
+@media (max-width: 575.98px) {
+    .tarjeta-producto .pie {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .boton-comprar {
+        justify-content: center;
+        padding: 0.45rem 0.7rem;
+        font-size: 0.85rem;
+    }
+}
