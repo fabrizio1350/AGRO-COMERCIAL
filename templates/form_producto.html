@@ -99,6 +99,7 @@
                 <label class="form-label small fw-semibold" for="{{ form.nueva_nombre.id_for_label }}">{{ form.nueva_nombre.label }}</label>
                 {{ form.nueva_nombre }}
                 {% if form.nueva_nombre.errors %}<div class="text-danger small mt-1">{{ form.nueva_nombre.errors|striptags }}</div>{% endif %}
+                <div id="zonaMapa">
                 <div class="buscador-mapa mt-3 mb-2">
                     <div class="flex-grow-1">
                         <label class="visually-hidden" for="textoLugar">Buscar mercado o dirección</label>
@@ -111,6 +112,15 @@
                      aria-label="Mapa: toca donde está la nueva ubicación"></div>
                 <p class="small text-muted mt-2 mb-0" id="estadoMapa"><i class="bi bi-hand-index me-1" aria-hidden="true"></i>Toca el mapa o arrastra el marcador hasta el lugar.</p>
                 <div class="alert alert-warning small mt-2 mb-0 d-none" id="avisoUbicacion" role="alert" tabindex="-1"></div>
+                </div>
+                <div class="resumen-ubicacion d-none mt-3" id="resumenUbicacion" aria-live="polite">
+                <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
+                <div class="flex-grow-1 min-w-0">
+                    <strong class="d-block">Ubicación lista. Revisa el nombre de arriba.</strong>
+                    <span class="small text-muted d-block text-truncate" data-resumen-texto></span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-cambiar-ubicacion><i class="bi bi-pencil me-1" aria-hidden="true"></i>Cambiar</button>
+            </div>
                 {{ form.nueva_latitud }}{{ form.nueva_longitud }}
                 <div class="row g-3 mt-1">
                     <div class="col-md-6">
