@@ -51,7 +51,7 @@
                     <h2 class="hero-titulo" data-titulo-animado>¿Tienes un puesto? <em>Que más compradores vean tus ofertas</em></h2>
                     <p class="hero-texto">Marca tu puesto en el mapa, publica tus productos con foto y precio, y avisa al instante lo que ya vendiste. No cobramos comisión por tus ventas.</p>
                     <div class="hero-acciones">
-                        <a href="{% if user.is_authenticated %}{% url 'crear_producto' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-warning">Publicar mis productos</a>
+                        <a href="{% if rol_actual == 'PRODUCTOR' %}{% url 'crear_producto' %}{% elif user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-warning">Publicar mis productos</a>
                         <a href="#como-funciona" class="btn btn-vidrio">Cómo funciona</a>
                     </div>
                 </div>
@@ -233,7 +233,7 @@
                     <p class="mb-0 opacity-75">Crea tu cuenta gratis, marca tu puesto en el mapa y publica tus ofertas en minutos. No cobramos comisión por tus ventas.</p>
                 </div>
                 <div class="col-lg-4 text-lg-end">
-                    <a href="{% if user.is_authenticated %}{% url 'crear_producto' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-light btn-lg fw-bold px-4">Empezar a vender <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                    <a href="{% if rol_actual == 'PRODUCTOR' %}{% url 'crear_producto' %}{% elif user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-light btn-lg fw-bold px-4">Empezar a vender <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
                 </div>
             </div>
         </div>
