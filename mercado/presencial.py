@@ -20,7 +20,8 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 import uuid
 
 from .models import (
-    Categoria, CuentaSinPagoOferta, ItemCarrito, Notificacion, PagoComision, Producto, Puesto, ResenaProducto, VentaPuesto,
+    Categoria, CuentaSinPagoOferta, ItemCarrito, Notificacion, PagoComision, Producto, Puesto, ResenaProducto,
+    UbicacionVendedor, VentaPuesto,
     fecha_vencimiento_por_defecto,
 )
 from .forms import ResenaForm
@@ -86,6 +87,22 @@ class PuestoForm(forms.ModelForm):
 
 
 class PublicacionForm(forms.ModelForm):
+    # Donde se vende: el puesto principal, una ubicacion guardada o una nueva que se marca aqui mismo
+    donde = forms.ChoiceField(required=False, widget=forms.RadioSelect, label='¿Dónde lo vendes?')
+    nueva_nombre = forms.CharField(
+        label='Nombre de esta ubicación', max_length=100, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Feria del sábado en Cayma'}))
+    nueva_referencia = forms.CharField(
+        label='Referencia (opcional)', max_length=150, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. frente a la iglesia'}))
+    nueva_direccion = forms.CharField(
+        label='Dirección (opcional)', max_length=200, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Se llena sola al marcar el mapa'}))
+    nueva_latitud = forms.DecimalField(max_digits=8, decimal_places=6, min_value=-90, max_value=90,
+                                       required=False, widget=forms.HiddenInput())
+    nueva_longitud = forms.DecimalField(max_digits=9, decimal_places=6, min_value=-180, max_value=180,
+                                        required=False, widget=forms.HiddenInput())
+
     class Meta:
         model = Producto
         fields = ('nombre', 'categoria', 'descripcion', 'imagen', 'unidad', 'stock', 'precio',
@@ -105,7 +122,7 @@ class PublicacionForm(forms.ModelForm):
             'disponible': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, vendedor=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['categoria'].empty_label = 'Elige una categoría'
         self.fields['categoria'].queryset = Categoria.objects.order_by('nombre')
@@ -115,6 +132,28 @@ class PublicacionForm(forms.ModelForm):
         if not self.instance.pk:
             self.initial.setdefault('unidad', 'KG')
             self.initial.setdefault('disponible', True)
+        # Solo puede elegir sus propias ubicaciones
+        self.ubicaciones = list(UbicacionVendedor.objects.filter(vendedor=vendedor)) if vendedor else []
+        puesto = getattr(vendedor, 'puesto', None) if vendedor else None
+        self.fields['donde'].choices = (
+            [('puesto', puesto.nombre if puesto else 'Mi puesto')]
+            + [(str(u.pk), u.nombre) for u in self.ubicaciones]
+            + [('nueva', 'Agregar otra ubicación')]
+        )
+        guardada = self.instance.ubicacion_id if self.instance.pk else None
+        self.initial.setdefault('donde', str(guardada) if guardada and any(u.pk == guardada for u in self.ubicaciones) else 'puesto')
+
+    def ubicacion_elegida(self):
+        """La UbicacionVendedor que eligio (None = puesto principal). Si es nueva, todavia no esta guardada."""
+        donde = self.cleaned_data.get('donde')
+        if donde == 'nueva':
+            return UbicacionVendedor(
+                vendedor=self.instance.productor, nombre=self.cleaned_data['nueva_nombre'].strip(),
+                referencia=self.cleaned_data.get('nueva_referencia', '').strip(),
+                direccion=self.cleaned_data.get('nueva_direccion', '').strip(),
+                latitud=self.cleaned_data['nueva_latitud'], longitud=self.cleaned_data['nueva_longitud'],
+            )
+        return next((u for u in self.ubicaciones if str(u.pk) == donde), None)
 
     def clean_imagen(self):
         return validar_foto(self.cleaned_data['imagen'])
@@ -127,6 +166,12 @@ class PublicacionForm(forms.ModelForm):
             self.add_error('precio', 'Ingresa un precio mayor a cero.')
         if oferta is not None and (precio is None or not 0 < oferta < precio):
             self.add_error('precio_oferta', 'El precio de oferta debe ser menor al precio normal.')
+        datos['donde'] = datos.get('donde') or 'puesto'
+        if datos['donde'] == 'nueva':
+            if not (datos.get('nueva_nombre') or '').strip():
+                self.add_error('nueva_nombre', 'Ponle un nombre a esta ubicación, así la reconoces después.')
+            if datos.get('nueva_latitud') is None or datos.get('nueva_longitud') is None:
+                self.add_error('donde', 'Marca en el mapa dónde queda la nueva ubicación.')
         return datos
 
 
@@ -156,7 +201,7 @@ def datos_stock(producto):
 
 def inicio(request):
     asegurar_datos_iniciales()
-    publicados = Producto.objects.publicados().select_related('categoria', 'productor__puesto', 'productor__perfil')
+    publicados = Producto.objects.publicados().select_related('categoria', 'productor__puesto', 'productor__perfil', 'ubicacion')
     ofertas = ofertas_destacadas()
     puestos = puestos_con_productos()
     return render(request, 'inicio.html', {
@@ -175,7 +220,7 @@ def inicio(request):
 def catalogo(request, ofertas=False):
     asegurar_datos_iniciales()
     base = Producto.objects.ofertas_activas() if ofertas else Producto.objects.publicados()
-    productos = con_precio_vigente(base.select_related('categoria', 'productor__puesto', 'productor__perfil'))
+    productos = con_precio_vigente(base.select_related('categoria', 'productor__puesto', 'productor__perfil', 'ubicacion'))
     busqueda = request.GET.get('q', '').strip()[:100]
     categoria_id = request.GET.get('categoria', '').strip()
     puesto_id = request.GET.get('puesto', '').strip()
@@ -183,7 +228,8 @@ def catalogo(request, ofertas=False):
     if busqueda:
         productos = productos.filter(
             Q(nombre__icontains=busqueda) | Q(descripcion__icontains=busqueda)
-            | Q(productor__puesto__nombre__icontains=busqueda) | Q(categoria__nombre__icontains=busqueda)
+            | Q(productor__puesto__nombre__icontains=busqueda) | Q(ubicacion__nombre__icontains=busqueda)
+            | Q(categoria__nombre__icontains=busqueda)
         )
     if categoria_id.isdigit():
         productos = productos.filter(categoria_id=int(categoria_id))
@@ -216,7 +262,7 @@ def catalogo(request, ofertas=False):
 
 def ficha(request, producto_id):
     producto = get_object_or_404(
-        Producto.objects.select_related('productor__puesto', 'productor__perfil', 'categoria'), pk=producto_id)
+        Producto.objects.select_related('productor__puesto', 'productor__perfil', 'categoria', 'ubicacion'), pk=producto_id)
     if request.user != producto.productor and not producto.vendedor_habilitado():
         raise Http404()
     en_lista = None
@@ -224,12 +270,12 @@ def ficha(request, producto_id):
         en_lista = ItemCarrito.objects.filter(comprador=request.user, producto=producto,
                                               precio_unitario_acordado__isnull=True).first()
     mas_del_puesto = (Producto.objects.publicados().filter(productor=producto.productor)
-                      .exclude(pk=producto.pk).select_related('categoria', 'productor__puesto', 'productor__perfil')[:4])
+                      .exclude(pk=producto.pk).select_related('categoria', 'productor__puesto', 'productor__perfil', 'ubicacion')[:4])
     resenas = ResenaProducto.objects.filter(producto=producto).select_related('autor__perfil')
     mi_resena = resenas.filter(autor=request.user).first() if request.user.is_authenticated else None
     promedio = resenas.aggregate(p=Avg('calificacion'))['p']
     return render(request, 'detalle_producto.html', {
-        'producto': producto, 'puesto': getattr(producto.productor, 'puesto', None),
+        'producto': producto, 'puesto': getattr(producto.productor, 'puesto', None), 'lugar': producto.lugar(),
         'en_lista': en_lista, 'mas_del_puesto': mas_del_puesto,
         'extras': producto.fotos.all(),
         'resenas': resenas[:20],
@@ -275,6 +321,15 @@ def puestos(request):
         'lat': float(p.latitud), 'lng': float(p.longitud), 'llegar': p.como_llegar(),
         'url': f"{reverse('catalogo')}?puesto={p.pk}",
     } for p in lista_puestos]
+    # Otras ubicaciones de esos mismos vendedores que tienen productos publicados
+    por_ubicacion = dict(Producto.objects.publicados().filter(ubicacion__isnull=False, productor__puesto__in=lista_puestos)
+                         .order_by().values_list('ubicacion').annotate(total=Count('id')))
+    for u in UbicacionVendedor.objects.filter(pk__in=por_ubicacion).select_related('vendedor__puesto'):
+        puntos.append({
+            'nombre': u.nombre, 'puesto': f'Otra ubicación de {u.vendedor.puesto.nombre}', 'productos': por_ubicacion[u.pk],
+            'lat': float(u.latitud), 'lng': float(u.longitud), 'llegar': u.como_llegar(),
+            'url': f"{reverse('catalogo')}?puesto={u.vendedor.puesto.pk}",
+        })
     return render(request, 'productores.html', {'puestos': lista_puestos, 'puntos': puntos})
 
 
@@ -296,12 +351,15 @@ def total_lista(usuario):
 def lista(request):
     # Cualquier cuenta puede comprar, tambien la de un vendedor
     items = list(ItemCarrito.objects.filter(comprador=request.user, precio_unitario_acordado__isnull=True)
-                 .select_related('producto__productor__puesto', 'producto__productor__perfil', 'producto__categoria')
+                 .select_related('producto__productor__puesto', 'producto__productor__perfil', 'producto__categoria',
+                                 'producto__ubicacion')
                  .order_by('producto__productor_id', '-fecha_agregado'))
     grupos = {}
     for item in items:
-        puesto = getattr(item.producto.productor, 'puesto', None)
-        grupo = grupos.setdefault(item.producto.productor_id, {'puesto': puesto, 'items': [], 'total': Decimal('0')})
+        # Un grupo por lugar: si el vendedor vende en dos ubicaciones, se ven como dos paradas
+        lugar = item.producto.lugar()
+        clave = (item.producto.productor_id, lugar.pk if isinstance(lugar, UbicacionVendedor) else None)
+        grupo = grupos.setdefault(clave, {'puesto': lugar, 'items': [], 'total': Decimal('0')})
         grupo['items'].append(item)
         if item.producto.esta_publicado():
             grupo['total'] += item.subtotal()
@@ -394,7 +452,21 @@ def configurar_puesto(request):
         'form': form, 'puesto': puesto, 'nuevo': nuevo, 'maps_key': settings.GOOGLE_MAPS_API_KEY,
         'foto_actual': puesto.foto.url if puesto.foto else '',
         'campos_pago': [(form['efectivo'], 'bi-cash-coin'), (form['tarjeta'], 'bi-credit-card'), (form['yape_plin'], 'bi-phone')],
+        'otras_ubicaciones': UbicacionVendedor.objects.filter(vendedor=request.user).annotate(total=Count('productos')),
     })
+
+
+@login_required
+@require_POST
+def quitar_ubicacion(request, ubicacion_id):
+    """Borra una ubicacion extra; sus productos vuelven a mostrarse en el puesto principal."""
+    ubicacion = get_object_or_404(UbicacionVendedor, pk=ubicacion_id, vendedor=request.user)
+    puesto = Puesto.objects.filter(vendedor=request.user).first()
+    with transaction.atomic():
+        Producto.objects.filter(ubicacion=ubicacion).update(ubicacion=None, origen=(puesto.nombre if puesto else '')[:120])
+        ubicacion.delete()
+    messages.info(request, f'Quitaste la ubicación "{ubicacion.nombre}". Sus productos ahora se ven en tu puesto principal.')
+    return redirect(f"{reverse('configurar_puesto')}#otrasUbicaciones")
 
 
 def resumen_de_hoy(usuario):
@@ -409,7 +481,7 @@ def panel(request):
     if not es_vendedor(request.user):
         return redirect('carrito')
     puesto = Puesto.objects.filter(vendedor=request.user).first()
-    productos = list(Producto.objects.filter(productor=request.user).select_related('categoria', 'productor__puesto', 'productor__perfil').order_by('-disponible', 'nombre'))
+    productos = list(Producto.objects.filter(productor=request.user).select_related('categoria', 'productor__puesto', 'productor__perfil', 'ubicacion').order_by('-disponible', 'nombre'))
     ventas_hoy, vendido_hoy = resumen_de_hoy(request.user)
     interesados = (ItemCarrito.objects.filter(producto__productor=request.user, precio_unitario_acordado__isnull=True)
                    .values('producto_id').annotate(total=Count('id')))
@@ -439,7 +511,8 @@ def publicar(request, producto_id=None):
         return redirect('configurar_puesto')
     producto = (get_object_or_404(Producto, pk=producto_id, productor=request.user)
                 if producto_id is not None else Producto(productor=request.user))
-    form = PublicacionForm(request.POST if request.method == 'POST' else None, request.FILES or None, instance=producto)
+    form = PublicacionForm(request.POST if request.method == 'POST' else None, request.FILES or None, instance=producto,
+                           vendedor=request.user)
     # Cuentas que el equipo agrego por dentro: sus ofertas salen sin pasar por el pago
     oferta_gratis = CuentaSinPagoOferta.incluye(request.user)
     if request.method == 'POST' and form.is_valid():
@@ -455,7 +528,12 @@ def publicar(request, producto_id=None):
         producto.oferta_inicio = producto.oferta_fin = None
         producto.acepta_ofertas = False
         producto.minimo_compra = 1
-        producto.origen = puesto.nombre
+        ubicacion = form.ubicacion_elegida()
+        if ubicacion is not None and ubicacion.pk is None:
+            ubicacion.save()
+            messages.info(request, f'Guardamos la ubicación "{ubicacion.nombre}". La próxima vez solo la eliges.')
+        producto.ubicacion = ubicacion
+        producto.origen = (ubicacion or puesto).nombre[:120]
         producto.fecha_vencimiento = fecha_vencimiento_por_defecto()
         if stock_antes != producto.stock:
             producto.stock_actualizado = timezone.now()
@@ -470,6 +548,7 @@ def publicar(request, producto_id=None):
         'form': form, 'producto': producto, 'puesto': puesto,
         'foto_actual': producto.imagen.url if producto.imagen else '',
         'oferta_gratis': oferta_gratis,
+        'maps_key': settings.GOOGLE_MAPS_API_KEY,
     })
 
 
