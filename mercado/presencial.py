@@ -20,7 +20,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 import uuid
 
 from .models import (
-    Categoria, ItemCarrito, Notificacion, PagoComision, Producto, Puesto, ResenaProducto, VentaPuesto,
+    Categoria, CuentaSinPagoOferta, ItemCarrito, Notificacion, PagoComision, Producto, Puesto, ResenaProducto, VentaPuesto,
     fecha_vencimiento_por_defecto,
 )
 from .forms import ResenaForm
@@ -425,7 +425,6 @@ def panel(request):
         'vendido_hoy': vendido_hoy,
         'unidades_hoy': ventas_hoy.count(),
         'total_interesados': sum(por_producto.values()),
-        'tarifa_oferta': Decimal(str(settings.TARIFA_OFERTA)),
     })
 
 
@@ -441,12 +440,14 @@ def publicar(request, producto_id=None):
     producto = (get_object_or_404(Producto, pk=producto_id, productor=request.user)
                 if producto_id is not None else Producto(productor=request.user))
     form = PublicacionForm(request.POST if request.method == 'POST' else None, request.FILES or None, instance=producto)
+    # Cuentas que el equipo agrego por dentro: sus ofertas salen sin pasar por el pago
+    oferta_gratis = CuentaSinPagoOferta.incluye(request.user)
     if request.method == 'POST' and form.is_valid():
         antes = Producto.objects.filter(pk=producto.pk).values('stock', 'en_oferta').first() or {}
         stock_antes = antes.get('stock')
         producto = form.save(commit=False)
         producto.en_oferta = producto.precio_oferta is not None
-        if not producto.en_oferta:
+        if not producto.en_oferta or oferta_gratis:
             producto.oferta_pendiente_pago = False
         elif not antes.get('en_oferta'):
             # Oferta nueva: sale como oferta cuando el vendedor paga la publicidad
@@ -468,7 +469,7 @@ def publicar(request, producto_id=None):
     return render(request, 'form_producto.html', {
         'form': form, 'producto': producto, 'puesto': puesto,
         'foto_actual': producto.imagen.url if producto.imagen else '',
-        'tarifa_oferta': Decimal(str(settings.TARIFA_OFERTA)),
+        'oferta_gratis': oferta_gratis,
     })
 
 
@@ -482,6 +483,10 @@ def pagar_oferta(request, producto_id):
     producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
     if not (producto.en_oferta and producto.oferta_pendiente_pago):
         messages.info(request, f'La oferta de {producto.nombre} no tiene pagos pendientes.')
+        return redirect('panel_productor')
+    if CuentaSinPagoOferta.incluye(request.user):
+        Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False)
+        messages.success(request, f'{producto.nombre} ya sale en Ofertas. Tu cuenta no paga la publicidad.')
         return redirect('panel_productor')
     monto = producto.monto_comision_oferta()
     error = ''
