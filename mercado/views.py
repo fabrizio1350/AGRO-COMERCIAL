@@ -282,7 +282,7 @@ def ofertas_destacadas(limite=10):
     """Ofertas vigentes para el carrusel: primero las de mayor descuento."""
     return (
         Producto.objects.ofertas_activas()
-        .select_related('categoria', 'productor')
+        .select_related('categoria', 'productor', 'productor__puesto', 'ubicacion')
         .annotate(descuento_calc=ExpressionWrapper(
             (F('precio') - F('precio_oferta')) * 100 / F('precio'),
             output_field=DecimalField(max_digits=8, decimal_places=2),
