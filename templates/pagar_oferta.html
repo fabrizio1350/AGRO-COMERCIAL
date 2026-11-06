@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Publica tu oferta | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="pago-oferta mx-auto">
+    <div class="mb-3 entrar">
+        <span class="antetitulo"><i class="bi bi-megaphone-fill" aria-hidden="true"></i>Publicidad de tu oferta</span>
+        <h1 class="h3 fw-bold mb-1">Paga y tu producto sale en Ofertas</h1>
+        <p class="text-muted mb-0">Este pago es para AgroComercial por mostrar tu oferta a los compradores. Lo que vendas en tu puesto no paga comisión.</p>
+    </div>
+
+    <div class="aviso-demo mb-3" role="note">
+        <i class="bi bi-cone-striped" aria-hidden="true"></i>
+        <div><strong>Modo demo:</strong> no se cobra dinero real. No escribas los datos de una tarjeta real.</div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7 order-2 order-lg-1">
+            <form method="post" class="bloque-verificacion entrar entrar-2" data-pago-oferta>
+                {% csrf_token %}
+                <h2><span class="numero">1</span>¿Cómo quieres pagar?</h2>
+                {% if error %}<div class="alert alert-danger small" role="alert">{{ error }}</div>{% endif %}
+                <div class="metodos-pago" role="radiogroup" aria-label="Forma de pago">
+                    <input type="radio" class="btn-check" name="metodo_pago" id="pagoTarjeta" value="TARJETA" {% if metodo != 'YAPE_PLIN' %}checked{% endif %}>
+                    <label class="opcion-pago grande" for="pagoTarjeta"><i class="bi bi-credit-card-2-front" aria-hidden="true"></i><span><strong>Tarjeta</strong><small>Crédito o débito</small></span></label>
+                    <input type="radio" class="btn-check" name="metodo_pago" id="pagoQR" value="YAPE_PLIN" {% if metodo == 'YAPE_PLIN' %}checked{% endif %}>
+                    <label class="opcion-pago grande" for="pagoQR"><i class="bi bi-qr-code" aria-hidden="true"></i><span><strong>QR</strong><small>Yape o Plin</small></span></label>
+                </div>
+
+                <div class="panel-pago" data-panel="TARJETA">
+                    <p class="small text-muted mb-2">Datos de prueba ya escritos. Solo presiona pagar.</p>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="tarjetaNumero">Número de tarjeta</label>
+                            <input id="tarjetaNumero" class="form-control" inputmode="numeric" autocomplete="off" value="4111 1111 1111 1111">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold" for="tarjetaVence">Vence</label>
+                            <input id="tarjetaVence" class="form-control" inputmode="numeric" autocomplete="off" value="12/29">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold" for="tarjetaCvv">CVV</label>
+                            <input id="tarjetaCvv" class="form-control" inputmode="numeric" autocomplete="off" value="123">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-pago" data-panel="YAPE_PLIN" hidden>
+                    <div class="d-flex gap-3 align-items-center flex-wrap">
+                        <img src="/static/imagenes/qr_pago.svg" alt="Código QR de AgroComercial para pagar con Yape o Plin" class="qr-pago">
+                        <div class="small">
+                            <strong class="d-block mb-1">Escanea con Yape o Plin</strong>
+                            Paga exactamente <strong>S/ {{ monto }}</strong> a AgroComercial y luego presiona "Ya pagué".
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success btn-lg w-100 mt-3" data-boton-pagar>
+                    <i class="bi bi-lock-fill me-1" aria-hidden="true"></i><span data-texto-pagar>Pagar S/ {{ monto }} y publicar oferta</span>
+                </button>
+                <a href="{% url 'panel_productor' %}" class="btn btn-link text-muted w-100 mt-1">Pagar después</a>
+                <p class="small text-muted mb-0">Si pagas después, tu producto se sigue viendo con su precio normal hasta que pagues.</p>
+            </form>
+        </div>
+
+        <div class="col-lg-5 order-1 order-lg-2">
+            <aside class="resumen-lista entrar">
+                <h2 class="h6 fw-bold mb-3">Tu oferta</h2>
+                <div class="d-flex gap-3 align-items-center mb-3">
+                    <img src="{{ producto.url_imagen }}" alt="" class="foto-item" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+                    <div class="min-w-0">
+                        <strong class="d-block text-truncate">{{ producto.nombre }}</strong>
+                        <span class="precio-oferta">S/ {{ producto.precio_oferta }}</span> <span class="precio-anterior">S/ {{ producto.precio }}</span>
+                        <span class="small text-muted">/ {{ producto.unidad_corta }}</span>
+                        <div><span class="chip chip-descuento chico">-{{ producto.descuento_configurado }}%</span></div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between small mb-1"><span>Stock en oferta</span><span>{{ producto.stock }} {{ producto.nombre_unidad_stock }}</span></div>
+                <div class="d-flex justify-content-between small mb-1"><span>Se muestra en</span><span>Ofertas y portada</span></div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-baseline"><span class="fw-semibold">Total a pagar</span><strong class="fs-4 text-success">S/ {{ monto }}</strong></div>
+            </aside>
+        </div>
+    </div>
+</div>
+
+<script>
+// Muestra los datos de tarjeta o el QR segun lo elegido
+(function () {
+    var form = document.querySelector('[data-pago-oferta]');
+    if (!form) return;
+    var texto = form.querySelector('[data-texto-pagar]');
+    function actualizar() {
+        var elegido = form.querySelector('input[name="metodo_pago"]:checked');
+        var valor = elegido ? elegido.value : 'TARJETA';
+        form.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== valor; });
+        texto.textContent = valor === 'YAPE_PLIN' ? 'Ya pagué S/ {{ monto }}, publicar oferta' : 'Pagar S/ {{ monto }} y publicar oferta';
+    }
+    form.addEventListener('change', actualizar);
+    form.addEventListener('submit', function () { form.querySelector('[data-boton-pagar]').disabled = true; });
+    actualizar();
+})();
+</script>
+{% endblock %}
