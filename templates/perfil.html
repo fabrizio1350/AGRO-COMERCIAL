@@ -10,7 +10,7 @@
             <h4 class="h5 fw-bold mb-1">{{ user.first_name|default:user.username }} {{ user.last_name }}</h4>
             <p class="text-muted small mb-2">{{ user.email|default:user.username }}</p>
             <span class="badge {% if perfil.rol == 'PRODUCTOR' %}bg-success{% else %}bg-secondary{% endif %} mb-3">
-                {{ perfil.get_rol_display }}
+                {% if perfil.rol == 'PRODUCTOR' %}Compra y vende{% else %}Comprador{% endif %}
             </span>
 
             <div class="border-top pt-3 text-start small text-secondary">
@@ -52,7 +52,7 @@
                 {% if perfil.rol == 'PRODUCTOR' %}
                     Actualiza tus datos de contacto. La ubicación, la foto y las formas de pago de tu puesto se cambian en <a href="{% url 'configurar_puesto' %}">Mi puesto</a>.
                 {% else %}
-                    Actualiza tus datos de contacto.
+                    Actualiza tus datos de contacto. ¿Tienes un puesto? <a href="{% url 'quiero_vender' %}">Vende con esta misma cuenta</a> sin dejar de comprar.
                 {% endif %}
             </p>
 
