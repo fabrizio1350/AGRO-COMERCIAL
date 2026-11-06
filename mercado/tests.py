@@ -231,7 +231,7 @@ class PruebasFotosExtra(TestCase):
         from .views import guardar_fotos_extra
         from django.test import RequestFactory
         from django.contrib.messages.storage.fallback import FallbackStorage
-        fotos = [SimpleUploadedFile(f'f{i}.jpg', b'x' * 10, content_type='image/jpeg') for i in range(6)]
+        fotos = [SimpleUploadedFile(f'f{i}.jpg', b'\xff\xd8\xff' + b'x' * 10, content_type='image/jpeg') for i in range(6)]
         fotos.append(SimpleUploadedFile('virus.exe', b'x', content_type='application/octet-stream'))
         request = RequestFactory().post('/', {'fotos_extra': fotos})
         request.session = {}
