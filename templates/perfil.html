@@ -28,6 +28,21 @@
                 {% endif %}
             </div>
         </div>
+
+        {% if google_configurado or perfil.google_sub %}
+        <div class="bg-white border rounded-3 p-4 shadow-sm mt-3">
+            <h3 class="h6 fw-bold mb-1"><i class="bi bi-google me-1"></i>Entrar con Google</h3>
+            {% if perfil.google_sub %}
+                <p class="text-success small mb-0"><i class="bi bi-check-circle-fill me-1"></i>Tu cuenta ya está vinculada con Google.</p>
+            {% else %}
+                <p class="text-muted small mb-2">Vincula tu cuenta para entrar con un clic usando tu Gmail.</p>
+                <form method="post" action="{% url 'vincular_google' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-success btn-sm w-100">Vincular con Google</button>
+                </form>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 
     <div class="col-md-8">
@@ -55,6 +70,7 @@
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">{{ form.email.label }}</label>
                         {{ form.email }}
+                        {% for error in form.email.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Tipo de cuenta activa</label>
