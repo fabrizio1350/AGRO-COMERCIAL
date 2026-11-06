@@ -137,3 +137,49 @@ class PruebasFotosYCabeceras(TestCase):
     @override_settings(DEBUG=False)
     def test_login_sigue_funcionando_con_cabeceras(self):
         self.assertEqual(self.client.get(reverse('login'), secure=True).status_code, 200)
+
+
+class PruebasQuieroVender(TestCase):
+    def setUp(self):
+        self.usuario = User.objects.create_user('compradora', email='compradora@gmail.com')
+        PerfilUsuario.objects.create(usuario=self.usuario, rol='COMPRADOR')
+        self.client.force_login(self.usuario)
+
+    def test_comprador_que_entra_a_publicar_va_a_quiero_vender(self):
+        self.assertRedirects(self.client.get(reverse('crear_producto')), reverse('quiero_vender'))
+        self.assertRedirects(self.client.get(reverse('configurar_puesto')), reverse('quiero_vender'))
+
+    def test_convertir_la_cuenta_pide_confirmar(self):
+        self.client.post(reverse('quiero_vender'), {'accion': 'convertir'})
+        self.assertEqual(PerfilUsuario.objects.get(usuario=self.usuario).rol, 'COMPRADOR')
+        respuesta = self.client.post(reverse('quiero_vender'), {'accion': 'convertir', 'confirmo': '1'})
+        self.assertRedirects(respuesta, reverse('configurar_puesto'))
+        self.assertEqual(PerfilUsuario.objects.get(usuario=self.usuario).rol, 'PRODUCTOR')
+
+    def test_otra_cuenta_cierra_sesion(self):
+        respuesta = self.client.post(reverse('quiero_vender'), {'accion': 'otra_cuenta'})
+        self.assertRedirects(respuesta, f"{reverse('registro')}?rol=PRODUCTOR")
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    @override_settings(DEBUG=False)
+    def test_pagina_404_amigable(self):
+        self.assertContains(self.client.get('/no-existe/'), 'No encontramos esta página', status_code=404)
+
+
+class PruebasPestanaVendedor(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.usuario = User.objects.create_user('mixta', email='mixta@gmail.com', password='Clave-segura-2026')
+        PerfilUsuario.objects.create(usuario=self.usuario, rol='COMPRADOR')
+
+    def test_comprador_por_pestana_vendedor_entra_y_va_a_quiero_vender(self):
+        respuesta = self.client.post(reverse('login'), {'username': 'mixta', 'password': 'Clave-segura-2026', 'modo_rol': 'PRODUCTOR'})
+        self.assertRedirects(respuesta, reverse('quiero_vender'))
+        self.assertEqual(self.client.session['_auth_user_id'], str(self.usuario.pk))
+
+    def test_vendedor_por_pestana_comprador_entra_a_su_panel(self):
+        perfil = PerfilUsuario.objects.get(usuario=self.usuario)
+        perfil.rol = 'PRODUCTOR'
+        perfil.save()
+        respuesta = self.client.post(reverse('login'), {'username': 'mixta', 'password': 'Clave-segura-2026', 'modo_rol': 'COMPRADOR'})
+        self.assertRedirects(respuesta, reverse('panel_productor'), fetch_redirect_response=False)
