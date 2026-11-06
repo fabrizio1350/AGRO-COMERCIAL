@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}Configuración de Usuario | AgroComercial{% endblock %}
+{% block title %}Mis datos | AgroComercial{% endblock %}
 
 {% block content %}
 <div class="row g-4">
     <div class="col-md-4">
         <div class="bg-white border rounded-3 p-4 shadow-sm text-center">
-            <img src="/static/imagenes/finca_productor.jpg" alt="Perfil" class="img-referencia mx-auto mb-3 d-block" style="width: 120px; height: 120px;">
+            <img src="{% if user.puesto %}{{ user.puesto.url_foto }}{% else %}/static/imagenes/banner_agro.jpg{% endif %}" alt="" class="img-referencia mx-auto mb-3 d-block" style="width: 120px; height: 120px; object-fit: cover;">
             <h4 class="h5 fw-bold mb-1">{{ user.first_name|default:user.username }} {{ user.last_name }}</h4>
             <p class="text-muted small mb-2">{{ user.email|default:user.username }}</p>
             <span class="badge {% if perfil.rol == 'PRODUCTOR' %}bg-success{% else %}bg-secondary{% endif %} mb-3">
@@ -20,16 +20,11 @@
                 {% if perfil.rol == 'PRODUCTOR' %}
                     <div class="mb-1"><strong>RUC / DNI:</strong> {{ perfil.ruc_dni|default:"Pendiente de configurar" }}</div>
                     {% if perfil.nombre_finca %}
-                        <div class="mb-1"><strong>Chacra / Granja:</strong> {{ perfil.nombre_finca }}</div>
+                        <div class="mb-1"><strong>Nombre comercial:</strong> {{ perfil.nombre_finca }}</div>
                     {% endif %}
-                    <div>
-                        <strong>Cuenta en Soles:</strong>
-                        {% if perfil.cuenta_bancaria %}
-                            <span class="text-success fw-semibold">{{ perfil.cuenta_bancaria }}</span>
-                        {% else %}
-                            <span class="text-muted">No registrada (Opcional)</span>
-                        {% endif %}
-                    </div>
+                    {% if user.puesto %}
+                        <div class="mb-1"><strong>Puesto:</strong> {{ user.puesto.nombre }}{% if user.puesto.numero %} · Puesto {{ user.puesto.numero }}{% endif %}</div>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -37,12 +32,12 @@
 
     <div class="col-md-8">
         <div class="bg-white border rounded-3 p-4 shadow-sm">
-            <h3 class="h5 fw-bold mb-1">Configuración de Usuario</h3>
+            <h3 class="h5 fw-bold mb-1">Mis datos</h3>
             <p class="text-muted small mb-3">
                 {% if perfil.rol == 'PRODUCTOR' %}
-                    Completa aquí tu RUC, teléfono, nombre de tu chacra/granja (opcional) y tu cuenta en soles (opcional) para recibir depósitos de tus ventas.
+                    Actualiza tus datos de contacto. La ubicación, la foto y las formas de pago de tu puesto se cambian en <a href="{% url 'configurar_puesto' %}">Mi puesto</a>.
                 {% else %}
-                    Actualiza tus datos de contacto y ubicación para tus compras.
+                    Actualiza tus datos de contacto.
                 {% endif %}
             </p>
 
@@ -77,24 +72,21 @@
                     {% if perfil.rol == 'PRODUCTOR' %}
                     <div class="col-12 mt-3">
                         <div class="p-3 rounded-3 border bg-light">
-                            <div class="fw-bold small text-success mb-2">Configuración de Vendedor (Opciones de Venta y Depósito)</div>
+                            <div class="fw-bold small text-success mb-2">Datos de tu negocio</div>
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label small fw-semibold">RUC o DNI del Vendedor</label>
                                     {{ form.ruc_dni }}
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small fw-semibold">Nombre de Chacra, Granja o Huerta (Opcional)</label>
+                                    <label class="form-label small fw-semibold">Nombre comercial de tu negocio (opcional)</label>
                                     {{ form.nombre_finca }}
                                 </div>
                                 <div class="col-md-12">
-                                    <label class="form-label small fw-semibold">Número de Cuenta en Soles para Depósito (Opcional)</label>
-                                    {{ form.cuenta_bancaria }}
-                                    <div class="form-text small">
-                                        Si colocas tu número de cuenta aquí, cuando un comprador compre tus productos le aparecerá la opción de pagarte por <strong>Depósito / Transferencia</strong> a esta cuenta.
-                                    </div>
+                                    <a href="{% url 'configurar_puesto' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>Editar ubicación, foto y formas de pago del puesto</a>
                                 </div>
                             </div>
+                            <div class="d-none">{{ form.cuenta_bancaria }}</div>
                         </div>
                     </div>
                     {% else %}
@@ -107,7 +99,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-success fw-semibold mt-4 px-4">
-                    Guardar Configuración
+                    Guardar mis datos
                 </button>
             </form>
         </div>
