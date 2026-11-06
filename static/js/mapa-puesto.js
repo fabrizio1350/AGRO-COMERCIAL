@@ -3,15 +3,27 @@
 // sin llave usa OpenStreetMap con Leaflet para que la pagina siga funcionando.
 (function () {
     var CENTRO_AREQUIPA = { lat: -16.3989, lng: -71.5369 };
-    var lat = document.getElementById('id_latitud');
-    var lng = document.getElementById('id_longitud');
-    var nombre = document.getElementById('id_nombre');
-    var direccion = document.getElementById('id_direccion');
+    var contenedor = document.getElementById('mapaPuesto');
+    if (!contenedor) return;
+    // Los campos se pueden cambiar con data-* (el formulario de publicar usa los de la ubicacion nueva)
+    function campo(nombreData, porDefecto) { return document.getElementById(contenedor.getAttribute('data-' + nombreData) || porDefecto); }
+    var lat = campo('lat', 'id_latitud');
+    var lng = campo('lng', 'id_longitud');
+    var nombre = campo('nombre', 'id_nombre');
+    var direccion = campo('direccion', 'id_direccion');
     var estado = document.getElementById('estadoMapa');
     var buscador = document.getElementById('textoLugar');
     var botonUbicacion = document.getElementById('btnMiUbicacion');
-    var contenedor = document.getElementById('mapaPuesto');
-    if (!contenedor || !lat || !lng) return;
+    if (!lat || !lng) return;
+
+    // Si el mapa esta escondido (ej. "Agregar otra ubicacion"), se arma recien cuando se muestra
+    function cuandoSeVea(arrancar) {
+        if (contenedor.offsetParent !== null) { arrancar(); return; }
+        document.addEventListener('mapa-puesto:mostrar', function alMostrar() {
+            document.removeEventListener('mapa-puesto:mostrar', alMostrar);
+            arrancar();
+        });
+    }
 
     function puntoGuardado() {
         return lat.value && lng.value ? { lat: Number(lat.value), lng: Number(lng.value) } : null;
@@ -94,7 +106,8 @@
     }
 
     // ---------------- Google Maps ----------------
-    window.iniciarMapaPuesto = async function () {
+    window.iniciarMapaPuesto = function () { cuandoSeVea(iniciarGoogle); };
+    async function iniciarGoogle() {
         var { Map } = await google.maps.importLibrary('maps');
         var { AdvancedMarkerElement } = await google.maps.importLibrary('marker');
         var inicio = puntoGuardado();
@@ -149,7 +162,7 @@
                 });
             });
         }
-    };
+    }
 
     // ---------------- OpenStreetMap (sin llave) ----------------
     function iniciarOSM() {
@@ -203,11 +216,12 @@
     }
 
     if (contenedor.getAttribute('data-proveedor') === 'osm') {
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciarOSM);
-        else iniciarOSM();
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { cuandoSeVea(iniciarOSM); });
+        else cuandoSeVea(iniciarOSM);
     }
     // Evita enviar el formulario al presionar Enter en el buscador
-    document.getElementById('formPuesto').addEventListener('keydown', function (e) {
+    var formulario = contenedor.closest('form');
+    if (formulario) formulario.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && e.target.id === 'textoLugar') e.preventDefault();
     });
 })();
