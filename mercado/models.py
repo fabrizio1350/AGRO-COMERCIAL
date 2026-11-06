@@ -278,6 +278,10 @@ class Producto(models.Model):
     imagen_url = models.CharField(max_length=350, blank=True, help_text="Enlace de imagen de referencia (opcional)")
     disponible = models.BooleanField(default=True)
     oferta_pendiente_pago = models.BooleanField(default=False, help_text="La oferta no se publica hasta pagar la comisión")
+    ubicacion = models.ForeignKey(
+        'UbicacionVendedor', on_delete=models.SET_NULL, null=True, blank=True, related_name='productos',
+        help_text="Otra ubicación donde se vende; vacío = el puesto principal",
+    )
     fecha_publicacion = models.DateTimeField(auto_now_add=True)
     fecha_vencimiento = models.DateTimeField(
         null=True, blank=True, default=fecha_vencimiento_por_defecto,
@@ -293,6 +297,12 @@ class Producto(models.Model):
 
     def esta_vencida(self):
         return bool(self.fecha_vencimiento and self.fecha_vencimiento <= timezone.now())
+
+    def lugar(self):
+        """Donde se compra: la ubicacion que eligio el vendedor al publicar o su puesto principal."""
+        if self.ubicacion_id and self.ubicacion and self.ubicacion.vendedor_id == self.productor_id:
+            return self.ubicacion
+        return getattr(self.productor, 'puesto', None)
 
     def vendedor_habilitado(self):
         """El comprador va al puesto: solo se muestra si el vendedor ya marco su puesto en el mapa."""
@@ -802,3 +812,58 @@ class CuentaSinPagoOferta(models.Model):
     def incluye(cls, usuario):
         correo = (getattr(usuario, 'email', '') or '').strip()
         return bool(correo) and cls.objects.filter(correo__iexact=correo).exists()
+
+
+class UbicacionVendedor(models.Model):
+    """Otro lugar donde el vendedor tambien vende (ej. una feria o un segundo puesto).
+    El puesto principal sigue en Puesto; aqui solo va el punto del mapa y su nombre."""
+    vendedor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ubicaciones')
+    nombre = models.CharField('Nombre de la ubicación', max_length=100)
+    referencia = models.CharField('Referencia', max_length=150, blank=True)
+    direccion = models.CharField('Dirección', max_length=200, blank=True)
+    latitud = models.DecimalField(max_digits=8, decimal_places=6, validators=[MinValueValidator(-90), MaxValueValidator(90)])
+    longitud = models.DecimalField(max_digits=9, decimal_places=6, validators=[MinValueValidator(-180), MaxValueValidator(180)])
+    creada = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Otra ubicación del vendedor'
+        verbose_name_plural = 'Otras ubicaciones de vendedores'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+    # Mismo uso que Puesto en las plantillas: lo propio del lugar sale de aqui y lo demas del puesto principal
+    @property
+    def puesto_principal(self):
+        return getattr(self.vendedor, 'puesto', None)
+
+    @property
+    def numero(self):
+        return ''
+
+    @property
+    def horario(self):
+        return self.puesto_principal.horario if self.puesto_principal else ''
+
+    def titulo_puesto(self):
+        return 'Otra ubicación'
+
+    def url_foto(self):
+        return self.puesto_principal.url_foto() if self.puesto_principal else '/static/imagenes/finca_productor.jpg'
+
+    def metodos_pago(self):
+        return self.puesto_principal.metodos_pago() if self.puesto_principal else []
+
+    def iconos_pago(self):
+        return self.puesto_principal.iconos_pago() if self.puesto_principal else []
+
+    def como_llegar(self):
+        return 'https://www.google.com/maps/dir/?' + urlencode({
+            'api': 1, 'destination': f'{self.latitud},{self.longitud}',
+        })
+
+    def mapa_embebido(self):
+        return 'https://maps.google.com/maps?' + urlencode({
+            'q': f'{self.latitud},{self.longitud}', 'z': 17, 'output': 'embed', 'hl': 'es',
+        })
