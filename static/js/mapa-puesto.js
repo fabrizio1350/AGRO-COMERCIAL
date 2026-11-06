@@ -25,14 +25,72 @@
     function ponerNombre(texto) { if (nombre && texto && !nombre.value.trim()) nombre.value = texto; }
     function ponerDireccion(texto) { if (direccion && texto) direccion.value = texto.slice(0, 200); }
 
+    // Aviso grande cuando la ubicacion esta apagada o bloqueada, con los pasos para activarla
+    var aviso = document.getElementById('avisoUbicacion');
+    var esCelular = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    var esIphone = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    function mostrarAviso(titulo, pasos) {
+        avisar('<i class="bi bi-hand-index me-1"></i>Toca el mapa o arrastra el marcador hasta tu puesto.');
+        if (!aviso) return;
+        aviso.innerHTML = '<div class="fw-semibold mb-1"><i class="bi bi-geo-alt me-1"></i>' + titulo + '</div>' +
+            '<ol class="mb-2 ps-3">' + pasos.map(function (p) { return '<li>' + p + '</li>'; }).join('') + '</ol>' +
+            '<div class="d-flex flex-wrap align-items-center gap-2">' +
+            '<button type="button" class="btn btn-sm btn-warning fw-semibold" data-reintentar><i class="bi bi-arrow-clockwise me-1"></i>Intentar de nuevo</button>' +
+            '<span>o busca tu mercado arriba / toca el mapa.</span></div>';
+        aviso.classList.remove('d-none');
+        aviso.querySelector('[data-reintentar]').addEventListener('click', function () { botonUbicacion.click(); });
+        aviso.focus({ preventScroll: true });
+        aviso.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    function ocultarAviso() { if (aviso) aviso.classList.add('d-none'); }
+
+    function pasosPermiso() {
+        if (esIphone) {
+            return ['Abre <strong>Ajustes → Privacidad y seguridad → Localización</strong> y actívala.',
+                    'En la misma pantalla entra a tu navegador (Safari o Chrome) y elige <strong>Al usar la app</strong>.',
+                    'Vuelve aquí y toca <strong>Intentar de nuevo</strong>.'];
+        }
+        if (esCelular) {
+            return ['Baja la barra de arriba del celular y activa <strong>Ubicación</strong> (GPS).',
+                    'Toca el candado <i class="bi bi-lock"></i> junto a la dirección de la página → <strong>Permisos</strong> → <strong>Ubicación</strong> → <strong>Permitir</strong>.',
+                    'Vuelve aquí y toca <strong>Intentar de nuevo</strong>.'];
+        }
+        return ['Haz clic en el candado <i class="bi bi-lock"></i> junto a la dirección de la página y en <strong>Ubicación</strong> elige <strong>Permitir</strong>.',
+                'En Windows revisa también <strong>Configuración → Privacidad → Ubicación</strong>.',
+                'Toca <strong>Intentar de nuevo</strong>.'];
+    }
+
     function pedirUbicacion(alEncontrar) {
-        if (!navigator.geolocation) { avisar('Tu navegador no permite usar la ubicación. Toca el mapa.'); return; }
+        if (!navigator.geolocation || window.isSecureContext === false) {
+            mostrarAviso('Este navegador no deja usar tu ubicación', [
+                'Abre la página en Chrome o Safari actualizado (con https://).',
+                'Mientras tanto, busca tu mercado o toca el mapa donde está tu puesto.',
+            ]);
+            return;
+        }
+        ocultarAviso();
+        botonUbicacion.disabled = true;
         avisar('<span class="spinner-border spinner-border-sm me-1"></span>Buscando tu ubicación...');
         navigator.geolocation.getCurrentPosition(function (pos) {
+            botonUbicacion.disabled = false;
             alEncontrar({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        }, function () {
-            avisar('No pudimos obtener tu ubicación. Busca tu mercado o toca el mapa.');
-        }, { enableHighAccuracy: true, timeout: 10000 });
+        }, function (error) {
+            botonUbicacion.disabled = false;
+            if (error.code === 1) {
+                mostrarAviso('Tu ubicación está desactivada o bloqueada para esta página', pasosPermiso());
+            } else if (error.code === 3) {
+                mostrarAviso('Tardó mucho en encontrar tu ubicación', [
+                    'Activa el Wi-Fi o acércate a una puerta o ventana para tener mejor señal.',
+                    'Toca <strong>Intentar de nuevo</strong>.',
+                ]);
+            } else {
+                mostrarAviso('No pudimos saber dónde estás', esCelular ? pasosPermiso() : [
+                    'Revisa que la ubicación de tu equipo esté encendida (en Windows: <strong>Configuración → Privacidad → Ubicación</strong>).',
+                    'Toca <strong>Intentar de nuevo</strong>.',
+                ]);
+            }
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
     }
 
     // ---------------- Google Maps ----------------
