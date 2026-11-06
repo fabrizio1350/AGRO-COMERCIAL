@@ -247,7 +247,7 @@
                 <div class="col-12 col-lg-4">
                     <h6>¿Tienes un puesto?</h6>
                     <p class="mb-3">Marca tu puesto en el mapa y publica tus ofertas gratis. No cobramos comisión por tus ventas.</p>
-                    <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-warning btn-sm">Empezar a vender <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                    <a href="{% if rol_actual == 'PRODUCTOR' %}{% url 'crear_producto' %}{% elif user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-warning btn-sm">Empezar a vender <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
                 </div>
             </div>
             <div class="pie-final">
