@@ -1,5 +1,6 @@
 import io
 import json
+from decimal import Decimal
 from io import StringIO
 from unittest.mock import patch
 
@@ -10,7 +11,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import PerfilUsuario
+from .models import ItemCarrito, PerfilUsuario, Producto, Puesto
 from .views import crear_enlace_google
 
 JPG = b'\xff\xd8\xff\xe0' + b'\x00' * 20
@@ -149,12 +150,19 @@ class PruebasQuieroVender(TestCase):
         self.assertRedirects(self.client.get(reverse('crear_producto')), reverse('quiero_vender'))
         self.assertRedirects(self.client.get(reverse('configurar_puesto')), reverse('quiero_vender'))
 
-    def test_convertir_la_cuenta_pide_confirmar(self):
-        self.client.post(reverse('quiero_vender'), {'accion': 'convertir'})
-        self.assertEqual(PerfilUsuario.objects.get(usuario=self.usuario).rol, 'COMPRADOR')
-        respuesta = self.client.post(reverse('quiero_vender'), {'accion': 'convertir', 'confirmo': '1'})
+    def test_activar_puesto_conserva_la_lista(self):
+        vendedora = User.objects.create_user('puestera')
+        PerfilUsuario.objects.create(usuario=vendedora, rol='PRODUCTOR')
+        Puesto.objects.create(vendedor=vendedora, nombre='Mercado San Camilo', numero='8',
+                              latitud=Decimal('-16.40'), longitud=Decimal('-71.53'))
+        producto = Producto.objects.create(productor=vendedora, nombre='Palta', descripcion='Fuerte',
+                                           precio=Decimal('5'), stock=10, origen='Arequipa')
+        ItemCarrito.objects.create(comprador=self.usuario, producto=producto, cantidad=2)
+        respuesta = self.client.post(reverse('quiero_vender'), {'accion': 'convertir'})
         self.assertRedirects(respuesta, reverse('configurar_puesto'))
         self.assertEqual(PerfilUsuario.objects.get(usuario=self.usuario).rol, 'PRODUCTOR')
+        self.assertTrue(ItemCarrito.objects.filter(comprador=self.usuario, producto=producto).exists())
+        self.assertContains(self.client.get(reverse('carrito')), 'Palta')
 
     def test_otra_cuenta_cierra_sesion(self):
         respuesta = self.client.post(reverse('quiero_vender'), {'accion': 'otra_cuenta'})
@@ -177,9 +185,12 @@ class PruebasPestanaVendedor(TestCase):
         self.assertRedirects(respuesta, reverse('quiero_vender'))
         self.assertEqual(self.client.session['_auth_user_id'], str(self.usuario.pk))
 
-    def test_vendedor_por_pestana_comprador_entra_a_su_panel(self):
+    def test_cuenta_hibrida_entra_segun_la_pestana(self):
         perfil = PerfilUsuario.objects.get(usuario=self.usuario)
         perfil.rol = 'PRODUCTOR'
         perfil.save()
         respuesta = self.client.post(reverse('login'), {'username': 'mixta', 'password': 'Clave-segura-2026', 'modo_rol': 'COMPRADOR'})
+        self.assertRedirects(respuesta, reverse('ventas_por_oferta'), fetch_redirect_response=False)
+        self.client.logout()
+        respuesta = self.client.post(reverse('login'), {'username': 'mixta', 'password': 'Clave-segura-2026', 'modo_rol': 'PRODUCTOR'})
         self.assertRedirects(respuesta, reverse('panel_productor'), fetch_redirect_response=False)
