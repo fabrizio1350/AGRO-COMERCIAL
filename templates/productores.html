@@ -13,7 +13,7 @@
         <p class="text-muted mb-0">Toca un puesto para ver lo que tiene hoy o cómo llegar.</p>
     </div>
     {% if not user.is_authenticated %}
-        <a href="{% url 'registro' %}?rol=PRODUCTOR" class="btn btn-outline-success"><i class="bi bi-shop me-1" aria-hidden="true"></i>Tengo un puesto</a>
+        <a href="{% if rol_actual == 'PRODUCTOR' %}{% url 'crear_producto' %}{% elif user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-outline-success"><i class="bi bi-shop me-1" aria-hidden="true"></i>Tengo un puesto</a>
     {% endif %}
 </div>
 
