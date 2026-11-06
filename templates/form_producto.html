@@ -3,6 +3,10 @@
 
 {% block title %}{% if producto.pk %}Editar producto{% else %}Publicar producto{% endif %} | AgroComercial{% endblock %}
 
+{% block extra_css %}
+{% if not maps_key %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="formulario-simple mx-auto">
     <a href="{% url 'panel_productor' %}" class="small text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver a mi puesto</a>
@@ -74,6 +78,53 @@
             </div>
         </section>
 
+        <section class="bloque-verificacion">
+            <h2><span class="numero">4</span>¿Dónde lo vendes?</h2>
+            <p class="small text-muted">Elige una ubicación que ya guardaste. Si hoy vendes en otro lugar, agrégalo aquí y queda guardado para la próxima.</p>
+            <div class="opciones-ubicacion">
+                {% for opcion in form.donde %}
+                <label class="opcion-ubicacion" for="{{ opcion.id_for_label }}">
+                    {{ opcion.tag }}
+                    <i class="bi {% if opcion.data.value == 'nueva' %}bi-plus-circle{% elif opcion.data.value == 'puesto' %}bi-shop{% else %}bi-geo-alt{% endif %}" aria-hidden="true"></i>
+                    <span class="min-w-0">
+                        <strong class="d-block text-truncate">{{ opcion.choice_label }}</strong>
+                        <small class="text-muted">{% if opcion.data.value == 'puesto' %}La que marcaste al inicio{% elif opcion.data.value == 'nueva' %}Márcala en el mapa y ponle nombre{% else %}Ubicación guardada{% endif %}</small>
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+            {% if form.donde.errors %}<div class="text-danger small mt-2">{{ form.donde.errors|striptags }}</div>{% endif %}
+
+            <div id="bloqueNuevaUbicacion" class="nueva-ubicacion mt-3 {% if form.donde.value != 'nueva' %}d-none{% endif %}">
+                <label class="form-label small fw-semibold" for="{{ form.nueva_nombre.id_for_label }}">{{ form.nueva_nombre.label }}</label>
+                {{ form.nueva_nombre }}
+                {% if form.nueva_nombre.errors %}<div class="text-danger small mt-1">{{ form.nueva_nombre.errors|striptags }}</div>{% endif %}
+                <div class="buscador-mapa mt-3 mb-2">
+                    <div class="flex-grow-1">
+                        <label class="visually-hidden" for="textoLugar">Buscar mercado o dirección</label>
+                        <input type="search" id="textoLugar" class="form-control" placeholder="Busca el lugar, ej. Feria de Cayma" autocomplete="off">
+                    </div>
+                    <button type="button" class="btn btn-outline-success flex-shrink-0" id="btnMiUbicacion"><i class="bi bi-crosshair me-1" aria-hidden="true"></i><span class="d-none d-sm-inline">Usar mi ubicación actual</span><span class="d-sm-none">Mi ubicación</span></button>
+                </div>
+                <div id="mapaPuesto" class="mapa-puesto" data-proveedor="{% if maps_key %}google{% else %}osm{% endif %}"
+                     data-lat="id_nueva_latitud" data-lng="id_nueva_longitud" data-nombre="id_nueva_nombre" data-direccion="id_nueva_direccion"
+                     aria-label="Mapa: toca donde está la nueva ubicación"></div>
+                <p class="small text-muted mt-2 mb-0" id="estadoMapa"><i class="bi bi-hand-index me-1" aria-hidden="true"></i>Toca el mapa o arrastra el marcador hasta el lugar.</p>
+                <div class="alert alert-warning small mt-2 mb-0 d-none" id="avisoUbicacion" role="alert" tabindex="-1"></div>
+                {{ form.nueva_latitud }}{{ form.nueva_longitud }}
+                <div class="row g-3 mt-1">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold" for="{{ form.nueva_referencia.id_for_label }}">{{ form.nueva_referencia.label }}</label>
+                        {{ form.nueva_referencia }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold" for="{{ form.nueva_direccion.id_for_label }}">{{ form.nueva_direccion.label }}</label>
+                        {{ form.nueva_direccion }}
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <div class="estado-verificacion estado-ok mb-3">
             <i class="bi bi-cash-coin" aria-hidden="true"></i>
             <div class="small">Los compradores verán que pagan en tu puesto con: <strong>{{ puesto.metodos_pago|join:", " }}</strong>. <a href="{% url 'configurar_puesto' %}">Cambiar</a></div>
@@ -93,4 +144,24 @@
 
 {% block extra_js %}
 <script src="{% static 'js/subir_foto.js' %}?v={{ version_estaticos }}"></script>
+{% if not maps_key %}<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>{% endif %}
+<script src="{% static 'js/mapa-puesto.js' %}?v={{ version_estaticos }}"></script>
+{% if maps_key %}<script async src="https://maps.googleapis.com/maps/api/js?key={{ maps_key|urlencode }}&amp;libraries=places,marker&amp;callback=iniciarMapaPuesto&amp;loading=async&amp;language=es&amp;region=PE"></script>{% endif %}
+<script>
+    // "Agregar otra ubicación" muestra el mapa; las demás opciones lo esconden
+    (function () {
+        var bloque = document.getElementById('bloqueNuevaUbicacion');
+        if (!bloque) return;
+        document.querySelectorAll('input[name="donde"]').forEach(function (opcion) {
+            opcion.addEventListener('change', function () {
+                var nueva = opcion.value === 'nueva' && opcion.checked;
+                bloque.classList.toggle('d-none', !nueva);
+                if (nueva) {
+                    document.dispatchEvent(new Event('mapa-puesto:mostrar'));
+                    document.getElementById('id_nueva_nombre').focus();
+                }
+            });
+        });
+    })();
+</script>
 {% endblock %}
