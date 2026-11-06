@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Quiero vender | AgroComercial{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+        <span class="antetitulo"><i class="bi bi-shop" aria-hidden="true"></i>Para comerciantes</span>
+        <h1 class="h3 fw-bold mb-2">¿Quieres vender en AgroComercial?</h1>
+        <p class="text-muted mb-4">Tu cuenta actual es de <strong>comprador</strong>. Para publicar productos necesitas una cuenta de vendedor. Elige cómo prefieres hacerlo.</p>
+
+        <div class="ficha-compra mb-3">
+            <h2 class="h5 fw-bold mb-1"><i class="bi bi-arrow-repeat me-1 text-success" aria-hidden="true"></i>Usar esta misma cuenta para vender</h2>
+            <p class="small text-muted mb-3">
+                Sigues entrando con el mismo correo{% if perfil_global.google_sub %} y el mismo botón de Google{% endif %}, pero tu cuenta pasa a ser de vendedor.
+                Ya no podrás armar listas de compra con ella{% if total_lista %} y se borrarán los {{ total_lista }} producto{{ total_lista|pluralize }} que tienes en tu lista{% endif %}.
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="convertir">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="confirmo" value="1" id="confirmo" required>
+                    <label class="form-check-label small" for="confirmo">Entiendo que mi cuenta dejará de ser de comprador.</label>
+                </div>
+                <button type="submit" class="btn btn-success fw-semibold">Convertir mi cuenta en vendedor</button>
+            </form>
+        </div>
+
+        <div class="ficha-compra">
+            <h2 class="h5 fw-bold mb-1"><i class="bi bi-person-plus me-1 text-success" aria-hidden="true"></i>Crear otra cuenta solo para vender</h2>
+            <p class="small text-muted mb-3">Conservas esta cuenta para comprar y creas una nueva de vendedor con otro correo o usuario.</p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="otra_cuenta">
+                <button type="submit" class="btn btn-outline-success fw-semibold">Cerrar sesión y crear cuenta de vendedor</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
