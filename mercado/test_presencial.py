@@ -52,8 +52,41 @@ class MercadoPresencialTests(TestCase):
         self.assertRedirects(self.client.post(reverse('pasarela_pago')), reverse('carrito'), fetch_redirect_response=False)
         self.assertFalse(Pedido.objects.exists())
 
+    def test_correos_sin_pago_publican_la_oferta_directo(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from .models import CuentaSinPagoOferta
+        self.vendedor.email = 'puesto@gmail.com'
+        self.vendedor.save()
+        self.client.force_login(self.vendedor)
+        datos = {
+            'nombre': 'Camote', 'descripcion': 'Morado', 'categoria': self.producto.categoria_id,
+            'unidad': 'KG', 'stock': 6, 'precio': '4.00', 'precio_oferta': '3.00', 'disponible': 'on',
+        }
+        # Una oferta que quedo esperando el pago antes de agregar el correo
+        self.client.post(reverse('crear_producto'), datos)
+        pendiente = Producto.objects.get(nombre='Camote')
+        self.assertTrue(pendiente.oferta_pendiente_pago)
+        salida = StringIO()
+        call_command('oferta_gratis', 'Puesto@Gmail.com', '--nota', 'equipo', stdout=salida)
+        self.assertIn('1 oferta(s) publicadas', salida.getvalue())
+        self.assertEqual(CuentaSinPagoOferta.objects.get().correo, 'puesto@gmail.com')
+        pendiente.refresh_from_db()
+        self.assertFalse(pendiente.oferta_pendiente_pago)
+        # Las nuevas salen sin pasar por el pago y sin cobro registrado
+        self.assertContains(self.client.get(reverse('crear_producto')), 'Tu cuenta publica ofertas sin pagar')
+        respuesta = self.client.post(reverse('crear_producto'), dict(datos, nombre='Olluco'))
+        self.assertRedirects(respuesta, reverse('panel_productor'), fetch_redirect_response=False)
+        self.assertIn(Producto.objects.get(nombre='Olluco'), Producto.objects.ofertas_activas())
+        self.assertFalse(PagoComision.objects.exists())
+        # Al quitar el correo vuelve a pagar
+        call_command('oferta_gratis', '--quitar', 'puesto@gmail.com', stdout=StringIO())
+        respuesta = self.client.post(reverse('crear_producto'), dict(datos, nombre='Oca'))
+        self.assertRedirects(respuesta, reverse('pagar_comision_oferta', args=[Producto.objects.get(nombre='Oca').pk]))
+
     def test_oferta_se_publica_despues_del_pago_demo(self):
         self.client.force_login(self.vendedor)
+        self.assertNotContains(self.client.get(reverse('crear_producto')), 'S/ 2,00')
         datos = {
             'nombre': 'Papa', 'descripcion': 'Por kilo', 'categoria': self.producto.categoria_id,
             'unidad': 'KG', 'stock': 4, 'precio': '5.00', 'precio_oferta': '4.00', 'disponible': 'on',
