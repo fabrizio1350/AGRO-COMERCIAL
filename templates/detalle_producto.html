@@ -87,8 +87,13 @@
             {% endif %}
         </div>
 
-        {% if puesto %}
-        <section class="tarjeta-donde mt-3" aria-labelledby="tituloDonde">
+    </div>
+</div>
+
+{% if puesto %}
+<section class="tarjeta-donde mb-4 entrar" aria-labelledby="tituloDonde">
+    <div class="row g-4 align-items-stretch">
+        <div class="col-lg-5 d-flex flex-column">
             <div class="d-flex gap-3 align-items-center mb-3">
                 <img src="{{ puesto.url_foto }}" alt="Foto del puesto {{ puesto.nombre }}" class="foto-puesto" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
                 <div class="min-w-0">
@@ -105,20 +110,22 @@
                     {% for icono, nombre in puesto.iconos_pago %}<span class="chip-pago"><i class="bi {{ icono }}" aria-hidden="true"></i>{{ nombre }}</span>{% endfor %}
                 </div>
             </div>
-            <div class="mapa-mini">
-                <iframe src="{{ puesto.mapa_embebido }}" title="Mapa de {{ puesto.nombre }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-            </div>
-            {% if puesto.direccion %}<p class="small text-muted mt-2 mb-2"><i class="bi bi-signpost me-1" aria-hidden="true"></i>{{ puesto.direccion }}</p>{% endif %}
-            <div class="d-flex gap-2 flex-wrap mt-2">
+            {% if puesto.direccion %}<p class="small text-muted mb-3"><i class="bi bi-signpost me-1" aria-hidden="true"></i>{{ puesto.direccion }}</p>{% endif %}
+            <div class="d-flex gap-2 flex-wrap mt-auto">
                 <a class="btn btn-warning fw-semibold" href="{{ puesto.como_llegar }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right-fill me-1" aria-hidden="true"></i>Cómo llegar</a>
                 <a class="btn btn-outline-success" href="{% url 'catalogo' %}?puesto={{ puesto.id }}">Ver todo el puesto</a>
             </div>
-        </section>
-        {% else %}
-        <div class="estado-verificacion estado-espera mt-3"><i class="bi bi-geo" aria-hidden="true"></i><div>El vendedor todavía no marcó su puesto en el mapa.</div></div>
-        {% endif %}
+        </div>
+        <div class="col-lg-7">
+            <div class="mapa-mini mapa-donde">
+                <iframe src="{{ puesto.mapa_embebido }}" title="Mapa de {{ puesto.nombre }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+        </div>
     </div>
-</div>
+</section>
+{% else %}
+<div class="estado-verificacion estado-espera mb-4"><i class="bi bi-geo" aria-hidden="true"></i><div>El vendedor todavía no marcó su puesto en el mapa.</div></div>
+{% endif %}
 
 {% if mas_del_puesto %}
 <section class="mt-5">
