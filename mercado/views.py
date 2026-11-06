@@ -30,6 +30,7 @@ from .models import (
     ItemCarrito,
     Pedido,
     VentaPuesto,
+    Puesto,
     ResenaProducto,
     PagoComision,
     FotoProducto,
@@ -1594,8 +1595,8 @@ def crear_producto(request):
     return render(request, 'form_producto.html', {
         'form': form,
         'accion': 'Publicar Nuevo Producto',
-        'comision_porcentaje': settings.COMISION_OFERTA_PORCENTAJE,
-        'comision_minima': settings.COMISION_OFERTA_MINIMA,
+        'comision_porcentaje': 0,
+        'comision_minima': settings.TARIFA_OFERTA,
     })
 
 
@@ -1638,46 +1639,9 @@ def editar_producto(request, producto_id):
         'form': form,
         'producto': producto,
         'accion': 'Editar mi Producto Agrícola',
-        'comision_porcentaje': settings.COMISION_OFERTA_PORCENTAJE,
-        'comision_minima': settings.COMISION_OFERTA_MINIMA,
+        'comision_porcentaje': 0,
+        'comision_minima': settings.TARIFA_OFERTA,
     })
-
-
-@login_required
-def pagar_comision_oferta(request, producto_id):
-    """Apartado de pago (simulado) de la comision por publicar un producto en oferta."""
-    producto = get_object_or_404(Producto, id=producto_id, productor=request.user)
-    if not producto.oferta_pendiente_pago:
-        messages.info(request, f"El producto '{producto.nombre}' no tiene comisiones pendientes.")
-        return redirect('panel_productor')
-
-    monto = producto.monto_comision_oferta()
-    if request.method == 'POST':
-        metodo = request.POST.get('metodo_pago', 'YAPE_PLIN')
-        if metodo not in dict(PagoComision.METODOS):
-            metodo = 'YAPE_PLIN'
-        # Pago simulado: no se cobra dinero real, solo se registra la operacion
-        pago = PagoComision.objects.create(
-            producto=producto,
-            productor=request.user,
-            porcentaje=Decimal(str(settings.COMISION_OFERTA_PORCENTAJE)),
-            monto=monto,
-            metodo_pago=metodo,
-            codigo_transaccion=f"COM-{uuid.uuid4().hex[:10].upper()}",
-        )
-        producto.oferta_pendiente_pago = False
-        producto.disponible = True
-        producto.save()
-        messages.success(request, f"Pago de comisión S/ {pago.monto} recibido (código {pago.codigo_transaccion}). ¡Tu oferta '{producto.nombre}' ya está publicada!")
-        return redirect('detalle_producto', producto_id=producto.id)
-
-    contexto = {
-        'producto': producto,
-        'monto': monto,
-        'porcentaje': settings.COMISION_OFERTA_PORCENTAJE,
-        'minimo': settings.COMISION_OFERTA_MINIMA,
-    }
-    return render(request, 'pagar_comision.html', contexto)
 
 
 @login_required
@@ -1995,54 +1959,61 @@ def solicitud_desde_chat(request, conversacion_id):
 
 @login_required
 def verificacion_vendedor(request):
-    """Un solo formulario corto para que el vendedor demuestre que es productor real."""
+    """Formulario corto para comprobar que el vendedor de verdad atiende el puesto que marco en el mapa."""
     perfil = obtener_o_crear_perfil(request.user)
     if perfil.rol != 'PRODUCTOR':
         messages.warning(request, "La verificación es solo para cuentas de vendedor.")
         return redirect('inicio')
+    puesto = Puesto.objects.filter(vendedor=request.user).first()
+    if not puesto and not perfil.es_demo:
+        messages.info(request, "Primero marca en el mapa dónde está tu puesto. Después lo verificamos.")
+        return redirect('configurar_puesto')
     verificacion = VerificacionVendedor.objects.filter(usuario=request.user).first()
     editar = request.GET.get('editar') == '1' or perfil.estado_verificacion in ('SIN_ENVIAR', 'RECHAZADO')
     if perfil.es_demo or perfil.estado_verificacion == 'VERIFICADO':
         editar = False
 
     if request.method == 'POST' and editar:
-        form = VerificacionVendedorForm(request.POST, request.FILES, instance=verificacion)
+        form = VerificacionVendedorForm(request.POST, request.FILES, instance=verificacion, puesto=puesto)
         if form.is_valid():
             verificacion = form.save(commit=False)
             verificacion.usuario = request.user
+            verificacion.tipo = 'ORGANIZACION' if verificacion.ruc.startswith('20') else 'PERSONA'
+            verificacion.distrito = f"{puesto.nombre} · {puesto.titulo_puesto()}"[:120]
             # Cada nuevo envio se revisa desde cero
-            for campo in ('revisado_identidad', 'revisado_padron', 'revisado_organizacion', 'revisado_chacra', 'revisado_organico'):
+            for campo in ('revisado_identidad', 'revisado_constancia', 'revisado_organizacion', 'revisado_puesto', 'revisado_organico'):
                 setattr(verificacion, campo, False)
             verificacion.motivo_rechazo = ''
             verificacion.save()
             perfil.estado_verificacion = 'PENDIENTE'
             if not perfil.ruc_dni:
-                perfil.ruc_dni = verificacion.documento()
+                perfil.ruc_dni = verificacion.ruc or verificacion.dni
             if not perfil.telefono:
                 perfil.telefono = verificacion.celular
             perfil.save()
             enlace = reverse('admin:mercado_verificacionvendedor_change', args=[verificacion.id])
             for admin_usuario in User.objects.filter(is_staff=True, is_active=True):
-                Notificacion.avisar(admin_usuario, f"Nueva verificación de vendedor: {request.user.get_full_name() or request.user.username}", enlace, 'bi-patch-check')
-            messages.success(request, "¡Listo! Recibimos tus datos. Te avisaremos cuando tu cuenta esté verificada (normalmente en 1 o 2 días hábiles).")
+                Notificacion.avisar(admin_usuario, f"Nuevo puesto por verificar: {puesto.nombre} ({request.user.get_full_name() or request.user.username})", enlace, 'bi-patch-check')
+            messages.success(request, "¡Listo! Recibimos tus datos. Te avisaremos cuando tu puesto esté verificado (normalmente en 1 o 2 días hábiles).")
             return redirect('verificacion_vendedor')
     else:
-        form = VerificacionVendedorForm(instance=verificacion, initial=None if verificacion else {
+        form = VerificacionVendedorForm(instance=verificacion, puesto=puesto, initial=None if verificacion else {
             'celular': perfil.telefono[-9:] if perfil.telefono else '',
-            'distrito': perfil.ubicacion,
             'dni': perfil.ruc_dni if len(perfil.ruc_dni or '') == 8 else '',
             'ruc': perfil.ruc_dni if len(perfil.ruc_dni or '') == 11 else '',
         })
 
     return render(request, 'verificacion_vendedor.html', {
         'perfil': perfil,
+        'puesto': puesto,
         'verificacion': verificacion,
         'form': form,
         'editar': editar,
+        'verificacion_obligatoria': settings.VERIFICACION_OBLIGATORIA,
     })
 
 
-CAMPOS_ARCHIVO_VERIFICACION = ('foto_documento', 'foto_chacra', 'documento_organizacion', 'certificado_organico')
+CAMPOS_ARCHIVO_VERIFICACION = ('foto_documento', 'foto_en_puesto', 'constancia_puesto', 'documento_organizacion', 'certificado_organico')
 
 
 @login_required
