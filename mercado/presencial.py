@@ -21,6 +21,7 @@ import uuid
 from .models import (
     Categoria, ItemCarrito, PagoComision, Producto, Puesto, VentaPuesto, fecha_vencimiento_por_defecto,
 )
+from .seguridad import renombrar_imagen, tipo_de_imagen
 from .views import asegurar_datos_iniciales, obtener_o_crear_perfil, ofertas_destacadas, con_precio_vigente
 
 UNIDADES_MERCADO = ['UNIDAD', 'KG', 'DOCENA', 'ATADO', 'BOLSA', 'CAJA', 'SACO']
@@ -31,12 +32,10 @@ def validar_foto(archivo):
         return archivo
     if archivo.size > 5 * 1024 * 1024:
         raise forms.ValidationError('La foto debe pesar como máximo 5 MB.')
-    cabecera = archivo.read(12)
-    archivo.seek(0)
-    if not (cabecera.startswith((b'\xff\xd8\xff', b'\x89PNG\r\n\x1a\n'))
-            or cabecera[:4] == b'RIFF' and cabecera[8:12] == b'WEBP'):
+    extension = tipo_de_imagen(archivo)
+    if not extension:
         raise forms.ValidationError('Selecciona una foto JPG, PNG o WEBP.')
-    return archivo
+    return renombrar_imagen(archivo, extension)
 
 
 class PuestoForm(forms.ModelForm):
