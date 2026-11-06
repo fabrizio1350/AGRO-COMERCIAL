@@ -8,36 +8,48 @@
 <section class="hero" aria-roledescription="carrusel" aria-label="Novedades de AgroComercial" data-hero>
     <div class="swiper hero-swiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide hero-slide" role="group" aria-label="1 de 3">
+            <div class="swiper-slide hero-slide" role="group" aria-label="1 de 4">
                 <div class="hero-fondo" style="background-image: url('{% static 'imagenes/banner_agro.jpg' %}');"></div>
                 <div class="hero-contenido">
-                    <span class="hero-etiqueta"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Mercados de Arequipa</span>
-                    <h1 class="hero-titulo" data-titulo-animado>Las ofertas del mercado, <em>antes de salir de casa</em></h1>
-                    <p class="hero-texto">Mira qué hay hoy en los puestos, cuánto queda y a qué precio. Arma tu lista y ve directo al puesto a comprar.</p>
+                    <span class="hero-etiqueta"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>Ofertas de hoy</span>
+                    <h1 class="hero-titulo" data-titulo-animado>Encuentra las mejores ofertas <em>de los mercados de Arequipa</em></h1>
+                    <p class="hero-texto">Descuentos de los puestos con foto, precio y cuánto queda. Encuentra lo que necesitas antes de salir de casa.</p>
                     <div class="hero-acciones">
-                        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning"><i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Ver ofertas</a>
+                        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning"><i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Ver ofertas de hoy</a>
                         <a href="{% url 'catalogo' %}" class="btn btn-vidrio">Explorar productos</a>
                     </div>
                 </div>
             </div>
-            <div class="swiper-slide hero-slide" role="group" aria-label="2 de 3">
-                <div class="hero-fondo" style="background-image: url('{% static 'imagenes/papa_amarilla.jpg' %}');"></div>
+            <div class="swiper-slide hero-slide" role="group" aria-label="2 de 4">
+                <div class="hero-fondo" style="background-image: url('{% static 'imagenes/tomate.jpg' %}');"></div>
                 <div class="hero-contenido">
-                    <span class="hero-etiqueta"><i class="bi bi-broadcast" aria-hidden="true"></i>Stock en tiempo real</span>
-                    <h2 class="hero-titulo" data-titulo-animado>Sabes cuánto queda <em>antes de ir</em></h2>
-                    <p class="hero-texto">Cuando el vendedor vende algo, el stock baja al momento en la web. Nada de llegar y encontrar todo agotado.</p>
+                    <span class="hero-etiqueta"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Compara precios</span>
+                    <h2 class="hero-titulo" data-titulo-animado>Ahorra en tus compras <em>sin recorrer puesto por puesto</em></h2>
+                    <p class="hero-texto">Compara el precio de un mismo producto en varios puestos y mira el stock en tiempo real. Menos tiempo buscando, más oportunidades de ahorrar.</p>
                     <div class="hero-acciones">
-                        <a href="{% url 'catalogo' %}" class="btn btn-warning">Ver catálogo</a>
-                        <a href="{% url 'productores' %}" class="btn btn-vidrio">Ver puestos en el mapa</a>
+                        <a href="{% url 'catalogo' %}?orden=precio_asc" class="btn btn-warning"><i class="bi bi-sort-numeric-down me-1" aria-hidden="true"></i>Ver lo más barato</a>
+                        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-vidrio">Ver ofertas</a>
                     </div>
                 </div>
             </div>
-            <div class="swiper-slide hero-slide" role="group" aria-label="3 de 3">
+            <div class="swiper-slide hero-slide" role="group" aria-label="3 de 4">
+                <div class="hero-fondo" style="background-image: url('{% static 'imagenes/papa_amarilla.jpg' %}');"></div>
+                <div class="hero-contenido">
+                    <span class="hero-etiqueta"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Ubicación de puestos</span>
+                    <h2 class="hero-titulo" data-titulo-animado>Descubre ofertas cerca de ti <em>y llega directo al puesto</em></h2>
+                    <p class="hero-texto">Cada producto muestra el mercado, el número de puesto y cómo llegar. Tu lista ordena todo por puesto para que hagas un solo recorrido.</p>
+                    <div class="hero-acciones">
+                        <a href="{% url 'productores' %}" class="btn btn-warning"><i class="bi bi-map me-1" aria-hidden="true"></i>Ver puestos en el mapa</a>
+                        <a href="{% url 'carrito' %}" class="btn btn-vidrio">Mi lista de compras</a>
+                    </div>
+                </div>
+            </div>
+            <div class="swiper-slide hero-slide" role="group" aria-label="4 de 4">
                 <div class="hero-fondo" style="background-image: url('{% static 'imagenes/finca_productor.jpg' %}');"></div>
                 <div class="hero-contenido">
-                    <span class="hero-etiqueta"><i class="bi bi-shop" aria-hidden="true"></i>Para vendedores</span>
-                    <h2 class="hero-titulo" data-titulo-animado>¿Tienes un puesto? <em>Vende más rápido</em></h2>
-                    <p class="hero-texto">Marca tu puesto en el mapa, sube tus productos con foto y precio, y avisa al instante lo que ya vendiste.</p>
+                    <span class="hero-etiqueta"><i class="bi bi-shop" aria-hidden="true"></i>Para comerciantes</span>
+                    <h2 class="hero-titulo" data-titulo-animado>¿Tienes un puesto? <em>Que más compradores vean tus ofertas</em></h2>
+                    <p class="hero-texto">Marca tu puesto en el mapa, publica tus productos con foto y precio, y avisa al instante lo que ya vendiste. No cobramos comisión por tus ventas.</p>
                     <div class="hero-acciones">
                         <a href="{% if user.is_authenticated %}{% url 'crear_producto' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-warning">Publicar mis productos</a>
                         <a href="#como-funciona" class="btn btn-vidrio">Cómo funciona</a>
@@ -73,12 +85,12 @@
 <div class="cinta" aria-hidden="true">
     <div class="cinta-pista">
         {% for i in "12" %}
-        <span><i class="bi bi-shop"></i>Puestos de mercado reales</span>
-        <span><i class="bi bi-lightning-charge-fill"></i>Ofertas del día</span>
+        <span><i class="bi bi-lightning-charge-fill"></i>Ofertas por tiempo limitado</span>
+        <span><i class="bi bi-arrow-left-right"></i>Compara precios entre puestos</span>
         <span><i class="bi bi-broadcast"></i>Stock en tiempo real</span>
-        <span><i class="bi bi-geo-alt-fill"></i>Cómo llegar con Google Maps</span>
-        <span><i class="bi bi-cash-coin"></i>Pagas en el puesto</span>
-        <span><i class="bi bi-phone"></i>Efectivo, tarjeta o Yape</span>
+        <span><i class="bi bi-geo-alt-fill"></i>Ubicación exacta de cada puesto</span>
+        <span><i class="bi bi-clock-history"></i>Menos tiempo buscando, más ahorro</span>
+        <span><i class="bi bi-cash-coin"></i>Pagas directo al vendedor</span>
         {% endfor %}
     </div>
 </div>
@@ -116,8 +128,8 @@
     <div class="container-xxl">
         <div class="encabezado-seccion revelar">
             <div>
-                <span class="antetitulo"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>Mientras dure el stock</span>
-                <h2>Ofertas de hoy <span class="resaltado">en el mercado</span></h2>
+                <span class="antetitulo"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>Por tiempo limitado</span>
+                <h2>Las mejores ofertas <span class="resaltado">de hoy</span></h2>
             </div>
             <a href="{% url 'ventas_por_oferta' %}" class="enlace-ver-todo">Todas las ofertas <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
         </div>
@@ -156,15 +168,15 @@
         <div class="encabezado-seccion revelar">
             <div>
                 <span class="antetitulo"><i class="bi bi-signpost-split-fill" aria-hidden="true"></i>Cómo funciona</span>
-                <h2>Del puesto a tu mesa en 4 pasos</h2>
+                <h2>Ahorra tiempo y dinero <span class="resaltado">en 4 pasos</span></h2>
             </div>
         </div>
         <div class="pasos pasos-4" data-pasos>
             <div class="linea-pasos" aria-hidden="true"><span></span></div>
             <div class="paso">
                 <div class="icono"><i class="bi bi-search" aria-hidden="true"></i></div>
-                <h3>Busca lo que necesitas</h3>
-                <p>Mira productos y ofertas de los puestos, con foto, precio y cuánto queda.</p>
+                <h3>Encuentra ofertas</h3>
+                <p>Busca lo que necesitas y compara precio y stock entre los puestos.</p>
             </div>
             <div class="paso">
                 <div class="icono"><i class="bi bi-list-check" aria-hidden="true"></i></div>
@@ -173,13 +185,13 @@
             </div>
             <div class="paso">
                 <div class="icono"><i class="bi bi-geo-alt" aria-hidden="true"></i></div>
-                <h3>Ve al puesto</h3>
-                <p>Cada producto muestra el mercado, el número de puesto y cómo llegar.</p>
+                <h3>Planea tu recorrido</h3>
+                <p>Tu lista agrupa todo por puesto, con el mercado, el número y cómo llegar.</p>
             </div>
             <div class="paso">
                 <div class="icono"><i class="bi bi-cash-coin" aria-hidden="true"></i></div>
-                <h3>Paga ahí mismo</h3>
-                <p>En efectivo, tarjeta o Yape/Plin, según lo que acepte cada vendedor.</p>
+                <h3>Compra en el puesto</h3>
+                <p>Pagas directo al vendedor en efectivo, tarjeta o Yape/Plin, según lo que acepte.</p>
             </div>
         </div>
 
@@ -218,7 +230,7 @@
             <div class="row align-items-center g-3 position-relative" style="z-index: 1;">
                 <div class="col-lg-8">
                     <h2 class="mb-2">¿Vendes en un mercado?</h2>
-                    <p class="mb-0 opacity-75">Crea tu cuenta gratis, marca tu puesto en el mapa y publica tus productos en minutos.</p>
+                    <p class="mb-0 opacity-75">Crea tu cuenta gratis, marca tu puesto en el mapa y publica tus ofertas en minutos. No cobramos comisión por tus ventas.</p>
                 </div>
                 <div class="col-lg-4 text-lg-end">
                     <a href="{% if user.is_authenticated %}{% url 'crear_producto' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-light btn-lg fw-bold px-4">Empezar a vender <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
