@@ -40,6 +40,9 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS'
 
 DATOS_DEMO_AUTOMATICOS = DEBUG and os.environ.get('DATOS_DEMO_AUTOMATICOS', '').lower() == 'true'
 
+# True: los productos solo se ven cuando un administrador verifica el puesto del vendedor
+VERIFICACION_OBLIGATORIA = os.environ.get('VERIFICACION_OBLIGATORIA', '').lower() == 'true'
+
 # Si el servidor (nginx) no entrega /static y /media, Django los sirve con SERVIR_ARCHIVOS=True
 SERVIR_ARCHIVOS = DEBUG or os.environ.get('SERVIR_ARCHIVOS', '').lower() == 'true'
 
@@ -138,11 +141,10 @@ LOGIN_REDIRECT_URL = 'inicio'
 LOGOUT_REDIRECT_URL = 'inicio'
 
 # ==============================================================================
-# COMISION DE AGROCOMERCIAL POR PUBLICAR UN PRODUCTO EN OFERTA (PAGO SIMULADO)
+# PUBLICIDAD: EL VENDEDOR PAGA PARA QUE SU PRODUCTO SALGA COMO OFERTA (PAGO DEMO)
 # ==============================================================================
-# Porcentaje sobre el valor del lote en oferta (precio de oferta x stock) y monto minimo en soles
-COMISION_OFERTA_PORCENTAJE = float(os.environ.get('COMISION_OFERTA_PORCENTAJE', '3'))
-COMISION_OFERTA_MINIMA = float(os.environ.get('COMISION_OFERTA_MINIMA', '2.00'))
+# Tarifa fija en soles por publicar una oferta. No es comision: las ventas en el puesto no pagan nada.
+TARIFA_OFERTA = float(os.environ.get('TARIFA_OFERTA', '2.00'))
 
 # Version de los archivos css/js: cambia sola cuando se modifican, asi el navegador no usa los viejos
 def _version_estaticos():
