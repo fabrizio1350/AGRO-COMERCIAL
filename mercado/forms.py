@@ -8,6 +8,7 @@ from .models import (
     PerfilUsuario, Producto, OfertaNegociacion, Pedido, ResenaProducto, VerificacionVendedor,
     OPCIONES_LUGARES, LUGAR_POR_DEFECTO, ruc_valido,
 )
+from .seguridad import renombrar_imagen, tipo_de_imagen
 
 # Tamaño maximo de la foto que sube el vendedor (ya llega achicada desde el navegador)
 TAMANO_MAXIMO_FOTO = 8 * 1024 * 1024
@@ -75,6 +76,12 @@ class RegistroUsuarioForm(UserCreationForm):
         super().__init__(*args, **kwargs)
         self.fields['password1'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Contraseña'})
         self.fields['password2'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Repite la contraseña'})
+
+    def clean_email(self):
+        correo = self.cleaned_data['email'].strip()
+        if User.objects.filter(email__iexact=correo).exists():
+            raise forms.ValidationError("Ya hay una cuenta con ese correo. Inicia sesión o usa otro correo.")
+        return correo
 
 
 def _inicio_del_dia(dia):
@@ -161,6 +168,11 @@ class ProductoForm(forms.ModelForm):
         imagen = self.cleaned_data.get('imagen')
         if imagen and hasattr(imagen, 'size') and imagen.size > TAMANO_MAXIMO_FOTO:
             raise forms.ValidationError("La foto es muy pesada (máximo 8 MB).")
+        if imagen and hasattr(imagen, 'content_type'):
+            extension = tipo_de_imagen(imagen)
+            if not extension:
+                raise forms.ValidationError("Selecciona una foto JPG, PNG o WEBP.")
+            renombrar_imagen(imagen, extension)
         return imagen
 
     def clean(self):
@@ -298,6 +310,12 @@ class PerfilForm(forms.ModelForm):
             'nombre_finca': forms.TextInput(attrs={'class': 'form-control'}),
             'cuenta_bancaria': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. BCP Soles: 191-12345678-0-99'}),
         }
+
+    def clean_email(self):
+        correo = self.cleaned_data['email'].strip()
+        if User.objects.filter(email__iexact=correo).exclude(pk=self.instance.usuario_id).exists():
+            raise forms.ValidationError("Ese correo ya lo usa otra cuenta.")
+        return correo
 
 
 TAMANO_MAXIMO_DOCUMENTO = 5 * 1024 * 1024
