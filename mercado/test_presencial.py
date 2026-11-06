@@ -218,6 +218,54 @@ class PanelYListaTests(TestCase):
         self.client.post(url, {'calificacion': 5, 'comentario': 'El mejor'})
         self.assertEqual(ResenaProducto.objects.count(), 1)
 
+    def test_publicar_en_otra_ubicacion_y_reusarla(self):
+        from .models import UbicacionVendedor
+        self.poner_puesto()
+        self.client.force_login(self.vendedor)
+        base = {'nombre': 'Haba', 'categoria': self.producto.categoria_id, 'unidad': 'KG', 'stock': 5,
+                'precio': '4.00', 'disponible': 'on'}
+        # Por defecto se vende en el puesto del inicio
+        self.assertContains(self.client.get(reverse('crear_producto')), 'La que marcaste al inicio')
+        sin_nombre = self.client.post(reverse('crear_producto'), dict(base, donde='nueva', nueva_latitud='-16.38', nueva_longitud='-71.55'))
+        self.assertContains(sin_nombre, 'Ponle un nombre a esta ubicación')
+        sin_mapa = self.client.post(reverse('crear_producto'), dict(base, donde='nueva', nueva_nombre='Feria de Cayma'))
+        self.assertContains(sin_mapa, 'Marca en el mapa dónde queda la nueva ubicación')
+        self.assertFalse(Producto.objects.filter(nombre='Haba').exists())
+        self.client.post(reverse('crear_producto'), dict(base, donde='nueva', nueva_nombre='Feria de Cayma',
+                                                         nueva_latitud='-16.380000', nueva_longitud='-71.550000'))
+        feria = UbicacionVendedor.objects.get()
+        haba = Producto.objects.get(nombre='Haba')
+        self.assertEqual((haba.ubicacion, haba.origen), (feria, 'Feria de Cayma'))
+        detalle = self.client.get(reverse('detalle_producto', args=[haba.pk]))
+        self.assertContains(detalle, 'Otra ubicación de Mercado San Camilo')
+        self.assertContains(detalle, '-16.380000%2C-71.550000')
+        # La siguiente vez solo la elige
+        self.client.post(reverse('crear_producto'), dict(base, nombre='Maca', donde=str(feria.pk)))
+        self.assertEqual(Producto.objects.get(nombre='Maca').ubicacion, feria)
+        self.assertEqual(UbicacionVendedor.objects.count(), 1)
+        self.assertContains(self.client.get(reverse('productores')), 'Feria de Cayma')
+        # El comprador ve dos paradas en su lista: el puesto y la feria
+        self.client.force_login(self.comprador)
+        for producto in (self.producto, haba):
+            self.client.post(reverse('agregar_al_carrito', args=[producto.pk]), {'cantidad': 1})
+        lista = self.client.get(reverse('carrito'))
+        self.assertContains(lista, 'Feria de Cayma')
+        self.assertContains(lista, 'Mercado San Camilo')
+        # Otra persona no puede usar ni quitar esa ubicacion
+        otro = User.objects.create_user('otro_puesto')
+        PerfilUsuario.objects.create(usuario=otro, rol='PRODUCTOR')
+        Puesto.objects.create(vendedor=otro, nombre='Otro mercado', latitud=Decimal('-16.4'), longitud=Decimal('-71.5'))
+        self.client.force_login(otro)
+        self.client.post(reverse('crear_producto'), dict(base, nombre='Ajeno', donde=str(feria.pk)))
+        self.assertFalse(Producto.objects.filter(nombre='Ajeno').exists())
+        self.assertEqual(self.client.post(reverse('quitar_ubicacion', args=[feria.pk])).status_code, 404)
+        # Al quitarla, sus productos vuelven al puesto principal
+        self.client.force_login(self.vendedor)
+        self.client.post(reverse('quitar_ubicacion', args=[feria.pk]))
+        haba.refresh_from_db()
+        self.assertIsNone(haba.ubicacion)
+        self.assertEqual(haba.origen, 'Mercado San Camilo')
+
     def test_datos_del_puesto_son_opcionales(self):
         puesto = self.poner_puesto()
         puesto.foto = 'puestos/prueba.jpg'
