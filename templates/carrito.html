@@ -25,7 +25,13 @@
                     {% if grupo.puesto %}<div class="small text-muted text-truncate">{{ grupo.puesto.titulo_puesto }}{% if grupo.puesto.referencia %} · {{ grupo.puesto.referencia }}{% endif %}</div>
                     <div class="d-flex flex-wrap gap-1 mt-1">{% for icono, nombre in grupo.puesto.iconos_pago %}<span class="chip-pago chico"><i class="bi {{ icono }}" aria-hidden="true"></i>{{ nombre }}</span>{% endfor %}</div>{% endif %}
                 </div>
-                {% if grupo.puesto %}<a class="btn btn-warning btn-sm fw-semibold flex-shrink-0" href="{{ grupo.puesto.como_llegar }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right-fill me-1" aria-hidden="true"></i>Cómo llegar</a>{% endif %}
+                <div class="d-flex gap-1 flex-shrink-0">
+                    <form action="{% url 'iniciar_chat' grupo.items.0.producto.id %}" method="post" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-success btn-sm" aria-label="Escribir a {{ grupo.puesto.nombre|default:'este puesto' }}" title="Escribir al vendedor"><i class="bi bi-chat-dots" aria-hidden="true"></i></button>
+                    </form>
+                    {% if grupo.puesto %}<a class="btn btn-warning btn-sm fw-semibold" href="{{ grupo.puesto.como_llegar }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right-fill me-1" aria-hidden="true"></i>Cómo llegar</a>{% endif %}
+                </div>
             </header>
             {% for item in grupo.items %}
             <article class="item-lista" data-stock-id="{{ item.producto_id }}">
