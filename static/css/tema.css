@@ -2334,3 +2334,23 @@ gmp-place-autocomplete { width: 100%; }
 @media (min-width: 992px) {
     .mapa-donde { aspect-ratio: auto; height: 100%; min-height: 280px; }
 }
+
+/* Ventas de hoy: boton para quitar una venta marcada por error */
+.ventas-hoy li { grid-template-columns: 56px 1fr auto auto auto; align-items: center; }
+@media (max-width: 575.98px) { .ventas-hoy li { grid-template-columns: 44px 1fr auto auto; } }
+
+/* Opiniones del producto */
+.resumen-estrellas { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--texto-suave, #475569); text-decoration: none; }
+.resumen-estrellas:hover { color: var(--texto, #0f172a); }
+.estrellas { color: #f59e0b; display: inline-flex; gap: 0.1rem; }
+.opinion { padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9; }
+.opinion:last-child { border-bottom: 0; }
+.opinion-invitar { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1rem; }
+.elegir-estrellas { display: inline-flex; flex-direction: row-reverse; gap: 0.1rem; }
+.elegir-estrellas input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.elegir-estrellas label { font-size: 1.7rem; line-height: 1; color: #cbd5e1; cursor: pointer; padding: 0.15rem; border-radius: 6px; transition: color 0.15s ease; }
+.elegir-estrellas input:checked ~ label,
+.elegir-estrellas label:hover,
+.elegir-estrellas label:hover ~ label { color: #f59e0b; }
+.elegir-estrellas input:focus-visible + label { outline: 2px solid #16a34a; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .elegir-estrellas label { transition: none; } }
