@@ -9,8 +9,8 @@
 <div class="encabezado-seccion entrar">
     <div>
         <span class="antetitulo"><i class="bi {% if ofertas %}bi-lightning-charge-fill{% else %}bi-basket-fill{% endif %}" aria-hidden="true"></i>{% if ofertas %}Mientras dure el stock{% else %}Mercados de Arequipa{% endif %}</span>
-        <h1 class="h2 fw-bold mb-0">{% if ofertas %}Ofertas del mercado{% else %}Productos disponibles{% endif %}</h1>
-        <p class="text-muted mb-0 mt-1">Compras en el puesto: aquí ves el precio y cuánto queda en tiempo real.</p>
+        <h1 class="h2 fw-bold mb-0">{% if ofertas %}Ofertas de los mercados{% else %}Productos disponibles{% endif %}</h1>
+        <p class="text-muted mb-0 mt-1">{% if ofertas %}Ahorra sin recorrer puesto por puesto: precio de oferta, cuánto ahorras y cuánto queda.{% else %}Compara precios entre puestos y mira cuánto queda en tiempo real. Compras directo en el puesto.{% endif %}</p>
     </div>
     {% if rol_actual == 'PRODUCTOR' %}
         <a href="{% url 'crear_producto' %}" class="btn btn-success"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Publicar producto</a>
