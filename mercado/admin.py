@@ -89,21 +89,22 @@ admin.site.register(Favorito)
 
 @admin.register(VerificacionVendedor)
 class VerificacionVendedorAdmin(admin.ModelAdmin):
-    """Revision manual: abrir cada archivo, consultar SUNAT / Padron / SUNARP, marcar lo comprobado y aprobar."""
-    list_display = ('usuario', 'tipo', 'documento', 'distrito', 'estado', 'fecha_envio')
-    list_filter = ('tipo', 'usuario__perfil__estado_verificacion')
-    search_fields = ('usuario__username', 'usuario__first_name', 'usuario__last_name', 'dni', 'ruc', 'nombre_organizacion')
-    readonly_fields = ('usuario', 'tipo', 'dni', 'ruc', 'nombre_organizacion', 'celular', 'distrito',
-                       'ver_foto_documento', 'ver_foto_chacra', 'ver_documento_organizacion', 'ver_certificado_organico',
-                       'inscrito_padron', 'certificadora', 'acepta_tratamiento_datos', 'fecha_envio', 'enlaces_consulta',
+    """Revision manual: abrir cada archivo, comparar con el puesto marcado en el mapa, marcar lo comprobado y aprobar."""
+    list_display = ('usuario', 'distrito', 'dni', 'estado', 'fecha_envio')
+    list_filter = ('usuario__perfil__estado_verificacion',)
+    search_fields = ('usuario__username', 'usuario__first_name', 'usuario__last_name', 'dni', 'ruc', 'nombre_organizacion', 'distrito')
+    readonly_fields = ('usuario', 'tipo', 'dni', 'ruc', 'nombre_organizacion', 'celular', 'distrito', 'puesto_en_mapa',
+                       'ver_foto_documento', 'ver_foto_en_puesto', 'ver_constancia_puesto',
+                       'declara_puesto', 'acepta_tratamiento_datos', 'fecha_envio', 'enlaces_consulta',
                        'revisado_por')
     fieldsets = (
-        ('Datos enviados por el vendedor', {'fields': ('usuario', 'tipo', 'dni', 'ruc', 'nombre_organizacion', 'celular', 'distrito', 'inscrito_padron', 'certificadora', 'acepta_tratamiento_datos', 'fecha_envio')}),
-        ('Archivos (privados, solo personal)', {'fields': ('ver_foto_documento', 'ver_foto_chacra', 'ver_documento_organizacion', 'ver_certificado_organico')}),
+        ('Datos enviados por el vendedor', {'fields': ('usuario', 'dni', 'celular', 'ruc', 'nombre_organizacion', 'distrito', 'puesto_en_mapa', 'declara_puesto', 'acepta_tratamiento_datos', 'fecha_envio')}),
+        ('Archivos (privados, solo personal)', {'fields': ('ver_foto_documento', 'ver_foto_en_puesto', 'ver_constancia_puesto')}),
         ('Dónde comprobar', {'fields': ('enlaces_consulta',)}),
-        ('Lo que comprobaste', {'description': 'Marca lo que comprobaste y guarda. Luego, en la lista, elige la acción "Aprobar" o escribe el motivo y usa "Rechazar".', 'fields': ('revisado_identidad', 'revisado_padron', 'revisado_organizacion', 'revisado_chacra', 'revisado_organico', 'motivo_rechazo', 'revisado_por')}),
+        ('Lo que comprobaste', {'description': 'Marca lo que comprobaste y guarda. Luego, en la lista, elige la acción "Aprobar" o escribe el motivo y usa "Rechazar". Para aprobar hace falta la identidad y la foto en el puesto.', 'fields': ('revisado_identidad', 'revisado_puesto', 'revisado_constancia', 'revisado_organizacion', 'motivo_rechazo', 'revisado_por')}),
     )
-    exclude = ('foto_documento', 'foto_chacra', 'documento_organizacion', 'certificado_organico')
+    exclude = ('foto_documento', 'foto_en_puesto', 'constancia_puesto', 'documento_organizacion', 'certificado_organico',
+               'certificadora', 'revisado_organico')
     actions = ['aprobar', 'rechazar']
 
     @admin.display(description='Estado')
@@ -120,25 +121,28 @@ class VerificacionVendedorAdmin(admin.ModelAdmin):
     def ver_foto_documento(self, obj):
         return self._enlace_archivo(obj, 'foto_documento')
 
-    @admin.display(description='Foto en la chacra')
-    def ver_foto_chacra(self, obj):
-        return self._enlace_archivo(obj, 'foto_chacra')
+    @admin.display(description='Foto en el puesto')
+    def ver_foto_en_puesto(self, obj):
+        return self._enlace_archivo(obj, 'foto_en_puesto')
 
-    @admin.display(description='SUNARP / constancia')
-    def ver_documento_organizacion(self, obj):
-        return self._enlace_archivo(obj, 'documento_organizacion')
+    @admin.display(description='Constancia del puesto')
+    def ver_constancia_puesto(self, obj):
+        return self._enlace_archivo(obj, 'constancia_puesto')
 
-    @admin.display(description='Certificado orgánico')
-    def ver_certificado_organico(self, obj):
-        return self._enlace_archivo(obj, 'certificado_organico')
+    @admin.display(description='Puesto en el mapa')
+    def puesto_en_mapa(self, obj):
+        puesto = getattr(obj.usuario, 'puesto', None)
+        if not puesto:
+            return 'Todavía no marcó su puesto'
+        return format_html('{} · {} · <a href="{}" target="_blank" rel="noopener">Ver en el mapa</a> · <a href="{}" target="_blank" rel="noopener">Foto pública del puesto</a>',
+                           puesto.nombre, puesto.titulo_puesto(), puesto.como_llegar(), puesto.url_foto())
 
     @admin.display(description='Consultas oficiales')
     def enlaces_consulta(self, obj):
         return format_html(
             '<a href="https://e-consultaruc.sunat.gob.pe/" target="_blank" rel="noopener">SUNAT (RUC)</a> · '
-            '<a href="https://consultapadron.midagri.gob.pe/" target="_blank" rel="noopener">Padrón de Productores (DNI)</a> · '
-            '<a href="https://www.sunarp.gob.pe/" target="_blank" rel="noopener">SUNARP</a> · '
-            '<a href="https://www.gob.pe/senasa" target="_blank" rel="noopener">SENASA (certificadoras orgánicas)</a>'
+            'Compara la foto en el puesto con la foto pública y el número del puesto. Si hay constancia, '
+            'revisa que sea del mismo mercado (asociación, merced conductiva o licencia municipal).'
         )
 
     def save_model(self, request, obj, form, change):
@@ -149,10 +153,9 @@ class VerificacionVendedorAdmin(admin.ModelAdmin):
     def aprobar(self, request, queryset):
         aprobados = 0
         for verificacion in queryset.select_related('usuario__perfil'):
-            # Se exige haber comprobado identidad y chacra, y el padron o el registro de la organizacion
-            respaldo = verificacion.revisado_organizacion if verificacion.tipo == 'ORGANIZACION' else verificacion.revisado_padron
-            if not (verificacion.revisado_identidad and verificacion.revisado_chacra and respaldo):
-                self.message_user(request, f"{verificacion.usuario.username}: marca primero lo que comprobaste (identidad, foto en chacra y padrón/SUNARP).", messages.WARNING)
+            # Se exige haber comprobado la identidad y la foto de la persona en su puesto
+            if not (verificacion.revisado_identidad and verificacion.revisado_puesto):
+                self.message_user(request, f"{verificacion.usuario.username}: marca primero lo que comprobaste (identidad y foto en el puesto).", messages.WARNING)
                 continue
             perfil = verificacion.usuario.perfil
             perfil.estado_verificacion = 'VERIFICADO'
@@ -162,7 +165,7 @@ class VerificacionVendedorAdmin(admin.ModelAdmin):
             verificacion.revisado_por = request.user
             verificacion.motivo_rechazo = ''
             verificacion.save()
-            Notificacion.avisar(verificacion.usuario, "¡Tu cuenta de vendedor fue verificada! Tus productos ya se muestran a los compradores.",
+            Notificacion.avisar(verificacion.usuario, "¡Tu puesto fue verificado! Tus productos ya muestran la insignia Puesto verificado.",
                                 reverse('panel_productor'), 'bi-patch-check-fill')
             aprobados += 1
         if aprobados:
@@ -177,7 +180,7 @@ class VerificacionVendedorAdmin(admin.ModelAdmin):
             perfil.save()
             verificacion.revisado_por = request.user
             if not verificacion.motivo_rechazo:
-                verificacion.motivo_rechazo = "Alguna foto no se ve bien o los datos no coinciden. Revisa y vuelve a enviar."
+                verificacion.motivo_rechazo = "Alguna foto no se ve bien o no coincide con tu puesto. Revisa y vuelve a enviar."
             verificacion.save()
             Notificacion.avisar(verificacion.usuario, f"Tu verificación necesita una corrección: {verificacion.motivo_rechazo}",
                                 reverse('verificacion_vendedor'), 'bi-exclamation-circle')
