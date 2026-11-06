@@ -16,8 +16,10 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+import uuid
+
 from .models import (
-    Categoria, ItemCarrito, Producto, Puesto, VentaPuesto, fecha_vencimiento_por_defecto,
+    Categoria, ItemCarrito, PagoComision, Producto, Puesto, VentaPuesto, fecha_vencimiento_por_defecto,
 )
 from .views import asegurar_datos_iniciales, obtener_o_crear_perfil, ofertas_destacadas, con_precio_vigente
 
@@ -214,7 +216,7 @@ def ficha(request, producto_id):
         en_lista = ItemCarrito.objects.filter(comprador=request.user, producto=producto,
                                               precio_unitario_acordado__isnull=True).first()
     mas_del_puesto = (Producto.objects.publicados().filter(productor=producto.productor)
-                      .exclude(pk=producto.pk).select_related('categoria', 'productor__puesto')[:4])
+                      .exclude(pk=producto.pk).select_related('categoria', 'productor__puesto', 'productor__perfil')[:4])
     return render(request, 'detalle_producto.html', {
         'producto': producto, 'puesto': getattr(producto.productor, 'puesto', None),
         'en_lista': en_lista, 'mas_del_puesto': mas_del_puesto,
@@ -353,6 +355,7 @@ def panel(request):
         'vendido_hoy': resumen['monto'] or Decimal('0'),
         'unidades_hoy': ventas_hoy.count(),
         'total_interesados': sum(por_producto.values()),
+        'tarifa_oferta': Decimal(str(settings.TARIFA_OFERTA)),
     })
 
 
@@ -369,10 +372,15 @@ def publicar(request, producto_id=None):
                 if producto_id is not None else Producto(productor=request.user))
     form = PublicacionForm(request.POST if request.method == 'POST' else None, request.FILES or None, instance=producto)
     if request.method == 'POST' and form.is_valid():
-        stock_antes = Producto.objects.filter(pk=producto.pk).values_list('stock', flat=True).first()
+        antes = Producto.objects.filter(pk=producto.pk).values('stock', 'en_oferta').first() or {}
+        stock_antes = antes.get('stock')
         producto = form.save(commit=False)
         producto.en_oferta = producto.precio_oferta is not None
-        producto.oferta_pendiente_pago = False
+        if not producto.en_oferta:
+            producto.oferta_pendiente_pago = False
+        elif not antes.get('en_oferta'):
+            # Oferta nueva: sale como oferta cuando el vendedor paga la publicidad
+            producto.oferta_pendiente_pago = True
         producto.oferta_inicio = producto.oferta_fin = None
         producto.acepta_ofertas = False
         producto.minimo_compra = 1
@@ -381,12 +389,50 @@ def publicar(request, producto_id=None):
         if stock_antes != producto.stock:
             producto.stock_actualizado = timezone.now()
         producto.save()
+        if producto.oferta_pendiente_pago:
+            messages.info(request, f'Guardaste {producto.nombre}. Para que salga como oferta, paga la publicidad.')
+            return redirect('pagar_comision_oferta', producto_id=producto.pk)
         messages.success(request, f'Guardaste {producto.nombre}. Ya se ve en la web.' if producto.esta_publicado()
                          else f'Guardaste {producto.nombre}.')
         return redirect('panel_productor')
     return render(request, 'form_producto.html', {
         'form': form, 'producto': producto, 'puesto': puesto,
         'foto_actual': producto.imagen.url if producto.imagen else '',
+        'tarifa_oferta': Decimal(str(settings.TARIFA_OFERTA)),
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def pagar_oferta(request, producto_id):
+    """El vendedor paga (en modo demo) la publicidad para que su producto salga como oferta.
+    No es una comision: la venta en el puesto no paga nada a AgroComercial."""
+    if not es_vendedor(request.user):
+        raise Http404()
+    producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
+    if not (producto.en_oferta and producto.oferta_pendiente_pago):
+        messages.info(request, f'La oferta de {producto.nombre} no tiene pagos pendientes.')
+        return redirect('panel_productor')
+    monto = producto.monto_comision_oferta()
+    error = ''
+    if request.method == 'POST':
+        metodo = request.POST.get('metodo_pago', '')
+        if metodo not in dict(PagoComision.METODOS):
+            error = 'Elige si pagas con tarjeta o con QR.'
+        else:
+            with transaction.atomic():
+                # El filtro evita registrar dos pagos si se presiona dos veces
+                if Producto.objects.filter(pk=producto.pk, oferta_pendiente_pago=True).update(oferta_pendiente_pago=False):
+                    pago = PagoComision.objects.create(
+                        producto=producto, productor=request.user, porcentaje=Decimal('0'), monto=monto,
+                        metodo_pago=metodo, codigo_transaccion=f'OF-{uuid.uuid4().hex[:10].upper()}',
+                    )
+                    messages.success(request, f'Pago demo de S/ {pago.monto} recibido (código {pago.codigo_transaccion}). '
+                                              f'{producto.nombre} ya sale en Ofertas.')
+            return redirect('panel_productor')
+    return render(request, 'pagar_oferta.html', {
+        'producto': producto, 'monto': monto, 'error': error,
+        'metodo': request.POST.get('metodo_pago', 'TARJETA'),
     })
 
 
