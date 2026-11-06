@@ -267,8 +267,8 @@
     <nav class="barra-inferior d-md-none" aria-label="Accesos rápidos">
         <a href="{% url 'inicio' %}" data-ruta="/"><i class="bi bi-house-door" aria-hidden="true"></i><span>Inicio</span></a>
         <a href="{% url 'ventas_por_oferta' %}" data-ruta="/ofertas/"><i class="bi bi-lightning-charge" aria-hidden="true"></i><span>Ofertas</span></a>
-        <a href="{% url 'catalogo' %}" data-ruta="/catalogo/"><i class="bi bi-grid" aria-hidden="true"></i><span>Productos</span></a>
         {% if user.is_authenticated %}
+            <a href="{% url 'mensajes' %}" data-ruta="/mensajes/"><i class="bi bi-chat-dots" aria-hidden="true"></i><span>Mensajes</span>{% if mensajes_sin_leer %}<b class="contador-icono">{{ mensajes_sin_leer }}</b>{% endif %}</a>
             <a href="{% url 'carrito' %}" data-ruta="/carrito/"><i class="bi bi-list-check" aria-hidden="true"></i><span>Mi lista</span><b class="contador-icono {% if not total_items_carrito %}d-none{% endif %}">{{ total_items_carrito }}</b></a>
             {% if rol_actual == 'PRODUCTOR' %}
                 <a href="{% url 'panel_productor' %}" data-ruta="/panel-productor/"><i class="bi bi-shop" aria-hidden="true"></i><span>Mi puesto</span></a>
@@ -276,6 +276,7 @@
                 <a href="{% url 'productores' %}" data-ruta="/puestos/"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Puestos</span></a>
             {% endif %}
         {% else %}
+            <a href="{% url 'catalogo' %}" data-ruta="/catalogo/"><i class="bi bi-grid" aria-hidden="true"></i><span>Productos</span></a>
             <a href="{% url 'productores' %}" data-ruta="/puestos/"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Puestos</span></a>
             <a href="{% url 'login' %}?modo=comprador" data-ruta="/login/"><i class="bi bi-person" aria-hidden="true"></i><span>Ingresar</span></a>
         {% endif %}
