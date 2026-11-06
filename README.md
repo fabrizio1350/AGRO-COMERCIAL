@@ -51,3 +51,11 @@ Las cuentas se crean al abrir el inicio cuando la base aún no tiene productos.
 - La web publica productos para compras presenciales. La lista del comprador no reserva stock ni genera pedidos. El vendedor actualiza la cantidad restante desde su panel y el catálogo la consulta cada 5 segundos. Los comprobantes antiguos se conservan como historial.
 
 Configura GOOGLE_MAPS_API_KEY con Maps JavaScript API habilitada y restringida a los dominios de la web para seleccionar el puesto directamente en el mapa. Sin esa clave se pueden pegar coordenadas de Google Maps. El enlace Cómo llegar abre Google Maps con la ubicación guardada.
+
+## Seguridad
+
+- Tras 5 contraseñas equivocadas, la cuenta espera 15 minutos (`LOGIN_INTENTOS_MAXIMOS` y `LOGIN_MINUTOS_BLOQUEO` en `.env`).
+- Cada correo solo puede usarse en una cuenta.
+- Las fotos se revisan por su contenido y se guardan con un nombre al azar.
+- Puedes cambiar la ruta del panel de administración con `ADMIN_URL=otra-ruta/` en `.env`.
+- Cuentas antiguas que no pueden entrar con Google ("ya tienes una cuenta con ese correo"): si tienen contraseña, entran con ella y usan **Vincular con Google** en Mi perfil. Si no tienen contraseña, el administrador genera un enlace de 1 hora con `python manage.py enlace_google correo@gmail.com` y se lo pasa a la persona.
