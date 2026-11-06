@@ -27,6 +27,7 @@ urlpatterns = [
     path('panel-comprador/', presencial.lista, name='panel_comprador'),
     path('panel-productor/', presencial.panel, name='panel_productor'),
     path('vendedor/puesto/', presencial.configurar_puesto, name='configurar_puesto'),
+    path('quiero-vender/', presencial.quiero_vender, name='quiero_vender'),
     path('producto/nuevo/', presencial.publicar, name='crear_producto'),
     path('producto/<int:producto_id>/editar/', presencial.publicar, name='editar_producto'),
     path('producto/<int:producto_id>/stock/', presencial.actualizar_stock, name='actualizar_stock'),
