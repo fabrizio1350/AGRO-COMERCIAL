@@ -362,10 +362,9 @@ class PruebasVerificacionVendedor(TestCase):
 
     def _datos(self, **cambios):
         datos = {
-            'tipo': 'PERSONA', 'dni': '45678912', 'celular': '987654321',
-            'distrito': 'Cayma, Arequipa', 'inscrito_padron': 'on', 'acepta_tratamiento_datos': 'on',
+            'dni': '45678912', 'celular': '987654321', 'declara_puesto': 'on', 'acepta_tratamiento_datos': 'on',
             'foto_documento': SimpleUploadedFile('dni.jpg', JPG_MINIMO, content_type='image/jpeg'),
-            'foto_chacra': SimpleUploadedFile('chacra.jpg', JPG_MINIMO, content_type='image/jpeg'),
+            'foto_en_puesto': SimpleUploadedFile('puesto.jpg', JPG_MINIMO, content_type='image/jpeg'),
         }
         datos.update(cambios)
         return datos
@@ -376,12 +375,24 @@ class PruebasVerificacionVendedor(TestCase):
         self.assertFalse(ruc_valido('20601106690'))
         self.assertFalse(ruc_valido('12345678901'))
 
-    def test_producto_de_vendedor_sin_verificar_esta_oculto(self):
+    def test_producto_sin_puesto_esta_oculto(self):
         self.assertNotIn(self.producto, Producto.objects.publicados())
         self.assertEqual(self.client.get(reverse('detalle_producto', args=[self.producto.id])).status_code, 404)
         # El propio vendedor si puede verlo
         self.client.login(username='nuevo_vendedor', password='clave12345')
         self.assertContains(self.client.get(reverse('detalle_producto', args=[self.producto.id])), 'Solo tú ves este producto')
+
+    def test_sin_verificar_se_muestra_salvo_que_sea_obligatorio(self):
+        dar_puesto(self.vendedor)
+        self.assertIn(self.producto, Producto.objects.publicados())
+        self.assertNotContains(self.client.get(reverse('detalle_producto', args=[self.producto.id])), 'Puesto verificado')
+        with self.settings(VERIFICACION_OBLIGATORIA=True):
+            self.assertNotIn(self.producto, Producto.objects.publicados())
+            self.assertEqual(self.client.get(reverse('detalle_producto', args=[self.producto.id])).status_code, 404)
+
+    def test_verificar_pide_marcar_el_puesto_primero(self):
+        self.client.login(username='nuevo_vendedor', password='clave12345')
+        self.assertRedirects(self.client.get(reverse('verificacion_vendedor')), reverse('configurar_puesto'))
 
     def test_registro_de_vendedor_lleva_a_verificacion(self):
         respuesta = self.client.post(reverse('registro'), {
@@ -392,29 +403,35 @@ class PruebasVerificacionVendedor(TestCase):
         self.assertRedirects(respuesta, reverse('configurar_puesto'))
 
     def test_envio_queda_pendiente_y_avisa_al_admin(self):
+        from .models import VerificacionVendedor
+        dar_puesto(self.vendedor, 'Mercado San Camilo')
         self.client.login(username='nuevo_vendedor', password='clave12345')
         respuesta = self.client.post(reverse('verificacion_vendedor'), self._datos())
         self.assertRedirects(respuesta, reverse('verificacion_vendedor'))
         self.perfil.refresh_from_db()
         self.assertEqual(self.perfil.estado_verificacion, 'PENDIENTE')
         self.assertTrue(Notificacion.objects.filter(usuario=self.admin).exists())
-        # Sigue oculto hasta que lo aprueben
-        self.assertNotIn(self.producto, Producto.objects.publicados())
+        self.assertIn('Mercado San Camilo', VerificacionVendedor.objects.get(usuario=self.vendedor).distrito)
+        # Mientras se revisa, el producto se sigue viendo
+        self.assertIn(self.producto, Producto.objects.publicados())
 
     def test_reglas_del_formulario(self):
+        dar_puesto(self.vendedor)
         self.client.login(username='nuevo_vendedor', password='clave12345')
-        sin_padron = self._datos()
-        sin_padron.pop('inscrito_padron')
-        self.assertContains(self.client.post(reverse('verificacion_vendedor'), sin_padron), 'Padrón de Productores Agrarios')
-        falso = self._datos(foto_chacra=SimpleUploadedFile('chacra.jpg', b'no soy una foto', content_type='image/jpeg'))
+        sin_declarar = self._datos()
+        sin_declarar.pop('declara_puesto')
+        self.assertContains(self.client.post(reverse('verificacion_vendedor'), sin_declarar), 'confirmar que atiendes ese puesto')
+        falso = self._datos(foto_en_puesto=SimpleUploadedFile('puesto.jpg', b'no soy una foto', content_type='image/jpeg'))
         self.assertContains(self.client.post(reverse('verificacion_vendedor'), falso), 'No pudimos abrir ese archivo')
-        organizacion = self._datos(tipo='ORGANIZACION', ruc='20601106690', nombre_organizacion='Asociación Majes')
-        self.assertContains(self.client.post(reverse('verificacion_vendedor'), organizacion), 'Ese RUC no es válido')
+        con_ruc = self._datos(ruc='20601106690')
+        self.assertContains(self.client.post(reverse('verificacion_vendedor'), con_ruc), 'Ese RUC no es válido')
+        self.assertContains(self.client.post(reverse('verificacion_vendedor'), self._datos(dni='123')), 'El DNI tiene 8 dígitos')
         self.perfil.refresh_from_db()
         self.assertEqual(self.perfil.estado_verificacion, 'SIN_ENVIAR')
 
     def test_admin_aprueba_y_el_producto_se_publica(self):
         from .models import VerificacionVendedor
+        dar_puesto(self.vendedor)
         self.client.login(username='nuevo_vendedor', password='clave12345')
         self.client.post(reverse('verificacion_vendedor'), self._datos())
         verificacion = VerificacionVendedor.objects.get(usuario=self.vendedor)
@@ -424,19 +441,20 @@ class PruebasVerificacionVendedor(TestCase):
         self.client.post(url, {'action': 'aprobar', '_selected_action': [verificacion.id]})
         self.perfil.refresh_from_db()
         self.assertEqual(self.perfil.estado_verificacion, 'PENDIENTE')
-        VerificacionVendedor.objects.filter(id=verificacion.id).update(revisado_identidad=True, revisado_padron=True, revisado_chacra=True)
+        VerificacionVendedor.objects.filter(id=verificacion.id).update(revisado_identidad=True, revisado_puesto=True)
         self.client.post(url, {'action': 'aprobar', '_selected_action': [verificacion.id]})
         self.perfil.refresh_from_db()
         self.assertEqual(self.perfil.estado_verificacion, 'VERIFICADO')
         self.assertFalse(self.perfil.organico_verificado)
-        dar_puesto(self.vendedor)
         self.assertIn(self.producto, Producto.objects.publicados())
-        self.assertTrue(Notificacion.objects.filter(usuario=self.vendedor, texto__icontains='verificada').exists())
+        self.assertTrue(Notificacion.objects.filter(usuario=self.vendedor, texto__icontains='verificado').exists())
         self.client.logout()
+        self.assertContains(self.client.get(reverse('detalle_producto', args=[self.producto.id])), 'Puesto verificado')
         self.assertContains(self.client.get(reverse('perfil_productor', args=[self.vendedor.id])), 'Verificado')
 
     def test_documentos_solo_los_ve_el_personal(self):
         from .models import VerificacionVendedor
+        dar_puesto(self.vendedor)
         self.client.login(username='nuevo_vendedor', password='clave12345')
         self.client.post(reverse('verificacion_vendedor'), self._datos())
         verificacion = VerificacionVendedor.objects.get(usuario=self.vendedor)
