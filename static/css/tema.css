@@ -2329,3 +2329,8 @@ gmp-place-autocomplete { width: 100%; }
         font-size: 0.85rem;
     }
 }
+
+/* Donde comprar ocupa todo el ancho: datos del puesto a un lado y mapa al otro */
+@media (min-width: 992px) {
+    .mapa-donde { aspect-ratio: auto; height: 100%; min-height: 280px; }
+}
