@@ -146,6 +146,21 @@ class PanelYListaTests(TestCase):
         datos = self.client.get(reverse('stock_publico'), {'ids': self.producto.pk}).json()
         self.assertEqual(datos[str(self.producto.pk)]['stock'], 10)
 
+    def test_datos_del_puesto_son_opcionales(self):
+        puesto = self.poner_puesto()
+        puesto.foto = 'puestos/prueba.jpg'
+        puesto.save()
+        self.client.force_login(self.vendedor)
+        respuesta = self.client.post(reverse('configurar_puesto'), {
+            'nombre': '', 'numero': '', 'referencia': '', 'direccion': '', 'horario': '',
+            'latitud': '-16.400000', 'longitud': '-71.530000', 'efectivo': 'on',
+        })
+        self.assertRedirects(respuesta, reverse('panel_productor'), fetch_redirect_response=False)
+        puesto.refresh_from_db()
+        self.assertEqual(puesto.nombre, 'Puesto de vende')
+        self.assertEqual(puesto.numero, '')
+        self.assertContains(self.client.get(reverse('configurar_puesto')), 'avisoUbicacion')
+
     def test_vendedor_nuevo_va_a_marcar_su_puesto(self):
         self.client.force_login(self.vendedor)
         self.assertRedirects(self.client.get(reverse('crear_producto')), reverse('configurar_puesto'))
