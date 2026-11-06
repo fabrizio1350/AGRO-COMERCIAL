@@ -31,11 +31,48 @@
     function guardar(punto) {
         lat.value = Number(punto.lat).toFixed(6);
         lng.value = Number(punto.lng).toFixed(6);
-        avisar('<i class="bi bi-check-circle-fill text-success me-1"></i>Ubicación guardada. Puedes arrastrar el marcador para afinarla.');
+        if (zona && resumen) {
+            avisar('<i class="bi bi-check-circle-fill text-success me-1"></i>Punto marcado. ' +
+                   '<button type="button" class="btn btn-success btn-sm ms-1" data-listo-mapa>Listo, usar este lugar</button>');
+        } else {
+            avisar('<i class="bi bi-check-circle-fill text-success me-1"></i>Ubicación guardada. Puedes arrastrar el marcador para afinarla.');
+        }
     }
     function avisar(html) { if (estado) estado.innerHTML = html; }
     function ponerNombre(texto) { if (nombre && texto && !nombre.value.trim()) nombre.value = texto; }
-    function ponerDireccion(texto) { if (direccion && texto) direccion.value = texto.slice(0, 200); }
+    function ponerDireccion(texto) { if (direccion && texto) { direccion.value = texto.slice(0, 200); actualizarResumen(); } }
+
+    // Cuando ya encontro el lugar, el mapa se cierra y queda un resumen con "Cambiar"; asi pasa directo a ponerle nombre
+    var zona = document.getElementById('zonaMapa');
+    var resumen = document.getElementById('resumenUbicacion');
+    var alReabrir = null;
+    function actualizarResumen() {
+        var texto = resumen && resumen.querySelector('[data-resumen-texto]');
+        if (!texto) return;
+        texto.textContent = direccion && direccion.value ? direccion.value
+            : 'Punto marcado en el mapa (' + Number(lat.value).toFixed(4) + ', ' + Number(lng.value).toFixed(4) + ')';
+    }
+    function cerrarMapa(enfocar) {
+        if (!zona || !resumen || !puntoGuardado()) return;
+        actualizarResumen();
+        zona.classList.add('d-none');
+        resumen.classList.remove('d-none');
+        if (enfocar !== false && nombre) {
+            nombre.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            nombre.focus({ preventScroll: true });
+        }
+    }
+    function abrirMapa() {
+        if (!zona || !resumen) return;
+        resumen.classList.add('d-none');
+        zona.classList.remove('d-none');
+        document.dispatchEvent(new Event('mapa-puesto:mostrar'));
+        if (alReabrir) alReabrir();
+    }
+    if (estado) estado.addEventListener('click', function (e) { if (e.target.closest('[data-listo-mapa]')) cerrarMapa(); });
+    if (resumen) resumen.addEventListener('click', function (e) { if (e.target.closest('[data-cambiar-ubicacion]')) abrirMapa(); });
+    // Si ya tiene un punto guardado (ej. al editar), empieza con el mapa cerrado
+    if (puntoGuardado()) cerrarMapa(false);
 
     // Aviso grande cuando la ubicacion esta apagada o bloqueada, con los pasos para activarla
     var aviso = document.getElementById('avisoUbicacion');
@@ -136,7 +173,7 @@
             var p = marcador.position;
             mover({ lat: typeof p.lat === 'function' ? p.lat() : p.lat, lng: typeof p.lng === 'function' ? p.lng() : p.lng });
         });
-        botonUbicacion.addEventListener('click', function () { pedirUbicacion(function (p) { mover(p, true); }); });
+        botonUbicacion.addEventListener('click', function () { pedirUbicacion(function (p) { mover(p, true); cerrarMapa(); }); });
 
         // Buscador de lugares (Places API New); si no esta habilitada se queda el campo simple
         try {
@@ -152,13 +189,14 @@
                 ponerNombre(lugar.displayName);
                 ponerDireccion(lugar.formattedAddress);
                 mover(lugar.location.toJSON(), true);
+                cerrarMapa();
             });
         } catch (e) {
             buscador.addEventListener('keydown', function (ev) {
                 if (ev.key !== 'Enter' || !geocoder) return;
                 ev.preventDefault();
                 geocoder.geocode({ address: buscador.value + ', Arequipa, Perú' }).then(function (r) {
-                    if (r.results && r.results[0]) { ponerDireccion(r.results[0].formatted_address); mover(r.results[0].geometry.location.toJSON(), true); }
+                    if (r.results && r.results[0]) { ponerDireccion(r.results[0].formatted_address); mover(r.results[0].geometry.location.toJSON(), true); cerrarMapa(); }
                 });
             });
         }
@@ -194,7 +232,7 @@
         }
         if (inicio) { marcador = L.marker(inicio, { draggable: true }).addTo(mapa); marcador.on('dragend', function () { var p = marcador.getLatLng(); guardar(p); direccionDe(p); }); }
         mapa.on('click', function (e) { mover(e.latlng); });
-        botonUbicacion.addEventListener('click', function () { pedirUbicacion(function (p) { mover(p, true); }); });
+        botonUbicacion.addEventListener('click', function () { pedirUbicacion(function (p) { mover(p, true); cerrarMapa(); }); });
         buscador.addEventListener('keydown', function (ev) {
             if (ev.key !== 'Enter') return;
             ev.preventDefault();
@@ -207,12 +245,14 @@
                     if (!res.length) { avisar('No encontramos ese lugar. Toca el mapa para marcarlo.'); return; }
                     ponerNombre(res[0].name || texto);
                     mover({ lat: Number(res[0].lat), lng: Number(res[0].lon) }, true);
+                    cerrarMapa();
                 })
                 .catch(function () { avisar('No se pudo buscar. Toca el mapa para marcarlo.'); });
         });
         buscador.setAttribute('enterkeyhint', 'search');
         buscador.placeholder = 'Busca tu mercado y presiona Enter';
         setTimeout(function () { mapa.invalidateSize(); }, 300);
+        alReabrir = function () { setTimeout(function () { mapa.invalidateSize(); }, 50); };
     }
 
     if (contenedor.getAttribute('data-proveedor') === 'osm') {
