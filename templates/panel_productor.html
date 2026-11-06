@@ -28,6 +28,7 @@
     </div>
     <div class="d-flex flex-wrap gap-2 acciones-puesto">
         <a href="{% url 'crear_producto' %}" class="btn btn-success"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Publicar producto</a>
+        <a href="{% url 'mensajes' %}" class="btn btn-outline-success"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Mensajes{% if mensajes_sin_leer %} <span class="badge rounded-pill text-bg-danger">{{ mensajes_sin_leer }}</span>{% endif %}</a>
         <a href="{% url 'configurar_puesto' %}" class="btn btn-outline-secondary"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Editar puesto</a>
     </div>
 </section>
@@ -107,9 +108,12 @@
 
 <section class="mt-4" aria-labelledby="tituloVentas">
     <h2 class="h5 fw-bold" id="tituloVentas">Ventas de hoy</h2>
-    <ul class="ventas-hoy list-unstyled mb-0" id="ventasHoy">
+    <p class="small text-muted mb-2">¿Marcaste una venta por error? Toca <strong>Quitar</strong> y las unidades vuelven a tu stock.</p>
+    <ul class="ventas-hoy list-unstyled mb-0" id="ventasHoy" data-url-quitar="{% url 'quitar_venta' 0 %}">
         {% for venta in ventas_hoy %}
-        <li><span>{{ venta.fecha|time:"H:i" }}</span><strong>{{ venta.producto.nombre }}</strong><span>{{ venta.cantidad }} × S/ {{ venta.precio_unitario }}</span><span class="text-success fw-semibold">S/ {{ venta.total|floatformat:2 }}</span></li>
+        <li><span>{{ venta.fecha|time:"H:i" }}</span><strong>{{ venta.producto.nombre }}</strong><span>{{ venta.cantidad }} × S/ {{ venta.precio_unitario }}</span><span class="text-success fw-semibold">S/ {{ venta.total|floatformat:2 }}</span>
+            <form method="post" action="{% url 'quitar_venta' venta.id %}" class="m-0">{% csrf_token %}<button type="submit" class="btn btn-link btn-sm text-danger p-0" aria-label="Quitar la venta de {{ venta.producto.nombre }} de las {{ venta.fecha|time:'H:i' }}">Quitar</button></form>
+        </li>
         {% empty %}
         <li class="text-muted small" data-sin-ventas>Todavía no registraste ventas hoy.</li>
         {% endfor %}
