@@ -27,7 +27,12 @@
                 <span class="text-truncate"><i class="bi bi-shop me-1" aria-hidden="true"></i>Ofertas de los mercados de Arequipa<span class="d-none d-md-inline"> · Compras y pagas en el puesto</span></span>
                 <div class="d-flex align-items-center gap-3 flex-shrink-0">
                     {% if user.is_authenticated %}
-                        <span><i class="bi {% if rol_actual == 'PRODUCTOR' %}bi-shop{% else %}bi-bag{% endif %} me-1" aria-hidden="true"></i>Cuenta de <strong>{% if rol_actual == 'PRODUCTOR' %}vendedor{% else %}comprador{% endif %}</strong></span>
+                        {% if rol_actual == 'PRODUCTOR' %}
+                            <span><i class="bi bi-shop me-1" aria-hidden="true"></i>Compras y <strong>vendes</strong> con esta cuenta</span>
+                        {% else %}
+                            <span class="d-none d-sm-inline"><i class="bi bi-bag me-1" aria-hidden="true"></i>Cuenta de <strong>comprador</strong></span>
+                            <a href="{% url 'quiero_vender' %}"><i class="bi bi-shop-window me-1" aria-hidden="true"></i>Tengo un puesto</a>
+                        {% endif %}
                     {% else %}
                         <a href="{% url 'login' %}?modo=vendedor" class="d-none d-sm-inline"><i class="bi bi-shop-window me-1" aria-hidden="true"></i>Tengo un puesto</a>
                     {% endif %}
@@ -62,12 +67,11 @@
                             <i class="bi bi-bell" aria-hidden="true"></i>
                             {% if notificaciones_sin_leer %}<span class="contador-icono">{{ notificaciones_sin_leer }}</span>{% endif %}
                         </a>
-                        {% if rol_actual == 'COMPRADOR' %}
-                            <a href="{% url 'carrito' %}" class="icono-cabecera" aria-label="Mi lista de compras, {{ total_items_carrito }} productos" title="Mi lista de compras">
-                                <i class="bi bi-list-check" aria-hidden="true"></i>
-                                <span class="contador-icono {% if not total_items_carrito %}d-none{% endif %}" id="contadorCarrito">{{ total_items_carrito }}</span>
-                            </a>
-                        {% else %}
+                        <a href="{% url 'carrito' %}" class="icono-cabecera" aria-label="Mi lista de compras, {{ total_items_carrito }} productos" title="Mi lista de compras">
+                            <i class="bi bi-list-check" aria-hidden="true"></i>
+                            <span class="contador-icono {% if not total_items_carrito %}d-none{% endif %}" id="contadorCarrito">{{ total_items_carrito }}</span>
+                        </a>
+                        {% if rol_actual == 'PRODUCTOR' %}
                             <a href="{% url 'crear_producto' %}" class="btn btn-success btn-sm d-none d-sm-inline-flex align-items-center gap-1">
                                 <i class="bi bi-plus-lg" aria-hidden="true"></i>Publicar
                             </a>
@@ -84,16 +88,19 @@
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 {% if rol_actual == 'PRODUCTOR' %}
+                                    <li><h6 class="dropdown-header">Vender</h6></li>
                                     <li><a class="dropdown-item" href="{% url 'panel_productor' %}"><i class="bi bi-shop" aria-hidden="true"></i>Mi puesto</a></li>
                                     <li><a class="dropdown-item" href="{% url 'crear_producto' %}"><i class="bi bi-plus-circle" aria-hidden="true"></i>Publicar producto</a></li>
                                     <li><a class="dropdown-item" href="{% url 'configurar_puesto' %}"><i class="bi bi-geo-alt" aria-hidden="true"></i>Ubicación y pagos</a></li>
                                     <li><a class="dropdown-item" href="{% url 'verificacion_vendedor' %}"><i class="bi bi-patch-check" aria-hidden="true"></i>Verificar mi puesto</a></li>
-                                {% else %}
-                                    <li><a class="dropdown-item" href="{% url 'carrito' %}"><i class="bi bi-list-check" aria-hidden="true"></i>Mi lista de compras</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header">Comprar</h6></li>
                                 {% endif %}
+                                <li><a class="dropdown-item" href="{% url 'carrito' %}"><i class="bi bi-list-check" aria-hidden="true"></i>Mi lista de compras</a></li>
+                                <li><a class="dropdown-item" href="{% url 'mis_favoritos' %}"><i class="bi bi-heart" aria-hidden="true"></i>Favoritos</a></li>
                                 <li><a class="dropdown-item" href="{% url 'mensajes' %}"><i class="bi bi-chat-dots" aria-hidden="true"></i>Mensajes{% if mensajes_sin_leer %} <span class="badge rounded-pill text-bg-danger ms-auto">{{ mensajes_sin_leer }}</span>{% endif %}</a></li>
-                                {% if rol_actual == 'COMPRADOR' %}
-                                    <li><a class="dropdown-item" href="{% url 'mis_favoritos' %}"><i class="bi bi-heart" aria-hidden="true"></i>Favoritos</a></li>
+                                {% if rol_actual != 'PRODUCTOR' %}
+                                    <li><a class="dropdown-item" href="{% url 'quiero_vender' %}"><i class="bi bi-shop-window" aria-hidden="true"></i>Vender en mi puesto</a></li>
                                 {% endif %}
                                 <li><a class="dropdown-item" href="{% url 'perfil' %}"><i class="bi bi-person-gear" aria-hidden="true"></i>Mi perfil</a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -128,11 +135,9 @@
                 <a class="enlace-nav" href="{% url 'catalogo' %}">Productos</a>
                 <a class="enlace-nav" href="{% url 'ventas_por_oferta' %}">
                     Ofertas
-                    {% if rol_actual == 'PRODUCTOR' and ofertas_pendientes_vendedor > 0 %}
-                        <span class="contador-icono en-linea">{{ ofertas_pendientes_vendedor }}</span>
-                    {% elif rol_actual == 'COMPRADOR' and ofertas_listas_comprador > 0 %}
-                        <span class="contador-icono en-linea">{{ ofertas_listas_comprador }}</span>
-                    {% endif %}
+                    {% with total_ofertas=ofertas_pendientes_vendedor|add:ofertas_listas_comprador %}
+                        {% if total_ofertas > 0 %}<span class="contador-icono en-linea">{{ total_ofertas }}</span>{% endif %}
+                    {% endwith %}
                 </a>
                 <div class="dropdown">
                     <button class="enlace-nav dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Categorías</button>
@@ -144,10 +149,11 @@
                 </div>
                 <a class="enlace-nav" href="{% url 'productores' %}">Puestos</a>
                 <a class="enlace-nav" href="{% url 'inicio' %}#como-funciona">Cómo funciona</a>
-                {% if rol_actual == 'PRODUCTOR' %}
-                    <a class="enlace-nav ms-auto" href="{% url 'panel_productor' %}"><i class="bi bi-shop" aria-hidden="true"></i>Mi puesto</a>
-                {% elif rol_actual == 'COMPRADOR' %}
+                {% if user.is_authenticated %}
                     <a class="enlace-nav ms-auto" href="{% url 'carrito' %}"><i class="bi bi-list-check" aria-hidden="true"></i>Mi lista de compras</a>
+                    {% if rol_actual == 'PRODUCTOR' %}
+                        <a class="enlace-nav" href="{% url 'panel_productor' %}"><i class="bi bi-shop" aria-hidden="true"></i>Mi puesto</a>
+                    {% endif %}
                 {% endif %}
             </div>
         </nav>
@@ -171,13 +177,13 @@
                 {% if rol_actual == 'PRODUCTOR' %}
                     <a href="{% url 'panel_productor' %}"><i class="bi bi-shop" aria-hidden="true"></i>Mi puesto</a>
                     <a href="{% url 'crear_producto' %}"><i class="bi bi-plus-circle" aria-hidden="true"></i>Publicar producto</a>
-                {% elif rol_actual == 'COMPRADOR' %}
-                    <a href="{% url 'carrito' %}"><i class="bi bi-list-check" aria-hidden="true"></i>Mi lista de compras ({{ total_items_carrito }})</a>
                 {% endif %}
                 {% if user.is_authenticated %}
+                    <a href="{% url 'carrito' %}"><i class="bi bi-list-check" aria-hidden="true"></i>Mi lista de compras ({{ total_items_carrito }})</a>
                     <a href="{% url 'mensajes' %}"><i class="bi bi-chat-dots" aria-hidden="true"></i>Mensajes{% if mensajes_sin_leer %} ({{ mensajes_sin_leer }}){% endif %}</a>
                     <a href="{% url 'notificaciones' %}"><i class="bi bi-bell" aria-hidden="true"></i>Notificaciones{% if notificaciones_sin_leer %} ({{ notificaciones_sin_leer }}){% endif %}</a>
-                    {% if rol_actual == 'COMPRADOR' %}<a href="{% url 'mis_favoritos' %}"><i class="bi bi-heart" aria-hidden="true"></i>Favoritos</a>{% endif %}
+                    <a href="{% url 'mis_favoritos' %}"><i class="bi bi-heart" aria-hidden="true"></i>Favoritos</a>
+                    {% if rol_actual != 'PRODUCTOR' %}<a href="{% url 'quiero_vender' %}"><i class="bi bi-shop-window" aria-hidden="true"></i>Vender en mi puesto</a>{% endif %}
                     <a href="{% url 'perfil' %}"><i class="bi bi-person-gear" aria-hidden="true"></i>Mi perfil</a>
                 {% endif %}
             </nav>
@@ -262,12 +268,13 @@
         <a href="{% url 'inicio' %}" data-ruta="/"><i class="bi bi-house-door" aria-hidden="true"></i><span>Inicio</span></a>
         <a href="{% url 'ventas_por_oferta' %}" data-ruta="/ofertas/"><i class="bi bi-lightning-charge" aria-hidden="true"></i><span>Ofertas</span></a>
         <a href="{% url 'catalogo' %}" data-ruta="/catalogo/"><i class="bi bi-grid" aria-hidden="true"></i><span>Productos</span></a>
-        {% if rol_actual == 'PRODUCTOR' %}
-            <a href="{% url 'panel_productor' %}" data-ruta="/panel-productor/"><i class="bi bi-shop" aria-hidden="true"></i><span>Mi puesto</span></a>
-            <a href="{% url 'crear_producto' %}" data-ruta="/producto/nuevo/"><i class="bi bi-plus-circle" aria-hidden="true"></i><span>Publicar</span></a>
-        {% elif rol_actual == 'COMPRADOR' %}
+        {% if user.is_authenticated %}
             <a href="{% url 'carrito' %}" data-ruta="/carrito/"><i class="bi bi-list-check" aria-hidden="true"></i><span>Mi lista</span><b class="contador-icono {% if not total_items_carrito %}d-none{% endif %}">{{ total_items_carrito }}</b></a>
-            <a href="{% url 'productores' %}" data-ruta="/puestos/"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Puestos</span></a>
+            {% if rol_actual == 'PRODUCTOR' %}
+                <a href="{% url 'panel_productor' %}" data-ruta="/panel-productor/"><i class="bi bi-shop" aria-hidden="true"></i><span>Mi puesto</span></a>
+            {% else %}
+                <a href="{% url 'productores' %}" data-ruta="/puestos/"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Puestos</span></a>
+            {% endif %}
         {% else %}
             <a href="{% url 'productores' %}" data-ruta="/puestos/"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Puestos</span></a>
             <a href="{% url 'login' %}?modo=comprador" data-ruta="/login/"><i class="bi bi-person" aria-hidden="true"></i><span>Ingresar</span></a>
