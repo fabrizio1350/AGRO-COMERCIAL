@@ -430,7 +430,9 @@ def actualizar_stock(request, producto_id):
                                        precio_unitario=producto.precio_actual())
             texto = f'Vendiste {cantidad} {producto.unidad_corta()} de {producto.nombre}.'
         elif accion == 'sumar':
-            Producto.objects.filter(pk=producto.pk).update(stock=F('stock') + cantidad, stock_actualizado=ahora)
+            # Si llego mas mercaderia, la publicacion sigue visible otros dias
+            Producto.objects.filter(pk=producto.pk).update(stock=F('stock') + cantidad, stock_actualizado=ahora,
+                                                           fecha_vencimiento=fecha_vencimiento_por_defecto())
             texto = f'Agregaste {cantidad} a {producto.nombre}.'
         else:
             if accion == 'agotado':
