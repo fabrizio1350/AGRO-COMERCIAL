@@ -23,7 +23,7 @@
         <div class="foto-detalle mb-3">
             <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" style="view-transition-name: foto-producto-{{ producto.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
             {% if producto.oferta_activa %}<span class="chip chip-descuento">-{{ producto.porcentaje_descuento }}%</span>{% endif %}
-            {% if rol_actual == 'COMPRADOR' %}{% include 'includes/boton_favorito.html' with prod=producto %}{% endif %}
+            {% if user.is_authenticated and producto.productor != user %}{% include 'includes/boton_favorito.html' with prod=producto %}{% endif %}
         </div>
         {% if extras %}
         <div class="miniaturas mb-3" data-galeria role="list" aria-label="Más fotos del producto">
@@ -58,7 +58,14 @@
 
             {% if producto.descripcion %}<p class="text-secondary mt-3 mb-3">{{ producto.descripcion|linebreaksbr }}</p>{% endif %}
 
-            {% if rol_actual == 'COMPRADOR' %}
+            {% if not user.is_authenticated %}
+                <a href="{% url 'login' %}?modo=comprador&next={{ request.path|urlencode }}" class="btn btn-success btn-lg w-100"><i class="bi bi-list-check me-1" aria-hidden="true"></i>Ingresa para armar tu lista</a>
+            {% elif producto.productor == user %}
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'editar_producto' producto.id %}" class="btn btn-success"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Editar producto</a>
+                    <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary">Actualizar stock en mi panel</a>
+                </div>
+            {% else %}
                 {% if producto.esta_publicado %}
                 <form method="post" action="{% url 'agregar_al_carrito' producto.id %}" class="agregar-lista" data-form-lista>
                     {% csrf_token %}
@@ -77,13 +84,6 @@
                     <p class="small text-muted mt-2 mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Tu lista te ayuda a planear la compra. Pagas en el puesto; agregar a la lista no aparta el producto.</p>
                 </form>
                 {% endif %}
-            {% elif not user.is_authenticated %}
-                <a href="{% url 'login' %}?modo=comprador&next={{ request.path|urlencode }}" class="btn btn-success btn-lg w-100"><i class="bi bi-list-check me-1" aria-hidden="true"></i>Ingresa para armar tu lista</a>
-            {% elif producto.productor == user %}
-                <div class="d-flex gap-2 flex-wrap">
-                    <a href="{% url 'editar_producto' producto.id %}" class="btn btn-success"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Editar producto</a>
-                    <a href="{% url 'panel_productor' %}" class="btn btn-outline-secondary">Actualizar stock en mi panel</a>
-                </div>
             {% endif %}
         </div>
 
