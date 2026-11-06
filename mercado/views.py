@@ -1316,7 +1316,7 @@ def login_vista(request):
                 siguiente, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
             ):
                 return redirect(siguiente)
-            if perfil.rol == 'PRODUCTOR':
+            if perfil.rol == 'PRODUCTOR' and modo_elegido != 'COMPRADOR':
                 return redirect('panel_productor')
             return redirect('ventas_por_oferta')
         elif login_bloqueado(username_real):
@@ -1482,7 +1482,8 @@ def login_google_callback(request):
     # Entro por "Tengo un puesto" con una cuenta de comprador: le ofrecemos pasarla a vendedor
     if rol_elegido == 'PRODUCTOR' and perfil.rol == 'COMPRADOR':
         return redirect('quiero_vender')
-    if perfil.rol == 'PRODUCTOR':
+    # Una cuenta que vende tambien compra: si entro por "Comprar", va a las ofertas
+    if perfil.rol == 'PRODUCTOR' and rol_elegido == 'PRODUCTOR':
         return redirect('panel_productor' if hasattr(usuario, 'puesto') else 'configurar_puesto')
     return redirect('ventas_por_oferta')
 
@@ -1773,14 +1774,14 @@ def pausar_producto(request, producto_id):
 @login_required
 @transaction.atomic
 def cambiar_estado_pedido(request, pedido_id):
-    perfil = obtener_o_crear_perfil(request.user)
     pedido = get_object_or_404(Pedido, id=pedido_id)
     if request.method == 'POST':
         nuevo_estado = request.POST.get('estado')
         estados_validos = dict(Pedido.ESTADOS).keys()
 
-        es_vendedor = perfil.rol == 'PRODUCTOR' and pedido.producto.productor == request.user
-        es_comprador = perfil.rol == 'COMPRADOR' and pedido.comprador == request.user
+        # Una misma cuenta puede vender en un pedido y comprar en otro
+        es_vendedor = pedido.producto.productor == request.user
+        es_comprador = pedido.comprador == request.user
         if (es_vendedor or es_comprador) and pedido.estado in ('PENDIENTE', 'CONFIRMADO') and nuevo_estado == 'CANCELADO':
             pedido.estado = 'CANCELADO'
             pedido.save(update_fields=['estado'])
@@ -1807,10 +1808,6 @@ def cambiar_estado_pedido(request, pedido_id):
 
 @login_required
 def mis_pedidos(request):
-    perfil = obtener_o_crear_perfil(request.user)
-    if perfil.rol != 'COMPRADOR':
-        return redirect('panel_productor')
-
     compras = Pedido.objects.filter(comprador=request.user).select_related('producto', 'producto__productor')
     total_gastado = sum(c.total for c in compras if c.estado != 'CANCELADO')
     return render(request, 'mis_pedidos.html', {
@@ -1878,9 +1875,11 @@ def guardar_fotos_extra(request, producto):
 
 @login_required
 def alternar_favorito(request, producto_id):
-    if request.method != 'POST' or obtener_o_crear_perfil(request.user).rol != 'COMPRADOR':
+    if request.method != 'POST':
         return redirect('detalle_producto', producto_id=producto_id)
     producto = get_object_or_404(Producto, id=producto_id)
+    if producto.productor_id == request.user.id:
+        return redirect('detalle_producto', producto_id=producto.id)
     favorito, creado = Favorito.objects.get_or_create(usuario=request.user, producto=producto)
     if not creado:
         favorito.delete()
@@ -1932,9 +1931,6 @@ def iniciar_chat(request, producto_id):
     if producto.productor == request.user:
         messages.info(request, "Este producto es tuyo: los compradores te escribirán desde aquí.")
         return redirect('mensajes')
-    if obtener_o_crear_perfil(request.user).rol != 'COMPRADOR':
-        messages.warning(request, "Solo las cuentas de comprador pueden escribir a los vendedores.")
-        return redirect('detalle_producto', producto_id=producto.id)
     conversacion, _ = Conversacion.objects.get_or_create(
         producto=producto, comprador=request.user, defaults={'vendedor': producto.productor}
     )
