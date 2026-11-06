@@ -22,6 +22,7 @@
 
         <section class="bloque-verificacion">
             <h2><span class="numero">1</span>Ubícalo en el mapa</h2>
+            <div id="zonaMapa">
             <div class="buscador-mapa mb-2">
                 <div id="buscadorLugar" class="flex-grow-1">
                     <label class="visually-hidden" for="textoLugar">Buscar mercado o dirección</label>
@@ -32,6 +33,15 @@
             <div id="mapaPuesto" class="mapa-puesto" data-proveedor="{% if maps_key %}google{% else %}osm{% endif %}" aria-label="Mapa: toca donde está tu puesto"></div>
             <p class="small text-muted mt-2 mb-0" id="estadoMapa"><i class="bi bi-hand-index me-1" aria-hidden="true"></i>Toca el mapa o arrastra el marcador hasta tu puesto.</p>
             <div class="alert alert-warning small mt-2 mb-0 d-none" id="avisoUbicacion" role="alert" tabindex="-1"></div>
+            </div>
+            <div class="resumen-ubicacion d-none" id="resumenUbicacion" aria-live="polite">
+                <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
+                <div class="flex-grow-1 min-w-0">
+                    <strong class="d-block">Ubicación lista. Ahora ponle un nombre abajo.</strong>
+                    <span class="small text-muted d-block text-truncate" data-resumen-texto></span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-cambiar-ubicacion><i class="bi bi-pencil me-1" aria-hidden="true"></i>Cambiar</button>
+            </div>
             {{ form.latitud }}{{ form.longitud }}
             {% if form.latitud.errors or form.longitud.errors %}<div class="text-danger small mt-1">Marca en el mapa dónde está tu puesto.</div>{% endif %}
         </section>
