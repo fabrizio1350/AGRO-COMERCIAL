@@ -9,7 +9,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, F, Q, Sum
+from django.db.models import Avg, Count, F, Q, Sum
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -20,8 +20,10 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 import uuid
 
 from .models import (
-    Categoria, ItemCarrito, PagoComision, Producto, Puesto, VentaPuesto, fecha_vencimiento_por_defecto,
+    Categoria, ItemCarrito, Notificacion, PagoComision, Producto, Puesto, ResenaProducto, VentaPuesto,
+    fecha_vencimiento_por_defecto,
 )
+from .forms import ResenaForm
 from .seguridad import renombrar_imagen, tipo_de_imagen
 from .views import asegurar_datos_iniciales, obtener_o_crear_perfil, ofertas_destacadas, con_precio_vigente
 
@@ -223,11 +225,47 @@ def ficha(request, producto_id):
                                               precio_unitario_acordado__isnull=True).first()
     mas_del_puesto = (Producto.objects.publicados().filter(productor=producto.productor)
                       .exclude(pk=producto.pk).select_related('categoria', 'productor__puesto', 'productor__perfil')[:4])
+    resenas = ResenaProducto.objects.filter(producto=producto).select_related('autor__perfil')
+    mi_resena = resenas.filter(autor=request.user).first() if request.user.is_authenticated else None
+    promedio = resenas.aggregate(p=Avg('calificacion'))['p']
     return render(request, 'detalle_producto.html', {
         'producto': producto, 'puesto': getattr(producto.productor, 'puesto', None),
         'en_lista': en_lista, 'mas_del_puesto': mas_del_puesto,
         'extras': producto.fotos.all(),
+        'resenas': resenas[:20],
+        'total_resenas': resenas.count(),
+        'promedio_resenas': promedio,
+        'estrellas_promedio': round(promedio or 0),
+        'mi_resena': mi_resena,
+        'resena_form': ResenaForm(instance=mi_resena),
     })
+
+
+@login_required
+@require_POST
+def opinar(request, producto_id):
+    """Guarda la calificacion de un producto. Cada persona tiene una sola opinion por producto y la puede cambiar."""
+    producto = get_object_or_404(Producto, pk=producto_id)
+    destino = f"{reverse('detalle_producto', args=[producto.pk])}#opiniones"
+    if producto.productor_id == request.user.id:
+        messages.info(request, 'No puedes calificar tus propios productos.')
+        return redirect(destino)
+    anterior = ResenaProducto.objects.filter(producto=producto, autor=request.user).first()
+    form = ResenaForm(request.POST, instance=anterior)
+    if not form.is_valid() or not 1 <= form.cleaned_data['calificacion'] <= 5:
+        messages.warning(request, 'Elige de 1 a 5 estrellas y escribe un comentario corto.')
+        return redirect(destino)
+    resena = form.save(commit=False)
+    resena.producto = producto
+    resena.autor = request.user
+    resena.comentario = resena.comentario.strip()[:1000]
+    resena.save()
+    if anterior is None:
+        Notificacion.avisar(producto.productor,
+                            f'{request.user.first_name or request.user.username} calificó {producto.nombre} con {resena.calificacion} estrella{"s" if resena.calificacion != 1 else ""}.',
+                            destino, 'bi-star')
+    messages.success(request, '¡Gracias! Tu opinión ya se ve en el producto.' if anterior is None else 'Actualizaste tu opinión.')
+    return redirect(destino)
 
 
 def puestos(request):
@@ -359,15 +397,20 @@ def configurar_puesto(request):
     })
 
 
+def resumen_de_hoy(usuario):
+    """Ventas que el vendedor marco hoy (hora de Lima) y cuanto suman."""
+    ventas = VentaPuesto.objects.filter(vendedor=usuario, fecha__date=timezone.localdate())
+    monto = ventas.aggregate(monto=Sum(F('cantidad') * F('precio_unitario')))['monto'] or Decimal('0')
+    return ventas, Decimal(monto).quantize(Decimal('0.01'))
+
+
 @login_required
 def panel(request):
     if not es_vendedor(request.user):
         return redirect('carrito')
     puesto = Puesto.objects.filter(vendedor=request.user).first()
     productos = list(Producto.objects.filter(productor=request.user).select_related('categoria', 'productor__puesto', 'productor__perfil').order_by('-disponible', 'nombre'))
-    hoy = timezone.localdate()
-    ventas_hoy = VentaPuesto.objects.filter(vendedor=request.user, fecha__date=hoy)
-    resumen = ventas_hoy.aggregate(unidades=Sum('cantidad'), monto=Sum(F('cantidad') * F('precio_unitario')))
+    ventas_hoy, vendido_hoy = resumen_de_hoy(request.user)
     interesados = (ItemCarrito.objects.filter(producto__productor=request.user, precio_unitario_acordado__isnull=True)
                    .values('producto_id').annotate(total=Count('id')))
     por_producto = {fila['producto_id']: fila['total'] for fila in interesados}
@@ -378,8 +421,8 @@ def panel(request):
         'productos': productos,
         'total_publicados': sum(1 for p in productos if p.esta_publicado()),
         'total_agotados': sum(1 for p in productos if p.stock == 0),
-        'ventas_hoy': ventas_hoy.select_related('producto')[:8],
-        'vendido_hoy': resumen['monto'] or Decimal('0'),
+        'ventas_hoy': ventas_hoy.select_related('producto')[:20],
+        'vendido_hoy': vendido_hoy,
         'unidades_hoy': ventas_hoy.count(),
         'total_interesados': sum(por_producto.values()),
         'tarifa_oferta': Decimal(str(settings.TARIFA_OFERTA)),
@@ -470,12 +513,13 @@ def actualizar_stock(request, producto_id):
     accion: vendi (resta y registra la venta), sumar, fijar, agotado."""
     rapido = request.headers.get('X-Stock-Rapido') == '1'
 
-    def responder(ok, texto, producto=None, estado=200):
+    def responder(ok, texto, producto=None, estado=200, extra=None):
         if rapido:
             datos = {'ok': ok, 'mensaje': texto}
             if producto is not None:
                 producto.refresh_from_db()
                 datos.update(datos_stock(producto))
+            datos.update(extra or {})
             return JsonResponse(datos, status=estado)
         (messages.success if ok else messages.warning)(request, texto)
         return redirect('panel_productor')
@@ -499,9 +543,13 @@ def actualizar_stock(request, producto_id):
                 stock=F('stock') - cantidad, stock_actualizado=ahora)
             if not vendidos:
                 return responder(False, f'No te quedan {cantidad} {producto.nombre_unidad_stock()}.', producto, 409)
-            VentaPuesto.objects.create(producto=producto, vendedor=request.user, cantidad=cantidad,
-                                       precio_unitario=producto.precio_actual())
-            texto = f'Vendiste {cantidad} {producto.unidad_corta()} de {producto.nombre}.'
+            venta = VentaPuesto.objects.create(producto=producto, vendedor=request.user, cantidad=cantidad,
+                                               precio_unitario=producto.precio_actual())
+            ventas_hoy, vendido_hoy = resumen_de_hoy(request.user)
+            # El panel usa estos totales tal cual; antes los sumaba en el navegador y se inflaban
+            extra = {'venta_id': venta.pk, 'vendido_hoy': str(vendido_hoy), 'ventas_hoy': ventas_hoy.count(),
+                     'total_venta': str(Decimal(venta.total()).quantize(Decimal('0.01')))}
+            return responder(True, f'Vendiste {cantidad} {producto.unidad_corta()} de {producto.nombre}.', producto, extra=extra)
         elif accion == 'sumar':
             # Si llego mas mercaderia, la publicacion sigue visible otros dias
             Producto.objects.filter(pk=producto.pk).update(stock=F('stock') + cantidad, stock_actualizado=ahora,
@@ -521,3 +569,20 @@ def actualizar_stock(request, producto_id):
                 return responder(False, 'El stock cambió en otra pantalla. Revisa el valor actual antes de guardarlo.', producto, 409)
             texto = f'{producto.nombre}: marcado como agotado.' if cantidad == 0 else f'{producto.nombre}: quedan {cantidad}.'
     return responder(True, texto, producto)
+
+
+@login_required
+@require_POST
+def quitar_venta(request, venta_id):
+    """Borra una venta de hoy marcada por error y devuelve las unidades al stock."""
+    venta = get_object_or_404(VentaPuesto.objects.select_related('producto'), pk=venta_id, vendedor=request.user)
+    destino = f"{reverse('panel_productor')}#tituloVentas"
+    if timezone.localtime(venta.fecha).date() != timezone.localdate():
+        messages.warning(request, 'Solo puedes quitar las ventas de hoy.')
+        return redirect(destino)
+    with transaction.atomic():
+        Producto.objects.filter(pk=venta.producto_id).update(stock=F('stock') + venta.cantidad, stock_actualizado=timezone.now())
+        venta.delete()
+    messages.info(request, f'Quitaste la venta de {venta.cantidad} {venta.producto.unidad_corta()} de {venta.producto.nombre}. '
+                           'Esas unidades volvieron a tu stock.')
+    return redirect(destino)
