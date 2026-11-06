@@ -304,57 +304,67 @@ TAMANO_MAXIMO_DOCUMENTO = 5 * 1024 * 1024
 
 
 class VerificacionVendedorForm(forms.ModelForm):
-    """Un solo formulario corto: quien eres, dos fotos y el padron. Lo revisa una persona."""
-    distrito = forms.ChoiceField(label="Distrito donde produces", choices=OPCIONES_LUGARES,
-                                 widget=forms.Select(attrs={'class': 'form-select'}))
+    """Formulario corto para comprobar que la persona atiende un puesto: DNI, foto en el puesto y,
+    si la tiene, una constancia del mercado. Lo revisa una persona del equipo."""
 
     class Meta:
         model = VerificacionVendedor
         fields = [
-            'tipo', 'dni', 'ruc', 'nombre_organizacion', 'celular', 'distrito',
-            'foto_documento', 'foto_chacra', 'documento_organizacion',
-            'inscrito_padron', 'certificado_organico', 'certificadora', 'acepta_tratamiento_datos',
+            'dni', 'celular', 'ruc', 'nombre_organizacion',
+            'foto_documento', 'foto_en_puesto', 'constancia_puesto',
+            'declara_puesto', 'acepta_tratamiento_datos',
         ]
         labels = {
-            'tipo': '¿Cómo vendes?',
             'dni': 'Tu DNI',
-            'ruc': 'RUC de la organización',
-            'nombre_organizacion': 'Nombre de la asociación, cooperativa o empresa',
             'celular': 'Celular',
+            'ruc': 'RUC (opcional)',
+            'nombre_organizacion': 'Nombre comercial (opcional)',
             'foto_documento': 'Foto de tu DNI (lado de la foto)',
-            'foto_chacra': 'Foto tuya en tu chacra o con tu producto',
-            'documento_organizacion': 'Partida de SUNARP o constancia de la directiva',
-            'inscrito_padron': 'Estoy inscrito en el Padrón de Productores Agrarios del MIDAGRI',
-            'certificado_organico': 'Certificado orgánico (solo si vendes productos orgánicos)',
-            'certificadora': 'Entidad que te certificó',
-            'acepta_tratamiento_datos': 'Autorizo a AgroComercial a usar estos datos solo para verificar mi cuenta',
+            'foto_en_puesto': 'Foto tuya en tu puesto',
+            'constancia_puesto': 'Constancia de tu puesto (opcional)',
+            'declara_puesto': 'Declaro que atiendo el puesto que marqué en el mapa',
+            'acepta_tratamiento_datos': 'Autorizo a AgroComercial a usar estos datos solo para verificar mi puesto',
         }
         widgets = {
-            'tipo': forms.RadioSelect(attrs={'class': 'form-check-input'}),
             'dni': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'maxlength': '8', 'placeholder': '8 dígitos', 'autocomplete': 'off'}),
-            'ruc': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'maxlength': '11', 'placeholder': '11 dígitos', 'autocomplete': 'off'}),
-            'nombre_organizacion': forms.TextInput(attrs={'class': 'form-control'}),
             'celular': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'tel', 'maxlength': '9', 'placeholder': '9 dígitos, ej. 987654321', 'autocomplete': 'tel'}),
+            'ruc': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'maxlength': '11', 'placeholder': 'Solo si tienes RUC o RUS', 'autocomplete': 'off'}),
+            'nombre_organizacion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Frutería Doña Rosa'}),
             'foto_documento': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*,.pdf'}),
-            'foto_chacra': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
-            'documento_organizacion': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*,.pdf'}),
-            'inscrito_padron': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'certificado_organico': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*,.pdf'}),
-            'certificadora': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Control Union, BioLatina, SGP de tu zona'}),
+            'foto_en_puesto': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'constancia_puesto': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*,.pdf'}),
+            'declara_puesto': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'acepta_tratamiento_datos': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+    def __init__(self, *args, puesto=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if puesto:
+            numero = f" {puesto.titulo_puesto()}" if puesto.numero else ''
+            self.fields['declara_puesto'].label = f"Declaro que atiendo{numero} en {puesto.nombre}, como lo marqué en el mapa"
+
     def clean_dni(self):
-        return (self.cleaned_data.get('dni') or '').strip()
+        dni = (self.cleaned_data.get('dni') or '').strip()
+        if len(dni) != 8 or not dni.isdigit():
+            raise forms.ValidationError("El DNI tiene 8 dígitos.")
+        return dni
 
     def clean_ruc(self):
-        return (self.cleaned_data.get('ruc') or '').strip()
+        ruc = (self.cleaned_data.get('ruc') or '').strip()
+        if ruc and not ruc_valido(ruc):
+            raise forms.ValidationError("Ese RUC no es válido. Revisa los 11 dígitos o déjalo vacío.")
+        return ruc
 
     def clean_celular(self):
         celular = (self.cleaned_data.get('celular') or '').replace(' ', '')
         if len(celular) != 9 or not celular.isdigit() or not celular.startswith('9'):
             raise forms.ValidationError("Escribe un celular peruano de 9 dígitos que empiece con 9.")
         return celular
+
+    def clean_declara_puesto(self):
+        if not self.cleaned_data.get('declara_puesto'):
+            raise forms.ValidationError("Marca esta casilla para confirmar que atiendes ese puesto.")
+        return True
 
     def clean_acepta_tratamiento_datos(self):
         if not self.cleaned_data.get('acepta_tratamiento_datos'):
@@ -363,24 +373,7 @@ class VerificacionVendedorForm(forms.ModelForm):
 
     def clean(self):
         datos = super().clean()
-        tipo = datos.get('tipo')
-        dni = datos.get('dni', '')
-        ruc = datos.get('ruc', '')
-        if tipo == 'PERSONA':
-            if len(dni) != 8 or not dni.isdigit():
-                self.add_error('dni', "El DNI tiene 8 dígitos.")
-            if not datos.get('inscrito_padron'):
-                self.add_error('inscrito_padron', "Para vender como productor individual debes estar en el Padrón de Productores Agrarios. Puedes inscribirte gratis en tu agencia agraria.")
-        if tipo == 'ORGANIZACION':
-            if not ruc_valido(ruc):
-                self.add_error('ruc', "Ese RUC no es válido. Revisa los 11 dígitos.")
-            if not datos.get('nombre_organizacion'):
-                self.add_error('nombre_organizacion', "Escribe el nombre de la organización.")
-            if not datos.get('documento_organizacion') and not (self.instance and self.instance.documento_organizacion):
-                self.add_error('documento_organizacion', "Sube la partida de SUNARP o la constancia de la directiva.")
-        if datos.get('certificado_organico') and not datos.get('certificadora'):
-            self.add_error('certificadora', "Indica qué entidad emitió tu certificado orgánico.")
-        for campo in ('foto_documento', 'foto_chacra', 'documento_organizacion', 'certificado_organico'):
+        for campo in ('foto_documento', 'foto_en_puesto', 'constancia_puesto'):
             archivo = datos.get(campo)
             if archivo and hasattr(archivo, 'size') and archivo.size > TAMANO_MAXIMO_DOCUMENTO:
                 self.add_error(campo, "El archivo pesa más de 5 MB. Toma la foto de nuevo o usa una más liviana.")
