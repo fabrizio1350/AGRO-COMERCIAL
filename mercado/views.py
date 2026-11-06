@@ -1306,16 +1306,11 @@ def login_vista(request):
             if perfil.es_demo and not settings.DATOS_DEMO_AUTOMATICOS:
                 messages.error(request, "Las cuentas de demostración solo están disponibles en el entorno de prueba.")
                 return redirect('login')
-            if modo_elegido in ['PRODUCTOR', 'COMPRADOR'] and perfil.rol != modo_elegido:
-                rol_nombre = "Vendedor" if modo_elegido == 'PRODUCTOR' else "Comprador"
-                messages.error(request, f"La cuenta '{identificador}' no pertenece al perfil de {rol_nombre}. Usa la pestaña correspondiente.")
-                return render(request, 'login.html', {
-                    'modo_acceso': 'vendedor' if modo_elegido == 'PRODUCTOR' else 'comprador',
-                    'google_client_id': getattr(settings, 'GOOGLE_CLIENT_ID', ''),
-                })
-
             login(request, usuario)
             messages.success(request, f"Sesión iniciada con {usuario.email or usuario.username} ({perfil.get_rol_display()}).")
+            # Entro por "Tengo un puesto" con una cuenta de comprador: le ofrecemos pasarla a vendedor
+            if modo_elegido == 'PRODUCTOR' and perfil.rol == 'COMPRADOR':
+                return redirect('quiero_vender')
             siguiente = request.POST.get('next') or request.GET.get('next', '')
             if siguiente and url_has_allowed_host_and_scheme(
                 siguiente, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
@@ -1481,13 +1476,12 @@ def login_google_callback(request):
     if not usuario.is_active:
         messages.error(request, "La cuenta no está activa.")
         return redirect('login')
-    if perfil.rol != rol_elegido:
-        tipo = 'vendedor' if perfil.rol == 'PRODUCTOR' else 'comprador'
-        messages.error(request, f"Ingresa por la pestaña de {tipo}.")
-        return redirect(f"{reverse('login')}?modo={tipo}")
     login(request, usuario)
     messages.success(request, f"¡Bienvenido(a), {usuario.first_name}! Ingresaste con tu cuenta oficial de Google ({usuario.email}).")
     perfil = obtener_o_crear_perfil(usuario)
+    # Entro por "Tengo un puesto" con una cuenta de comprador: le ofrecemos pasarla a vendedor
+    if rol_elegido == 'PRODUCTOR' and perfil.rol == 'COMPRADOR':
+        return redirect('quiero_vender')
     if perfil.rol == 'PRODUCTOR':
         return redirect('panel_productor' if hasattr(usuario, 'puesto') else 'configurar_puesto')
     return redirect('ventas_por_oferta')
