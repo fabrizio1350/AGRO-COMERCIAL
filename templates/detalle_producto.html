@@ -94,6 +94,7 @@
                 <div class="min-w-0">
                     <span class="antetitulo mb-0"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Dónde comprar</span>
                     <h2 class="h5 fw-bold mb-0" id="tituloDonde">{{ puesto.nombre }}</h2>
+                    {% if producto.productor.perfil.vendedor_verificado %}<span class="insignia-verificado" title="AgroComercial comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span>{% endif %}
                     <div class="text-muted small">{{ puesto.titulo_puesto }}{% if puesto.referencia %} · {{ puesto.referencia }}{% endif %}</div>
                     {% if puesto.horario %}<div class="small"><i class="bi bi-clock me-1" aria-hidden="true"></i>{{ puesto.horario }}</div>{% endif %}
                 </div>
