@@ -31,7 +31,7 @@ class RegistroUsuarioForm(UserCreationForm):
     )
     rol = forms.ChoiceField(
         label="¿Qué quieres hacer?",
-        choices=[('COMPRADOR', 'Comprar en los puestos'), ('PRODUCTOR', 'Vender: tengo un puesto')],
+        choices=[('COMPRADOR', 'Solo comprar en los puestos'), ('PRODUCTOR', 'Vender en mi puesto y también comprar')],
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     ruc_dni = forms.CharField(
