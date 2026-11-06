@@ -16,7 +16,7 @@ El stock se refresca solo (static/js/stock-vivo.js) si un contenedor padre tiene
         </span>
     </div>
     <div class="cuerpo">
-        <div class="meta text-truncate"><i class="bi bi-shop me-1" aria-hidden="true"></i>{{ prod.productor.puesto.nombre|default:"Mercado local" }}{% if prod.productor.puesto.numero %} · Puesto {{ prod.productor.puesto.numero }}{% endif %}</div>
+        <div class="meta text-truncate"><i class="bi bi-shop me-1" aria-hidden="true"></i>{% with lugar=prod.lugar %}{{ lugar.nombre|default:"Mercado local" }}{% if lugar.numero %} · Puesto {{ lugar.numero }}{% endif %}{% endwith %}</div>
         {% if prod.productor.perfil.vendedor_verificado %}<div class="mb-1"><span class="insignia-verificado chica" title="AgroComercial comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span></div>{% endif %}
         <h3><a href="{% url 'detalle_producto' prod.id %}">{{ prod.nombre }}</a></h3>
         {% with pagos=prod.productor.puesto.iconos_pago %}
