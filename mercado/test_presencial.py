@@ -88,7 +88,8 @@ class MercadoPresencialTests(TestCase):
         self.assertFalse(publicado.en_oferta)
         self.assertFalse(publicado.oferta_pendiente_pago)
         self.client.force_login(self.comprador)
-        self.assertEqual(self.client.post(reverse('editar_producto', args=[publicado.pk]), {}).status_code, 404)
+        # Un comprador no puede editar: se le ofrece pasar su cuenta a vendedor
+        self.assertRedirects(self.client.post(reverse('editar_producto', args=[publicado.pk]), {}), reverse('quiero_vender'))
 
 
 class PanelYListaTests(TestCase):
