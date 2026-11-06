@@ -32,7 +32,8 @@ El stock se refresca solo (static/js/stock-vivo.js) si un contenedor padre tiene
                 {% endif %}
                 <span class="small text-muted">/ {{ prod.unidad_corta }}</span>
             </div>
-            {% if rol_actual == 'PRODUCTOR' %}
+            {% if user.is_authenticated and prod.productor_id == user.id %}
+                {# Es un producto de su propio puesto: solo lo ve #}
                 <a href="{% url 'detalle_producto' prod.id %}" class="boton-circular" aria-label="Ver {{ prod.nombre }}"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
             {% else %}
                 {# Lleva a la ficha, donde el comprador elige cuánto quiere antes de guardarlo #}
