@@ -17,6 +17,7 @@ from .models import (
     Mensaje,
     Notificacion,
     VerificacionVendedor,
+    CuentaSinPagoOferta,
 )
 
 
@@ -185,3 +186,16 @@ class VerificacionVendedorAdmin(admin.ModelAdmin):
             Notificacion.avisar(verificacion.usuario, f"Tu verificación necesita una corrección: {verificacion.motivo_rechazo}",
                                 reverse('verificacion_vendedor'), 'bi-exclamation-circle')
         self.message_user(request, f"{queryset.count()} verificación(es) devueltas para corregir.", messages.INFO)
+
+
+@admin.register(CuentaSinPagoOferta)
+class CuentaSinPagoOfertaAdmin(admin.ModelAdmin):
+    """Correos que publican ofertas sin pagar. Agrega aqui las cuentas que les pasen."""
+    list_display = ('correo', 'cuenta', 'nota', 'agregado')
+    search_fields = ('correo', 'nota')
+
+    @admin.display(description='Cuenta que usa ese correo')
+    def cuenta(self, obj):
+        from django.contrib.auth.models import User
+        usuario = User.objects.filter(email__iexact=obj.correo).first()
+        return usuario.username if usuario else 'Aún nadie se registró con ese correo'
