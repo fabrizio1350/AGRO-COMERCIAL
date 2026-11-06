@@ -46,6 +46,9 @@ VERIFICACION_OBLIGATORIA = os.environ.get('VERIFICACION_OBLIGATORIA', '').lower(
 # Si el servidor (nginx) no entrega /static y /media, Django los sirve con SERVIR_ARCHIVOS=True
 SERVIR_ARCHIVOS = DEBUG or os.environ.get('SERVIR_ARCHIVOS', '').lower() == 'true'
 
+# Los mapas de OpenStreetMap exigen saber desde que web se piden; solo se envia el dominio, nunca la pagina
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
 # Permite que la ventana emergente de Google Sign-In se comunique con la pagina
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
