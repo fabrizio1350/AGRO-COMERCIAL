@@ -5,6 +5,7 @@ from decimal import Decimal
 from django import forms
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -311,9 +312,31 @@ def quitar_de_lista(request, item_id):
 
 @login_required
 @require_http_methods(['GET', 'POST'])
+def quiero_vender(request):
+    """Un comprador quiere vender: explica las opciones y, si confirma, pasa su cuenta a vendedor."""
+    perfil = obtener_o_crear_perfil(request.user)
+    if perfil.rol == 'PRODUCTOR':
+        return redirect('panel_productor' if Puesto.objects.filter(vendedor=request.user).exists() else 'configurar_puesto')
+    if request.method == 'POST':
+        if request.POST.get('accion') == 'convertir' and request.POST.get('confirmo') == '1':
+            with transaction.atomic():
+                ItemCarrito.objects.filter(comprador=request.user).delete()
+                perfil.rol = 'PRODUCTOR'
+                perfil.save(update_fields=['rol'])
+            messages.success(request, 'Tu cuenta ahora es de vendedor. Marca en el mapa dónde está tu puesto.')
+            return redirect('configurar_puesto')
+        if request.POST.get('accion') == 'otra_cuenta':
+            logout(request)
+            return redirect(f"{reverse('registro')}?rol=PRODUCTOR")
+        messages.warning(request, 'Marca la casilla para confirmar el cambio.')
+    return render(request, 'quiero_vender.html', {'total_lista': total_lista(request.user)})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
 def configurar_puesto(request):
     if not es_vendedor(request.user):
-        raise Http404()
+        return redirect('quiero_vender')
     puesto = Puesto.objects.filter(vendedor=request.user).first() or Puesto(vendedor=request.user)
     nuevo = puesto.pk is None
     form = PuestoForm(request.POST if request.method == 'POST' else None, request.FILES or None, instance=puesto)
@@ -362,7 +385,7 @@ def panel(request):
 @require_http_methods(['GET', 'POST'])
 def publicar(request, producto_id=None):
     if not es_vendedor(request.user):
-        raise Http404()
+        return redirect('quiero_vender')
     puesto = Puesto.objects.filter(vendedor=request.user).first()
     if not puesto:
         messages.info(request, 'Primero marca en el mapa dónde está tu puesto.')
