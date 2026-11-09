@@ -105,9 +105,9 @@ class PublicacionForm(forms.ModelForm):
 
     class Meta:
         model = Producto
-        fields = ('nombre', 'categoria', 'descripcion', 'imagen', 'unidad', 'stock', 'precio',
+        fields = ('nombre', 'categoria', 'descripcion', 'imagen', 'unidad', 'stock', 'fecha_cosecha', 'precio',
                   'precio_oferta', 'disponible')
-        labels = {'nombre': '¿Qué vendes?', 'imagen': 'Foto del producto', 'precio': 'Precio normal (S/)',
+        labels = {'fecha_cosecha': '¿Cuándo llegó a tu puesto?','nombre': '¿Qué vendes?', 'imagen': 'Foto del producto', 'precio': 'Precio normal (S/)',
                   'precio_oferta': 'Precio de oferta (S/)', 'disponible': 'Mostrar en la web',
                   'stock': 'Cantidad que tienes', 'unidad': 'Se vende por', 'descripcion': 'Descripción corta'}
         widgets = {
@@ -117,6 +117,7 @@ class PublicacionForm(forms.ModelForm):
             'imagen': forms.FileInput(attrs={'accept': 'image/jpeg,image/png,image/webp', 'class': 'd-none'}),
             'unidad': forms.Select(attrs={'class': 'form-select'}),
             'stock': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'inputmode': 'numeric'}),
+            'fecha_cosecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
             'precio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'inputmode': 'decimal'}),
             'precio_oferta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'inputmode': 'decimal', 'placeholder': 'Opcional'}),
             'disponible': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
@@ -127,11 +128,15 @@ class PublicacionForm(forms.ModelForm):
         self.fields['categoria'].empty_label = 'Elige una categoría'
         self.fields['categoria'].queryset = Categoria.objects.order_by('nombre')
         self.fields['descripcion'].required = False
+        # Con esta fecha se pinta la frescura (verde, amarillo o gris) en la tarjeta
+        self.fields['fecha_cosecha'].required = False
+        self.fields['fecha_cosecha'].widget.attrs['max'] = timezone.localdate().isoformat()
         actual = self.instance.unidad if self.instance and self.instance.pk else None
         self.fields['unidad'].choices = [c for c in Producto.UNIDADES if c[0] in UNIDADES_MERCADO or c[0] == actual]
         if not self.instance.pk:
             self.initial.setdefault('unidad', 'KG')
             self.initial.setdefault('disponible', True)
+            self.initial.setdefault('fecha_cosecha', timezone.localdate())
         # Solo puede elegir sus propias ubicaciones
         self.ubicaciones = list(UbicacionVendedor.objects.filter(vendedor=vendedor)) if vendedor else []
         puesto = getattr(vendedor, 'puesto', None) if vendedor else None
@@ -157,6 +162,12 @@ class PublicacionForm(forms.ModelForm):
 
     def clean_imagen(self):
         return validar_foto(self.cleaned_data['imagen'])
+
+    def clean_fecha_cosecha(self):
+        fecha = self.cleaned_data.get('fecha_cosecha') or timezone.localdate()
+        if fecha > timezone.localdate():
+            raise forms.ValidationError('La fecha de llegada no puede ser en el futuro.')
+        return fecha
 
     def clean(self):
         datos = super().clean()
@@ -212,14 +223,15 @@ def inicio(request):
         'mejor_oferta': ofertas[0] if ofertas else None,
         'puestos_destacados': puestos[:6],
         'total_productos': publicados.count(),
-        'total_ofertas': Producto.objects.ofertas_activas().count(),
+        'total_ofertas': Producto.objects.ofertas_premium().count(),
         'total_puestos': puestos.count(),
     })
 
 
 def catalogo(request, ofertas=False):
     asegurar_datos_iniciales()
-    base = Producto.objects.ofertas_activas() if ofertas else Producto.objects.publicados()
+    # La pagina Ofertas solo muestra las premium; las normales se ven en Productos con su etiqueta
+    base = Producto.objects.ofertas_premium() if ofertas else Producto.objects.publicados()
     productos = con_precio_vigente(base.select_related('categoria', 'productor__puesto', 'productor__perfil', 'ubicacion'))
     busqueda = request.GET.get('q', '').strip()[:100]
     categoria_id = request.GET.get('categoria', '').strip()
@@ -520,10 +532,14 @@ def publicar(request, producto_id=None):
         stock_antes = antes.get('stock')
         producto = form.save(commit=False)
         producto.en_oferta = producto.precio_oferta is not None
-        if not producto.en_oferta or oferta_gratis:
+        if not producto.en_oferta:
             producto.oferta_pendiente_pago = False
+            producto.tipo_oferta = 'NORMAL'
+        elif oferta_gratis:
+            producto.oferta_pendiente_pago = False
+            producto.tipo_oferta = 'PREMIUM'
         elif not antes.get('en_oferta'):
-            # Oferta nueva: sale como oferta cuando el vendedor paga la publicidad
+            # Oferta nueva: sale como oferta cuando el vendedor paga la publicidad (normal o premium)
             producto.oferta_pendiente_pago = True
         producto.oferta_inicio = producto.oferta_fin = None
         producto.acepta_ofertas = False
@@ -560,33 +576,54 @@ def pagar_oferta(request, producto_id):
     if not es_vendedor(request.user):
         raise Http404()
     producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
-    if not (producto.en_oferta and producto.oferta_pendiente_pago):
+    # Dos casos: oferta nueva sin pagar (elige normal o premium) u oferta normal que pasa a premium
+    mejora = producto.puede_pasar_a_premium()
+    if not (producto.en_oferta and producto.oferta_pendiente_pago) and not mejora:
         messages.info(request, f'La oferta de {producto.nombre} no tiene pagos pendientes.')
         return redirect('panel_productor')
     if CuentaSinPagoOferta.incluye(request.user):
-        Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False)
+        Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False, tipo_oferta='PREMIUM')
         messages.success(request, f'{producto.nombre} ya sale en Ofertas. Tu cuenta no paga la publicidad.')
         return redirect('panel_productor')
-    monto = producto.monto_comision_oferta()
+    planes = [
+        {'tipo': 'NORMAL', 'nombre': 'Oferta normal', 'monto': Producto.tarifa_oferta('NORMAL'),
+         'detalle': 'Tu producto lleva la etiqueta "Oferta" en el listado de productos.'},
+        {'tipo': 'PREMIUM', 'nombre': 'Oferta premium', 'monto': Producto.tarifa_oferta('PREMIUM'),
+         'detalle': 'Además sale en el carrusel, en la página Ofertas y en el inicio.'},
+    ]
+    if mejora:
+        planes = [dict(planes[1], nombre='Pasar a premium', monto=producto.diferencia_premium(),
+                       detalle='Pagas solo la diferencia y tu oferta sale también en el carrusel, en Ofertas y en el inicio.')]
+    tipo = request.POST.get('tipo_oferta') or request.GET.get('tipo') or 'PREMIUM'
+    plan = next((p for p in planes if p['tipo'] == tipo), planes[-1])
     error = ''
     if request.method == 'POST':
         metodo = request.POST.get('metodo_pago', '')
         if metodo not in dict(PagoComision.METODOS):
             error = 'Elige si pagas con tarjeta o con QR.'
+        elif not any(p['tipo'] == request.POST.get('tipo_oferta') for p in planes):
+            error = 'Elige si tu oferta es normal o premium.'
         else:
             with transaction.atomic():
                 # El filtro evita registrar dos pagos si se presiona dos veces
-                if Producto.objects.filter(pk=producto.pk, oferta_pendiente_pago=True).update(oferta_pendiente_pago=False):
+                if mejora:
+                    filtro = Producto.objects.filter(pk=producto.pk, oferta_pendiente_pago=False, tipo_oferta='NORMAL')
+                else:
+                    filtro = Producto.objects.filter(pk=producto.pk, oferta_pendiente_pago=True)
+                if filtro.update(oferta_pendiente_pago=False, tipo_oferta=plan['tipo']):
                     pago = PagoComision.objects.create(
-                        producto=producto, productor=request.user, porcentaje=Decimal('0'), monto=monto,
-                        metodo_pago=metodo, codigo_transaccion=f'OF-{uuid.uuid4().hex[:10].upper()}',
+                        producto=producto, productor=request.user, porcentaje=Decimal('0'), monto=plan['monto'],
+                        tipo_oferta=plan['tipo'], metodo_pago=metodo,
+                        codigo_transaccion=f'OF-{uuid.uuid4().hex[:10].upper()}',
                     )
+                    donde = ('ya sale en el carrusel y en Ofertas' if plan['tipo'] == 'PREMIUM'
+                             else 'ya sale con la etiqueta Oferta en Productos')
                     messages.success(request, f'Pago demo de S/ {pago.monto} recibido (código {pago.codigo_transaccion}). '
-                                              f'{producto.nombre} ya sale en Ofertas.')
+                                              f'{producto.nombre} {donde}.')
             return redirect('panel_productor')
     return render(request, 'pagar_oferta.html', {
-        'producto': producto, 'monto': monto, 'error': error,
-        'metodo': request.POST.get('metodo_pago', 'TARJETA'),
+        'producto': producto, 'planes': planes, 'plan': plan, 'monto': plan['monto'], 'mejora': mejora,
+        'error': error, 'metodo': request.POST.get('metodo_pago', 'TARJETA'),
     })
 
 
@@ -636,7 +673,9 @@ def actualizar_stock(request, producto_id):
             return responder(True, f'Vendiste {cantidad} {producto.unidad_corta()} de {producto.nombre}.', producto, extra=extra)
         elif accion == 'sumar':
             # Si llego mas mercaderia, la publicacion sigue visible otros dias
+            # y vuelve a contar como fresco (llego hoy)
             Producto.objects.filter(pk=producto.pk).update(stock=F('stock') + cantidad, stock_actualizado=ahora,
+                                                           fecha_cosecha=timezone.localdate(),
                                                            fecha_vencimiento=fecha_vencimiento_por_defecto())
             texto = f'Agregaste {cantidad} a {producto.nombre}.'
         else:
