@@ -52,6 +52,15 @@
                     {{ form.stock }}
                     {% if form.stock.errors %}<div class="text-danger small mt-1">{{ form.stock.errors|striptags }}</div>{% endif %}
                 </div>
+                <div class="col-12 col-md-5">
+                    <label class="form-label small fw-semibold" for="{{ form.fecha_cosecha.id_for_label }}">{{ form.fecha_cosecha.label }}</label>
+                    {{ form.fecha_cosecha }}
+                    {% if form.fecha_cosecha.errors %}<div class="text-danger small mt-1">{{ form.fecha_cosecha.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-12 col-md-7"><p class="small text-muted mb-1">Con esta fecha el comprador ve qué tan fresco está:
+                    <span class="chip-frescura en-linea fresco">Fresco</span> hasta 2 días,
+                    <span class="chip-frescura en-linea normal">Normal</span> de 3 a 6 y
+                    <span class="chip-frescura en-linea antiguo">Con más días</span> desde 7. Al tocar <strong>Llegó</strong> en tu panel vuelve a fresco.</p></div>
             </div>
         </section>
 
@@ -63,8 +72,8 @@
                     {{ form.precio_oferta }}
                     {% if form.precio_oferta.errors %}<div class="text-danger small mt-1">{{ form.precio_oferta.errors|striptags }}</div>{% endif %}
                 </div>
-                <div class="col-md-7"><p class="small text-muted mb-1">Pon un precio menor al normal y tu producto sale en <strong>Ofertas</strong> mientras te quede stock.
-                    {% if oferta_gratis %}Tu cuenta publica ofertas sin pagar la publicidad.{% elif producto.pk and producto.en_oferta and not producto.oferta_pendiente_pago %}Esta oferta ya está publicada.{% else %}Para que salga en Ofertas, en el siguiente paso pagas la publicidad con tarjeta o QR (Yape/Plin).{% endif %}</p></div>
+                <div class="col-md-7"><p class="small text-muted mb-1">Pon un precio menor al normal y tu producto lleva la etiqueta <strong>Oferta</strong> mientras te quede stock. En el siguiente paso eliges si es normal o premium (premium sale también en el carrusel y en Ofertas).
+                    {% if oferta_gratis %}Tu cuenta publica ofertas sin pagar la publicidad.{% elif producto.pk and producto.en_oferta and not producto.oferta_pendiente_pago %}Esta oferta ya está publicada.{% else %}La publicidad se paga con tarjeta o QR (Yape/Plin).{% endif %}</p></div>
                 <div class="col-12">
                     <label class="form-label small fw-semibold" for="{{ form.descripcion.id_for_label }}">{{ form.descripcion.label }} (opcional)</label>
                     {{ form.descripcion }}
