@@ -50,14 +50,15 @@
 {% endwith %}
 {% endif %}
 
-<div class="row g-3 my-1" data-escalonado>
+<div class="d-flex flex-column">
+<div class="row g-3 my-1 order-1 order-lg-0">
     <div class="col-6 col-lg-3"><div class="tarjeta-cifra"><span>Vendido hoy</span><strong class="text-success" id="vendidoHoy">S/ {{ vendido_hoy|floatformat:2 }}</strong></div></div>
     <div class="col-6 col-lg-3"><div class="tarjeta-cifra"><span>Ventas registradas hoy</span><strong id="unidadesHoy">{{ unidades_hoy }}</strong></div></div>
     <div class="col-6 col-lg-3"><div class="tarjeta-cifra"><span>Productos en la web</span><strong>{{ total_publicados }}</strong>{% if total_agotados %}<small class="text-danger">{{ total_agotados }} agotado{{ total_agotados|pluralize }}</small>{% endif %}</div></div>
     <div class="col-6 col-lg-3"><div class="tarjeta-cifra"><span>Lo tienen en su lista</span><strong>{{ total_interesados }}</strong><small class="text-muted">compradores</small></div></div>
 </div>
 
-<section class="mt-4" aria-labelledby="tituloProductos">
+<section class="mt-4 order-0" aria-labelledby="tituloProductos">
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
         <div>
             <h2 class="h4 fw-bold mb-0" id="tituloProductos">Mis productos</h2>
@@ -105,6 +106,7 @@
         {% endfor %}
     </div>
 </section>
+</div>
 
 <section class="mt-4" aria-labelledby="tituloVentas">
     <h2 class="h5 fw-bold" id="tituloVentas">Ventas de hoy</h2>
