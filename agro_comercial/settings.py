@@ -165,7 +165,14 @@ LOGOUT_REDIRECT_URL = 'inicio'
 # PUBLICIDAD: EL VENDEDOR PAGA PARA QUE SU PRODUCTO SALGA COMO OFERTA (PAGO DEMO)
 # ==============================================================================
 # Tarifa fija en soles por publicar una oferta. No es comision: las ventas en el puesto no pagan nada.
-TARIFA_OFERTA = float(os.environ.get('TARIFA_OFERTA', '2.00'))
+# Normal: solo la etiqueta "Oferta" en el listado de productos.
+# Premium: ademas sale en el carrusel, la pagina Ofertas y el inicio.
+TARIFA_OFERTA_NORMAL = float(os.environ.get('TARIFA_OFERTA_NORMAL', '0.50'))
+TARIFA_OFERTA_PREMIUM = float(os.environ.get('TARIFA_OFERTA_PREMIUM', '1.00'))
+
+# Frescura: dias desde que el producto llego al puesto
+FRESCURA_DIAS_FRESCO = int(os.environ.get('FRESCURA_DIAS_FRESCO', '2'))   # 0 a 2 dias: verde
+FRESCURA_DIAS_NORMAL = int(os.environ.get('FRESCURA_DIAS_NORMAL', '6'))   # 3 a 6 dias: amarillo; 7 o mas: gris
 
 # Version de los archivos css/js: cambia sola cuando se modifican, asi el navegador no usa los viejos
 def _version_estaticos():
