@@ -14,13 +14,13 @@
     --ambar: #f97316;
     --ambar-claro: #fff1e6;
     --amarillo: #facc15;
-    --rojo-descuento: #e11d48;
+    --rojo-descuento: #c2410c;
     --arena: #f7faf8;
     --borde: #e5ebe7;
     --texto: #111827;
     --texto-secundario: #5b6670;
     --sombra-suave: 0 1px 2px rgba(17, 24, 39, 0.04), 0 2px 8px rgba(17, 24, 39, 0.04);
-    --sombra-hover: 0 18px 40px -12px rgba(21, 128, 61, 0.28);
+    --sombra-hover: 0 4px 14px -6px rgba(17, 24, 39, 0.18);
     --radio: 16px;
     --transicion: 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -65,7 +65,6 @@ h1, h2, h3, h4, h5, h6 {
     transition: transform var(--transicion), box-shadow var(--transicion);
 }
 .card:hover {
-    transform: translateY(-4px);
     box-shadow: var(--sombra-hover);
 }
 
@@ -233,9 +232,6 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1.05rem;
     transition: transform 0.4s ease;
 }
-.navbar-brand:hover .logo-icono {
-    transform: rotate(-12deg) scale(1.08);
-}
 
 .insignia-rol-comprador {
     background-color: var(--ambar-claro);
@@ -277,9 +273,6 @@ h1, h2, h3, h4, h5, h6 {
     background-color: rgba(255, 255, 255, 0.12);
     color: #ffffff !important;
 }
-.navbar-nav .nav-link:hover i {
-    transform: translateY(-2px);
-}
 .navbar-nav .nav-link.activo {
     background-color: rgba(255, 255, 255, 0.16);
     color: #ffffff !important;
@@ -318,36 +311,11 @@ h1, h2, h3, h4, h5, h6 {
 .img-zoom img {
     transition: transform 0.5s ease;
 }
-.card:hover .img-zoom img,
-.img-zoom:hover img {
-    transform: scale(1.06);
-}
 
 /* ==========================================================
    Portada (inicio)
    ========================================================== */
 
-.portada {
-    position: relative;
-    border-radius: 18px;
-    overflow: hidden;
-    background:
-        linear-gradient(110deg, rgba(20, 42, 27, 0.92) 0%, rgba(31, 63, 41, 0.78) 55%, rgba(31, 63, 41, 0.35) 100%),
-        url("../imagenes/banner_agro.jpg") center / cover no-repeat;
-    color: #ffffff;
-}
-.portada h1 {
-    color: #ffffff;
-}
-.portada .texto-portada {
-    color: rgba(255, 255, 255, 0.85);
-}
-.portada .btn-outline-light:hover {
-    color: var(--verde-bosque) !important;
-}
-.portada .carousel {
-    color: var(--texto);
-}
 
 .dato-portada {
     display: flex;
@@ -407,9 +375,6 @@ h1, h2, h3, h4, h5, h6 {
     bottom: 0.7rem;
     z-index: 1;
 }
-.tarjeta-categoria:hover img {
-    transform: scale(1.08);
-}
 .tarjeta-categoria:hover .flecha-categoria {
     transform: translateX(4px);
 }
@@ -438,7 +403,7 @@ h1, h2, h3, h4, h5, h6 {
     to   { opacity: 1; transform: none; }
 }
 .entrar {
-    animation: entrarArriba 0.6s ease both;
+    animation: none;
 }
 .entrar-2 { animation-delay: 0.1s; }
 .entrar-3 { animation-delay: 0.2s; }
@@ -574,12 +539,6 @@ h1, h2, h3, h4, h5, h6 {
         font-size: 0.86rem;
     }
 
-    .portada {
-        border-radius: 14px;
-    }
-    .portada h1 {
-        font-size: 1.6rem;
-    }
     .tarjeta-categoria {
         height: 120px;
     }
