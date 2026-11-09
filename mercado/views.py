@@ -343,7 +343,7 @@ def procesar_cobro_culqi(total_soles, correo_gmail, culqi_token):
             "currency_code": "PEN",
             "email": correo_gmail,
             "source_id": culqi_token,
-            "description": "Compra de productos agricolas en AgroComercial"
+            "description": "Compra de productos agricolas en MercOfertas"
         }).encode('utf-8')
         req = urllib.request.Request(
             url,
@@ -430,7 +430,7 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
         ]
     )
 
-    asunto = f"Boleta de Venta Electrónica {serie_boleta} ({codigo_tx}) - AgroComercial"
+    asunto = f"Boleta de Venta Electrónica {serie_boleta} ({codigo_tx}) - MercOfertas"
     cuerpo_texto = (
         f"AGROCOMERCIAL PERÚ S.A.C. - RUC: 20608945123\n"
         f"BOLETA DE VENTA ELECTRÓNICA: {serie_boleta}\n"
@@ -454,7 +454,7 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
         f"ESTADO DE PAGO                  : {primer_ped.get_estado_pago_display() if primer_ped else '-'}\n"
         f"====================================================\n"
         f"Representación impresa de la Boleta de Venta Electrónica.\n"
-        f"Gracias por su preferencia en AgroComercial."
+        f"Gracias por su preferencia en MercOfertas."
     )
 
     estado_pago = primer_ped.get_estado_pago_display() if primer_ped else 'Pendiente de verificación'
@@ -585,7 +585,7 @@ def enviar_comprobante_gmail(usuario, correo_destino, codigo_tx, lista_pedidos, 
         try:
             msg = MIMEMultipart('alternative')
             msg['Subject'] = asunto
-            msg['From'] = f"AgroComercial <{remitente_gmail}>"
+            msg['From'] = f"MercOfertas <{remitente_gmail}>"
             msg['To'] = correo_destino
             msg.attach(MIMEText(cuerpo_texto, 'plain', 'utf-8'))
             msg.attach(MIMEText(cuerpo_html, 'html', 'utf-8'))
@@ -1551,7 +1551,7 @@ def completar_vinculo_google(request, vinculo, google_sub, email_google):
             messages.error(request, "Las cuentas de demostración no se pueden vincular con Google.")
             return redirect('login')
         if PerfilUsuario.objects.filter(google_sub=google_sub).exclude(pk=perfil.pk).exists():
-            messages.error(request, "Esa cuenta de Google ya está vinculada a otra cuenta de AgroComercial.")
+            messages.error(request, "Esa cuenta de Google ya está vinculada a otra cuenta de MercOfertas.")
             return redirect('perfil' if request.user.is_authenticated else 'login')
         if perfil.google_sub and perfil.google_sub != google_sub:
             messages.error(request, "Tu cuenta ya está vinculada con otra cuenta de Google.")
@@ -1667,7 +1667,7 @@ def crear_producto(request):
                 producto.disponible = False
                 producto.save()
                 guardar_fotos_extra(request, producto)
-                messages.info(request, "Para publicar tu producto como oferta primero debes pagar la comisión de AgroComercial.")
+                messages.info(request, "Para publicar tu producto como oferta primero debes pagar la comisión de MercOfertas.")
                 return redirect('pagar_comision_oferta', producto_id=producto.id)
             producto.save()
             guardar_fotos_extra(request, producto)
@@ -1712,7 +1712,7 @@ def editar_producto(request, producto_id):
                 producto.disponible = False
                 producto.save()
                 guardar_fotos_extra(request, producto)
-                messages.info(request, "Para publicar tu producto como oferta primero debes pagar la comisión de AgroComercial.")
+                messages.info(request, "Para publicar tu producto como oferta primero debes pagar la comisión de MercOfertas.")
                 return redirect('pagar_comision_oferta', producto_id=producto.id)
             producto.oferta_pendiente_pago = False
             producto.save()
