@@ -52,13 +52,14 @@
 </div>
 
 <div id="resultados" class="resultados" data-stock-url="{% url 'stock_publico' %}">
+    <div class="leyenda-frescura small text-muted mb-2">
+        <span class="titulo">Frescura:</span>
+        <span class="text-nowrap"><span class="chip-frescura fresco"><i class="bi bi-flower1" aria-hidden="true"></i>Fresco</span> hasta 2 días</span>
+        <span class="text-nowrap"><span class="chip-frescura normal"><i class="bi bi-clock" aria-hidden="true"></i>Normal</span> 3 a 6 días</span>
+        <span class="text-nowrap"><span class="chip-frescura antiguo"><i class="bi bi-hourglass-split" aria-hidden="true"></i>Con más días</span> 7 o más</span>
+    </div>
     <div class="d-flex justify-content-between align-items-center mb-3">
         <p class="text-muted small mb-0" aria-live="polite">{{ total_resultados }} producto{{ total_resultados|pluralize }}</p>
-        <span class="leyenda-frescura small text-muted d-none d-md-inline-flex" aria-label="Frescura">
-            <span><span class="punto-frescura fresco" aria-hidden="true"></span>Fresco</span>
-            <span><span class="punto-frescura normal" aria-hidden="true"></span>Normal</span>
-            <span><span class="punto-frescura antiguo" aria-hidden="true"></span>Con más días</span>
-        </span>
         <span class="estado-vivo small text-muted" data-estado-stock><span class="punto-vivo" aria-hidden="true"></span>Stock en vivo</span>
         <span class="cargando-texto small text-muted"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Actualizando...</span>
     </div>
