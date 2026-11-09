@@ -30,7 +30,7 @@
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-success btn-sm" aria-label="Escribir a {{ grupo.puesto.nombre|default:'este puesto' }}" title="Escribir al vendedor"><i class="bi bi-chat-dots" aria-hidden="true"></i></button>
                     </form>
-                    {% if grupo.puesto %}<a class="btn btn-warning btn-sm fw-semibold" href="{{ grupo.puesto.como_llegar }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right-fill me-1" aria-hidden="true"></i>Cómo llegar</a>{% endif %}
+                    {% if grupo.puesto %}<a class="btn btn-success btn-sm fw-semibold" href="{{ grupo.puesto.como_llegar }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-sign-turn-right-fill me-1" aria-hidden="true"></i>Cómo llegar</a>{% endif %}
                 </div>
             </header>
             {% for item in grupo.items %}
