@@ -3,49 +3,84 @@
 
 {% block title %}MercOfertas | Ofertas de los mercados de Arequipa{% endblock %}
 
-{# La portada ya tiene su buscador: en el celular no se repite el de la cabecera #}
-{% block buscador_movil %}{% endblock %}
-
 {% block ancho %}
-<!-- Portada: que se busca, un buscador y la mejor oferta real del dia -->
-<section class="portada">
-    <div class="container-xxl">
-        <div class="portada-grilla">
-            <div class="portada-texto">
-                <p class="portada-lugar">Mercados de Arequipa</p>
-                <h1>Mira las ofertas de los puestos antes de salir de casa</h1>
-                <p class="portada-bajada">Precio, foto y cuánto queda en cada puesto. Arma tu lista y paga directo al vendedor.</p>
-                <form class="portada-buscador" action="{% url 'catalogo' %}" method="get" role="search">
-                    <label for="buscadorPortada" class="visually-hidden">Buscar productos</label>
-                    <i class="bi bi-search" aria-hidden="true"></i>
-                    <input type="search" id="buscadorPortada" name="q" placeholder="Papa, palta, tomate..." autocomplete="off">
-                    <button type="submit" class="btn btn-success">Buscar</button>
-                </form>
-                <div class="portada-enlaces">
-                    <a href="{% url 'ventas_por_oferta' %}">Ver ofertas de hoy</a>
-                    <a href="{% url 'catalogo' %}?orden=precio_asc">Lo más barato</a>
-                    <a href="{% url 'productores' %}">Puestos en el mapa</a>
-                </div>
-            </div>
-
-            {% if mejor_oferta %}
-            <a href="{% url 'detalle_producto' mejor_oferta.id %}" class="portada-oferta" aria-label="Mejor oferta de hoy: {{ mejor_oferta.nombre }}">
-                <img src="{{ mejor_oferta.url_imagen }}" alt="" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
-                <div class="portada-oferta-datos">
-                    <span class="portada-oferta-titulo">Mejor oferta de hoy</span>
-                    <strong>{{ mejor_oferta.nombre }}</strong>
-                    <div class="d-flex align-items-baseline gap-2 flex-wrap">
-                        <span class="precio en-oferta">S/ {{ mejor_oferta.precio_oferta }}</span>
-                        <span class="precio-anterior">Antes S/ {{ mejor_oferta.precio }}</span>
-                        <span class="chip chip-oferta">-{{ mejor_oferta.porcentaje_descuento }}%</span>
+<!-- Carrusel de portada: cuatro banners que pasan despacio, con flechas y puntos dentro de la foto -->
+<section class="hero" aria-roledescription="carrusel" aria-label="Novedades de MercOfertas" data-hero>
+    <div class="swiper hero-swiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide hero-slide" role="group" aria-label="1 de 4">
+                <div class="hero-fondo" style="background-image: url('{% static 'imagenes/banner_agro.jpg' %}');"></div>
+                <div class="hero-contenido">
+                    <span class="hero-etiqueta"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>Ofertas de hoy</span>
+                    <h1 class="hero-titulo">Encuentra las mejores ofertas <em>de los mercados de Arequipa</em></h1>
+                    <p class="hero-texto">Descuentos de los puestos con foto, precio y cuánto queda. Encuentra lo que necesitas antes de salir de casa.</p>
+                    <div class="hero-acciones">
+                        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-warning"><i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Ver ofertas de hoy</a>
+                        <a href="{% url 'catalogo' %}" class="btn btn-vidrio">Explorar productos</a>
                     </div>
                 </div>
-            </a>
-            {% else %}
-            <div class="portada-foto"><img src="{% static 'imagenes/banner_agro.jpg' %}" alt="Puesto de verduras en un mercado"></div>
-            {% endif %}
+            </div>
+            <div class="swiper-slide hero-slide" role="group" aria-label="2 de 4">
+                <div class="hero-fondo" style="background-image: url('{% static 'imagenes/tomate.jpg' %}');"></div>
+                <div class="hero-contenido">
+                    <span class="hero-etiqueta"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Compara precios</span>
+                    <h2 class="hero-titulo">Ahorra en tus compras <em>sin recorrer puesto por puesto</em></h2>
+                    <p class="hero-texto">Compara el precio de un mismo producto en varios puestos y mira el stock en tiempo real. Menos tiempo buscando, más oportunidades de ahorrar.</p>
+                    <div class="hero-acciones">
+                        <a href="{% url 'catalogo' %}?orden=precio_asc" class="btn btn-warning"><i class="bi bi-sort-numeric-down me-1" aria-hidden="true"></i>Ver lo más barato</a>
+                        <a href="{% url 'ventas_por_oferta' %}" class="btn btn-vidrio">Ver ofertas</a>
+                    </div>
+                </div>
+            </div>
+            <div class="swiper-slide hero-slide" role="group" aria-label="3 de 4">
+                <div class="hero-fondo" style="background-image: url('{% static 'imagenes/papa_amarilla.jpg' %}');"></div>
+                <div class="hero-contenido">
+                    <span class="hero-etiqueta"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Ubicación de puestos</span>
+                    <h2 class="hero-titulo">Descubre ofertas cerca de ti <em>y llega directo al puesto</em></h2>
+                    <p class="hero-texto">Cada producto muestra el mercado, el número de puesto y cómo llegar. Tu lista ordena todo por puesto para que hagas un solo recorrido.</p>
+                    <div class="hero-acciones">
+                        <a href="{% url 'productores' %}" class="btn btn-warning"><i class="bi bi-map me-1" aria-hidden="true"></i>Ver puestos en el mapa</a>
+                        <a href="{% url 'carrito' %}" class="btn btn-vidrio">Mi lista de compras</a>
+                    </div>
+                </div>
+            </div>
+            <div class="swiper-slide hero-slide" role="group" aria-label="4 de 4">
+                <div class="hero-fondo" style="background-image: url('{% static 'imagenes/finca_productor.jpg' %}');"></div>
+                <div class="hero-contenido">
+                    <span class="hero-etiqueta"><i class="bi bi-shop" aria-hidden="true"></i>Para comerciantes</span>
+                    <h2 class="hero-titulo">¿Tienes un puesto? <em>Que más compradores vean tus ofertas</em></h2>
+                    <p class="hero-texto">Marca tu puesto en el mapa, publica tus productos con foto y precio, y avisa al instante lo que ya vendiste. No cobramos comisión por tus ventas.</p>
+                    <div class="hero-acciones">
+                        <a href="{% if rol_actual == 'PRODUCTOR' %}{% url 'crear_producto' %}{% elif user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-warning">Publicar mis productos</a>
+                        <a href="#como-funciona" class="btn btn-vidrio">Cómo funciona</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-pie">
+            <div class="hero-paginacion" data-hero-paginacion></div>
+            <div class="hero-controles">
+                <button type="button" data-hero-anterior aria-label="Banner anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+                <button type="button" data-hero-siguiente aria-label="Banner siguiente"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+            </div>
         </div>
     </div>
+
+    {% if mejor_oferta %}
+    <a href="{% url 'detalle_producto' mejor_oferta.id %}" class="hero-oferta-flotante" aria-label="Mejor oferta del día: {{ mejor_oferta.nombre }}">
+        <img src="{{ mejor_oferta.url_imagen }}" alt="" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="chip chip-oferta">Oferta -{{ mejor_oferta.porcentaje_descuento }}%</span>
+            <span class="small text-muted">Mejor oferta de hoy</span>
+        </div>
+        <strong class="d-block text-truncate">{{ mejor_oferta.nombre }}</strong>
+        <div class="d-flex align-items-baseline gap-2 mb-2">
+            <span class="precio-oferta">S/ {{ mejor_oferta.precio_oferta }}</span>
+            <span class="precio-anterior">Antes S/ {{ mejor_oferta.precio }}</span>
+        </div>
+    </a>
+    {% endif %}
+
 </section>
 
 <!-- Categorias -->
