@@ -2,6 +2,9 @@
 
 {% block title %}{% if ofertas %}Ofertas{% else %}Productos{% endif %} | MercOfertas{% endblock %}
 
+{# La pagina ya tiene su propio buscador: en el celular no se repite el de la cabecera #}
+{% block buscador_movil %}{% endblock %}
+
 {% block content %}
 {% if ofertas %}{% include 'includes/carrusel_ofertas.html' %}{% endif %}
 
