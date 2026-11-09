@@ -38,7 +38,7 @@ PRODUCTORES = [
                  descripcion='Tomate firme y maduro, ideal para ensalada y salsa. Llegó hoy temprano.'),
             dict(nombre='Zanahoria', categoria='Hortalizas y Verduras', precio='2.00', unidad='KG',
                  stock=40, imagen='/static/imagenes/zanahoria.jpg',
-                 descripcion='Zanahoria dulce y lavada.'),
+                 descripcion='Zanahoria dulce y lavada.', dias=1),
         ],
     },
     {
@@ -50,10 +50,11 @@ PRODUCTORES = [
         'productos': [
             dict(nombre='Quinua roja del Colca', categoria='Granos y Cereales', precio='12.00', unidad='KG',
                  stock=25, imagen='/static/imagenes/quinua_blanca.jpg',
-                 descripcion='Quinua lavada y lista para cocinar. Se vende por kilo.'),
+                 descripcion='Quinua lavada y lista para cocinar. Se vende por kilo.', dias=8),
             dict(nombre='Papa huayro', categoria='Tubérculos y Raíces', precio='3.80', oferta='3.20', unidad='KG',
                  stock=60, imagen='/static/imagenes/papa_amarilla.jpg',
-                 descripcion='Papa harinosa, perfecta para sancochado y puré.'),
+                 descripcion='Papa harinosa, perfecta para sancochado y puré.', dias=4,
+                 tipo_oferta='NORMAL'),
         ],
     },
     {
@@ -65,10 +66,10 @@ PRODUCTORES = [
         'productos': [
             dict(nombre='Palta fuerte', categoria='Frutas de Estación', precio='8.00', oferta='6.50', unidad='KG',
                  stock=18, imagen='/static/imagenes/palta_hass.jpg',
-                 descripcion='Palta cremosa, madura para hoy y mañana.'),
+                 descripcion='Palta cremosa, madura para hoy y mañana.', dias=2),
             dict(nombre='Mandarina', categoria='Frutas de Estación', precio='4.00', unidad='KG',
                  stock=45, imagen='/static/imagenes/mandarina.jpg',
-                 descripcion='Mandarina jugosa y dulce.'),
+                 descripcion='Mandarina jugosa y dulce.', dias=3),
         ],
     },
     {
@@ -83,7 +84,7 @@ PRODUCTORES = [
                  descripcion='Tomate redondo de buen color. Quedan pocos kilos.'),
             dict(nombre='Papa amarilla', categoria='Tubérculos y Raíces', precio='4.50', unidad='KG',
                  stock=30, imagen='/static/imagenes/papa_amarilla.jpg',
-                 descripcion='Papa amarilla para causa y frituras.'),
+                 descripcion='Papa amarilla para causa y frituras.', dias=9),
         ],
     },
 ]
@@ -149,6 +150,8 @@ class Command(BaseCommand):
                     oferta_pendiente_pago=False,
                     fecha_vencimiento=ahora + timedelta(days=30),
                     en_oferta='oferta' in prod,
+                    tipo_oferta=prod.get('tipo_oferta', 'PREMIUM'),
+                    fecha_cosecha=timezone.localdate() - timedelta(days=prod.get('dias', 0)),
                     precio_oferta=Decimal(prod['oferta']) if 'oferta' in prod else None,
                     oferta_inicio=ahora if 'oferta' in prod else None,
                     oferta_fin=None,
