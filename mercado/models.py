@@ -226,6 +226,11 @@ class ProductoQuerySet(models.QuerySet):
             Q(oferta_fin__isnull=True) | Q(oferta_fin__gt=ahora)
         )
 
+    def ofertas_premium(self):
+        """Ofertas premium: las unicas que salen en el carrusel, la pagina Ofertas y el inicio.
+        Las normales solo llevan su etiqueta "Oferta" en el listado de productos."""
+        return self.ofertas_activas().filter(tipo_oferta='PREMIUM')
+
 
 class Producto(models.Model):
     UNIDADES = [
@@ -263,6 +268,14 @@ class Producto(models.Model):
     precio = models.DecimalField(max_digits=8, decimal_places=2)
     en_oferta = models.BooleanField(default=False)
     precio_oferta = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    TIPOS_OFERTA = [
+        ('NORMAL', 'Oferta normal'),
+        ('PREMIUM', 'Oferta premium'),
+    ]
+    tipo_oferta = models.CharField(
+        max_length=10, choices=TIPOS_OFERTA, default='NORMAL',
+        help_text="Normal: etiqueta Oferta en el listado. Premium: además sale en el carrusel y en Ofertas",
+    )
     acepta_ofertas = models.BooleanField(default=True, help_text="Permite que compradores envíen contraofertas de precio")
     unidad = models.CharField(max_length=15, choices=UNIDADES, default='KG')
     stock = models.PositiveIntegerField(default=1)
@@ -405,9 +418,55 @@ class Producto(models.Model):
             return self.precio_oferta * self.stock
         return Decimal('0.00')
 
-    def monto_comision_oferta(self):
-        """Lo que paga el vendedor (publicidad) para que su producto salga como oferta: tarifa fija."""
-        return Decimal(str(settings.TARIFA_OFERTA)).quantize(Decimal('0.01'))
+    @staticmethod
+    def tarifa_oferta(tipo):
+        """Tarifa fija de publicidad segun el tipo de oferta (S/ 0.50 normal, S/ 1.00 premium)."""
+        valor = settings.TARIFA_OFERTA_PREMIUM if tipo == 'PREMIUM' else settings.TARIFA_OFERTA_NORMAL
+        return Decimal(str(valor)).quantize(Decimal('0.01'))
+
+    def monto_comision_oferta(self, tipo=None):
+        """Lo que paga el vendedor (publicidad) para que su producto salga como oferta."""
+        return self.tarifa_oferta(tipo or self.tipo_oferta)
+
+    def es_premium(self):
+        return self.tipo_oferta == 'PREMIUM'
+
+    def puede_pasar_a_premium(self):
+        """Oferta normal ya pagada: puede pagar la diferencia para salir en todos lados."""
+        return self.en_oferta and not self.oferta_pendiente_pago and self.tipo_oferta == 'NORMAL'
+
+    def diferencia_premium(self):
+        return self.tarifa_oferta('PREMIUM') - self.tarifa_oferta('NORMAL')
+
+    # ---------------------------------------------------------- frescura
+    def dias_desde_llegada(self):
+        """Dias desde que el producto llego al puesto (fecha_cosecha; se reinicia al marcar Llego)."""
+        if not self.fecha_cosecha:
+            return 0
+        llegada = self.fecha_cosecha
+        if hasattr(llegada, 'date'):
+            llegada = llegada.date()
+        return max((timezone.localdate() - llegada).days, 0)
+
+    def nivel_frescura(self):
+        """fresco, normal o antiguo, segun FRESCURA_DIAS_FRESCO y FRESCURA_DIAS_NORMAL."""
+        dias = self.dias_desde_llegada()
+        if dias <= settings.FRESCURA_DIAS_FRESCO:
+            return 'fresco'
+        if dias <= settings.FRESCURA_DIAS_NORMAL:
+            return 'normal'
+        return 'antiguo'
+
+    def nombre_frescura(self):
+        return {'fresco': 'Fresco', 'normal': 'Normal', 'antiguo': 'Con más días'}[self.nivel_frescura()]
+
+    def texto_frescura(self):
+        dias = self.dias_desde_llegada()
+        if dias == 0:
+            return 'Llegó hoy'
+        if dias == 1:
+            return 'Llegó ayer'
+        return f'Llegó hace {dias} días'
 
     def descuento_configurado(self):
         """Descuento que puso el vendedor, aunque la oferta todavia no este vigente."""
@@ -595,6 +654,7 @@ class PagoComision(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='pagos_comision')
     productor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pagos_comision')
     porcentaje = models.DecimalField(max_digits=5, decimal_places=2)
+    tipo_oferta = models.CharField(max_length=10, choices=Producto.TIPOS_OFERTA, default='NORMAL')
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     metodo_pago = models.CharField(max_length=20, choices=METODOS, default='YAPE_PLIN')
     codigo_transaccion = models.CharField(max_length=40)
