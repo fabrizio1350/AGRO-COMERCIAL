@@ -146,7 +146,9 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = '/static/'
+# En la VPS nginx entrega /static/ desde una carpeta vieja: con STATIC_URL=/estaticos/ en el .env
+# los CSS y JS los entrega Django (necesita SERVIR_ARCHIVOS=True) y siempre salen los del repo.
+STATIC_URL = '/' + os.environ.get('STATIC_URL', '/static/').strip('/') + '/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = Path(os.environ.get('STATIC_ROOT', BASE_DIR / 'staticfiles'))
 
