@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Mi puesto | AgroComercial{% endblock %}
+{% block title %}Mi puesto | MercOfertas{% endblock %}
 
 {% block content %}
 {% if not puesto %}
@@ -36,7 +36,7 @@
 {% if not perfil_global.es_demo %}
 {% with estado=perfil_global.estado_verificacion %}
 {% if estado == 'VERIFICADO' %}
-<p class="mt-2 mb-0"><span class="insignia-verificado" title="AgroComercial comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span></p>
+<p class="mt-2 mb-0"><span class="insignia-verificado" title="MercOfertas comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span></p>
 {% else %}
 <div class="estado-verificacion {% if estado == 'RECHAZADO' %}estado-error{% else %}estado-espera{% endif %} mt-3">
     <i class="bi {% if estado == 'PENDIENTE' %}bi-hourglass-split{% elif estado == 'RECHAZADO' %}bi-exclamation-circle{% else %}bi-patch-check{% endif %}" aria-hidden="true"></i>
