@@ -572,7 +572,7 @@ def publicar(request, producto_id=None):
 @require_http_methods(['GET', 'POST'])
 def pagar_oferta(request, producto_id):
     """El vendedor paga (en modo demo) la publicidad para que su producto salga como oferta.
-    No es una comision: la venta en el puesto no paga nada a AgroComercial."""
+    No es una comision: la venta en el puesto no paga nada a MercOfertas."""
     if not es_vendedor(request.user):
         raise Http404()
     producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
