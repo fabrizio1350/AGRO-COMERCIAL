@@ -5,22 +5,22 @@
 
 :root {
     /* Paleta "Cosecha vibrante": verde esmeralda, naranja mandarina y amarillo maiz */
-    --verde-bosque: #064e3b;
-    --verde-campo: #15803d;
-    --verde-oscuro: #166534;
-    --verde-secundario: #16a34a;
-    --verde-vivo: #22c55e;
-    --verde-suave: #ecfdf3;
-    --ambar: #f97316;
-    --ambar-claro: #fff1e6;
-    --amarillo: #facc15;
-    --rojo-descuento: #c2410c;
-    --arena: #f7faf8;
-    --borde: #e5ebe7;
-    --texto: #111827;
-    --texto-secundario: #5b6670;
-    --sombra-suave: 0 1px 2px rgba(17, 24, 39, 0.04), 0 2px 8px rgba(17, 24, 39, 0.04);
-    --sombra-hover: 0 4px 14px -6px rgba(17, 24, 39, 0.18);
+    --verde-bosque: #0d3b26;
+    --verde-campo: #167a3e;
+    --verde-oscuro: #11602f;
+    --verde-secundario: #2a9552;
+    --verde-vivo: #3aa863;
+    --verde-suave: #eaf5ed;
+    --ambar: #ef6c1a;
+    --ambar-claro: #fdf0e4;
+    --amarillo: #f4b938;
+    --rojo-descuento: #b8470d;
+    --arena: #faf8f4;
+    --borde: #e7e2d8;
+    --texto: #1c2a21;
+    --texto-secundario: #5f6b62;
+    --sombra-suave: 0 1px 2px rgba(28, 42, 33, 0.04), 0 2px 8px rgba(28, 42, 33, 0.04);
+    --sombra-hover: 0 4px 14px -6px rgba(28, 42, 33, 0.18);
     --radio: 16px;
     --transicion: 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -71,14 +71,14 @@ h1, h2, h3, h4, h5, h6 {
 /* Inputs y selects sin sobreponer la flecha */
 .form-control {
     border-radius: 8px;
-    border: 1px solid #d3ddd6;
+    border: 1px solid #d9d4c8;
     padding: 0.5rem 0.75rem;
     background-color: #ffffff;
 }
 
 .form-select {
     border-radius: 8px;
-    border: 1px solid #d3ddd6;
+    border: 1px solid #d9d4c8;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
     padding-left: 0.75rem;
@@ -235,8 +235,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .insignia-rol-comprador {
     background-color: var(--ambar-claro);
-    color: #78350f;
-    border: 1px solid #f59e0b;
+    color: #6b3a12;
+    border: 1px solid #e39a1e;
     font-size: 0.72rem;
     padding: 0.2rem 0.55rem;
     border-radius: 5px;
@@ -244,9 +244,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .insignia-rol-vendedor {
-    background-color: #dcfce7;
-    color: #14532d;
-    border: 1px solid #86efac;
+    background-color: #dcefe1;
+    color: #0f4a26;
+    border: 1px solid #9fd1ae;
     font-size: 0.72rem;
     padding: 0.2rem 0.55rem;
     border-radius: 5px;
@@ -1056,10 +1056,10 @@ h1, h2, h3, h4, h5, h6 {
     border: 1px solid transparent;
 }
 .estado-publicacion.activa { background-color: var(--verde-suave); color: var(--verde-campo); border-color: #c9dfcf; }
-.estado-publicacion.pausada { background-color: #f1f3f2; color: var(--texto-secundario); border-color: var(--borde); }
+.estado-publicacion.pausada { background-color: #f4f1eb; color: var(--texto-secundario); border-color: var(--borde); }
 .estado-publicacion.vencida { background-color: #fbeceb; color: var(--rojo-descuento); border-color: #efc7c5; }
 .estado-publicacion.pendiente { background-color: var(--ambar-claro); color: #8a6a2f; border-color: #ead7b3; }
-.estado-publicacion.programada { background-color: #eef2f7; color: #4b5a6b; border-color: #dde3ea; }
+.estado-publicacion.programada { background-color: #f3f0ea; color: #4b5a6b; border-color: #dde3ea; }
 
 .aviso-vencida {
     background-color: #fbeceb;
