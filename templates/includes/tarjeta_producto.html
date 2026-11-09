@@ -2,7 +2,7 @@
 Tarjeta de producto. Uso: {% include 'includes/tarjeta_producto.html' with prod=producto %}
 El stock se refresca solo (static/js/stock-vivo.js) si un contenedor padre tiene data-stock-url.
 Sobre la foto solo van dos cosas: la etiqueta de oferta (arriba) y el stock en vivo (abajo).
-La frescura (verde = fresco, amarillo = normal, gris = con más días) va como punto debajo del puesto.
+La frescura va siempre escrita con su ícono (Fresco, Normal, Con más días) y cuándo llegó, debajo del puesto.
 {% endcomment %}
 {% with frescura=prod.nivel_frescura %}
 <article class="tarjeta-producto frescura-{{ frescura }}" data-stock-id="{{ prod.id }}">
@@ -23,7 +23,8 @@ La frescura (verde = fresco, amarillo = normal, gris = con más días) va como p
         <h3><a href="{% url 'detalle_producto' prod.id %}">{{ prod.nombre }}</a></h3>
         <div class="meta text-truncate">{% with lugar=prod.lugar %}{{ lugar.nombre|default:"Mercado local" }}{% if lugar.numero %} · Puesto {{ lugar.numero }}{% endif %}{% endwith %}</div>
         <div class="datos-extra">
-            <span class="frescura-texto" title="{{ prod.texto_frescura }}"><span class="punto-frescura {{ frescura }}" aria-hidden="true"></span>{{ prod.nombre_frescura }}</span>
+            <span class="chip-frescura {{ frescura }}"><i class="bi {% if frescura == 'fresco' %}bi-flower1{% elif frescura == 'normal' %}bi-clock{% else %}bi-hourglass-split{% endif %}" aria-hidden="true"></i>{{ prod.nombre_frescura }}</span>
+            <span class="frescura-llegada">{{ prod.texto_frescura }}</span>
             {% if prod.productor.perfil.vendedor_verificado %}<span class="insignia-verificado chica" title="MercOfertas comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Verificado</span>{% endif %}
             {% if prod.productor.perfil.es_demo %}<span class="texto-demo" title="Publicación de prueba con datos de ejemplo">Demo</span>{% endif %}
         </div>
