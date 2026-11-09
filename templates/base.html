@@ -13,6 +13,7 @@
     <link href="{% static 'vendor/swiper-bundle.min.css' %}" rel="stylesheet">
     <link href="{% static 'css/estilos.css' %}?v={{ version_estaticos }}" rel="stylesheet">
     <link href="{% static 'css/tema.css' %}?v={{ version_estaticos }}" rel="stylesheet">
+    {% include 'includes/estilos_ofertas.html' %}
     <meta name="theme-color" content="#15803d">
     <meta name="description" content="AgroComercial: encuentra las mejores ofertas de los mercados de Arequipa, compara precios entre puestos y llega directo al puesto.">
     {% block extra_css %}{% endblock %}
