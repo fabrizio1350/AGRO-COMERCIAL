@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Mi lista de compras | AgroComercial{% endblock %}
+{% block title %}Mi lista de compras | MercOfertas{% endblock %}
 
 {% block content %}
 <div class="encabezado-seccion entrar">
@@ -21,7 +21,7 @@
                 <img src="{% if grupo.puesto %}{{ grupo.puesto.url_foto }}{% else %}/static/imagenes/finca_productor.jpg{% endif %}" alt="" class="foto-puesto">
                 <div class="flex-grow-1 min-w-0">
                     <h2 class="h6 fw-bold mb-0 text-truncate">{{ grupo.puesto.nombre|default:"Puesto sin ubicación" }}</h2>
-                    {% if grupo.puesto.vendedor.perfil.vendedor_verificado %}<span class="insignia-verificado" title="AgroComercial comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span>{% endif %}
+                    {% if grupo.puesto.vendedor.perfil.vendedor_verificado %}<span class="insignia-verificado" title="MercOfertas comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span>{% endif %}
                     {% if grupo.puesto %}<div class="small text-muted text-truncate">{{ grupo.puesto.titulo_puesto }}{% if grupo.puesto.referencia %} · {{ grupo.puesto.referencia }}{% endif %}</div>
                     <div class="d-flex flex-wrap gap-1 mt-1">{% for icono, nombre in grupo.puesto.iconos_pago %}<span class="chip-pago chico"><i class="bi {{ icono }}" aria-hidden="true"></i>{{ nombre }}</span>{% endfor %}</div>{% endif %}
                 </div>
