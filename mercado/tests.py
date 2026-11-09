@@ -115,7 +115,8 @@ class PruebasOfertasYVencimiento(TestCase):
         self.assertRedirects(respuesta, reverse('ventas_por_oferta'), fetch_redirect_response=False)
 
     def test_paginas_con_carrusel_cargan(self):
-        self.crear(en_oferta=True, precio_oferta=Decimal('8.00'), oferta_fin=timezone.now() + timedelta(days=2))
+        self.crear(en_oferta=True, precio_oferta=Decimal('8.00'), oferta_fin=timezone.now() + timedelta(days=2),
+                   tipo_oferta='PREMIUM')
         self.client.login(username='vendedor', password='clave12345')
         for nombre in ('ventas_por_oferta', 'catalogo'):
             respuesta = self.client.get(reverse(nombre))
