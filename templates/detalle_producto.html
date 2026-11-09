@@ -22,7 +22,7 @@
     <div class="col-lg-6 entrar">
         <div class="foto-detalle mb-3">
             <img src="{{ producto.url_imagen }}" alt="{{ producto.nombre }}" style="view-transition-name: foto-producto-{{ producto.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
-            {% if producto.oferta_activa %}<span class="chip chip-descuento">-{{ producto.porcentaje_descuento }}%</span>{% endif %}
+            {% if producto.oferta_activa %}<span class="chip chip-descuento">{% if producto.es_premium %}<i class="bi bi-star-fill" aria-hidden="true"></i>{% endif %}Oferta -{{ producto.porcentaje_descuento }}%</span>{% endif %}
             {% if user.is_authenticated and producto.productor != user %}{% include 'includes/boton_favorito.html' with prod=producto %}{% endif %}
         </div>
         {% if extras %}
@@ -39,6 +39,9 @@
         <div class="ficha-compra" id="comprar" data-stock-id="{{ producto.id }}">
             <span class="antetitulo"><i class="bi bi-tag-fill" aria-hidden="true"></i>{{ producto.categoria.nombre|default:"Mercado" }}{% if producto.oferta_activa %} · Oferta{% endif %}</span>
             <h1 class="h2 fw-bold mb-2">{{ producto.nombre }} {% if producto.productor.perfil.es_demo %}{% include 'includes/etiqueta_demo.html' %}{% endif %}</h1>
+            {% with frescura=producto.nivel_frescura %}
+            <div class="mb-2"><span class="chip-frescura en-linea {{ frescura }}"><i class="bi {% if frescura == 'fresco' %}bi-flower1{% elif frescura == 'normal' %}bi-clock{% else %}bi-hourglass-split{% endif %}" aria-hidden="true"></i>{{ producto.nombre_frescura }} · {{ producto.texto_frescura }}</span></div>
+            {% endwith %}
             <a href="#opiniones" class="resumen-estrellas mb-2">
                 {% if total_resenas %}
                     <span class="estrellas" aria-hidden="true">{% for i in "12345" %}<i class="bi {% if forloop.counter <= estrellas_promedio %}bi-star-fill{% else %}bi-star{% endif %}"></i>{% endfor %}</span>
