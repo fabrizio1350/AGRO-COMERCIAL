@@ -101,17 +101,24 @@ class MercadoPresencialTests(TestCase):
         pagina = self.client.get(reverse('pagar_comision_oferta', args=[publicado.pk]))
         self.assertContains(pagina, 'Tarjeta')
         self.assertContains(pagina, 'Yape o Plin')
-        self.assertContains(pagina, 'S/ 2,00')
-        self.assertContains(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]), {'metodo_pago': 'BITCOIN'}),
+        self.assertContains(pagina, 'S/ 0,50')
+        self.assertContains(pagina, 'S/ 1,00')
+        self.assertContains(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]),
+                                             {'metodo_pago': 'BITCOIN', 'tipo_oferta': 'PREMIUM'}),
                             'Elige si pagas con tarjeta o con QR')
-        self.assertRedirects(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]), {'metodo_pago': 'YAPE_PLIN'}),
+        self.assertContains(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]),
+                                             {'metodo_pago': 'TARJETA', 'tipo_oferta': 'GRATIS'}),
+                            'Elige si tu oferta es normal o premium')
+        self.assertRedirects(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]),
+                                              {'metodo_pago': 'YAPE_PLIN', 'tipo_oferta': 'PREMIUM'}),
                              reverse('panel_productor'))
         publicado.refresh_from_db()
         self.assertFalse(publicado.oferta_pendiente_pago)
-        self.assertIn(publicado, Producto.objects.ofertas_activas())
-        self.assertEqual(PagoComision.objects.get(producto=publicado).monto, Decimal('2.00'))
+        self.assertEqual(publicado.tipo_oferta, 'PREMIUM')
+        self.assertIn(publicado, Producto.objects.ofertas_premium())
+        self.assertEqual(PagoComision.objects.get(producto=publicado).monto, Decimal('1.00'))
         # Pagar otra vez no crea un segundo cobro, y editar una oferta pagada no la vuelve a cobrar
-        self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]), {'metodo_pago': 'TARJETA'})
+        self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]), {'metodo_pago': 'TARJETA', 'tipo_oferta': 'PREMIUM'})
         self.assertRedirects(self.client.post(reverse('editar_producto', args=[publicado.pk]), dict(datos, precio_oferta='3.50')),
                              reverse('panel_productor'))
         self.assertEqual(PagoComision.objects.filter(producto=publicado).count(), 1)
@@ -123,6 +130,64 @@ class MercadoPresencialTests(TestCase):
         self.client.force_login(self.comprador)
         # Un comprador no puede editar: se le ofrece pasar su cuenta a vendedor
         self.assertRedirects(self.client.post(reverse('editar_producto', args=[publicado.pk]), {}), reverse('quiero_vender'))
+
+    def test_oferta_normal_solo_en_productos_y_premium_en_todos_lados(self):
+        self.client.force_login(self.vendedor)
+        datos = {
+            'nombre': 'Mango', 'descripcion': 'Dulce', 'categoria': self.producto.categoria_id,
+            'unidad': 'KG', 'stock': 9, 'precio': '6.00', 'precio_oferta': '5.00', 'disponible': 'on',
+        }
+        self.client.post(reverse('crear_producto'), datos)
+        mango = Producto.objects.get(nombre='Mango')
+        self.client.post(reverse('pagar_comision_oferta', args=[mango.pk]), {'metodo_pago': 'TARJETA', 'tipo_oferta': 'NORMAL'})
+        mango.refresh_from_db()
+        self.assertEqual(mango.tipo_oferta, 'NORMAL')
+        self.assertEqual(PagoComision.objects.get(producto=mango).monto, Decimal('0.50'))
+        # Normal: precio de oferta y etiqueta en Productos, pero no en Ofertas ni en el carrusel
+        self.assertIn(mango, Producto.objects.ofertas_activas())
+        self.assertNotIn(mango, Producto.objects.ofertas_premium())
+        catalogo = self.client.get(reverse('catalogo'))
+        self.assertContains(catalogo, 'chip-oferta')
+        self.assertNotContains(self.client.get(reverse('ventas_por_oferta')), 'Mango')
+        self.assertNotContains(self.client.get(reverse('inicio')), 'carrusel-slide')
+        # Pasar a premium cobra solo la diferencia
+        pagina = self.client.get(reverse('pagar_comision_oferta', args=[mango.pk]))
+        self.assertContains(pagina, 'Pasar a premium')
+        self.client.post(reverse('pagar_comision_oferta', args=[mango.pk]), {'metodo_pago': 'TARJETA', 'tipo_oferta': 'PREMIUM'})
+        mango.refresh_from_db()
+        self.assertEqual(mango.tipo_oferta, 'PREMIUM')
+        self.assertEqual(PagoComision.objects.filter(producto=mango).latest('fecha_pago').monto, Decimal('0.50'))
+        self.assertContains(self.client.get(reverse('ventas_por_oferta')), 'Mango')
+        self.assertContains(self.client.get(reverse('inicio')), 'carrusel-slide')
+        # Ya premium: no hay nada mas que pagar
+        self.assertRedirects(self.client.get(reverse('pagar_comision_oferta', args=[mango.pk])), reverse('panel_productor'))
+        # Quitar la oferta la deja normal otra vez
+        self.client.post(reverse('editar_producto', args=[mango.pk]), dict(datos, precio_oferta=''))
+        mango.refresh_from_db()
+        self.assertEqual(mango.tipo_oferta, 'NORMAL')
+
+    def test_frescura_segun_dias_desde_que_llego(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        hoy = timezone.localdate()
+        for dias, nivel in ((0, 'fresco'), (2, 'fresco'), (3, 'normal'), (6, 'normal'), (7, 'antiguo'), (20, 'antiguo')):
+            self.producto.fecha_cosecha = hoy - timedelta(days=dias)
+            self.assertEqual(self.producto.nivel_frescura(), nivel, dias)
+        self.producto.save()
+        self.assertContains(self.client.get(reverse('catalogo')), 'frescura-antiguo')
+        # Al tocar Llego vuelve a fresco
+        self.client.force_login(self.vendedor)
+        self.client.post(reverse('actualizar_stock', args=[self.producto.pk]), {'accion': 'sumar', 'cantidad': 3})
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.nivel_frescura(), 'fresco')
+        self.assertEqual(self.producto.texto_frescura(), 'Llegó hoy')
+        # No acepta una fecha de llegada futura
+        datos = {
+            'nombre': 'Palta', 'descripcion': 'Fresca', 'categoria': self.producto.categoria_id, 'unidad': 'KG',
+            'stock': 8, 'precio': '5.00', 'disponible': 'on', 'fecha_cosecha': (hoy + timedelta(days=1)).isoformat(),
+        }
+        self.assertContains(self.client.post(reverse('editar_producto', args=[self.producto.pk]), datos),
+                            'no puede ser en el futuro')
 
 
 class PanelYListaTests(TestCase):
