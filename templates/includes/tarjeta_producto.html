@@ -1,16 +1,24 @@
 {% comment %}
 Tarjeta de producto. Uso: {% include 'includes/tarjeta_producto.html' with prod=producto %}
 El stock se refresca solo (static/js/stock-vivo.js) si un contenedor padre tiene data-stock-url.
+Arriba a la izquierda va la etiqueta "Oferta" (normal o premium) y arriba a la derecha la frescura:
+verde = fresco, amarillo = normal, gris = con más días desde que llegó al puesto.
 {% endcomment %}
-<article class="tarjeta-producto" data-stock-id="{{ prod.id }}">
+{% with frescura=prod.nivel_frescura %}
+<article class="tarjeta-producto frescura-{{ frescura }}" data-stock-id="{{ prod.id }}">
     <div class="foto">
         <a href="{% url 'detalle_producto' prod.id %}" tabindex="-1" aria-hidden="true">
             <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" loading="lazy" style="view-transition-name: foto-producto-{{ prod.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
         </a>
         <div class="chip-foto">
-            {% if prod.oferta_activa %}<span class="chip chip-descuento">-{{ prod.porcentaje_descuento }}%</span>{% endif %}
+            {% if prod.oferta_activa %}
+                {% if prod.es_premium %}<span class="chip chip-oferta premium" title="Oferta premium"><i class="bi bi-star-fill" aria-hidden="true"></i>Oferta</span>
+                {% else %}<span class="chip chip-oferta"><i class="bi bi-tag-fill" aria-hidden="true"></i>Oferta</span>{% endif %}
+                <span class="chip chip-descuento">-{{ prod.porcentaje_descuento }}%</span>
+            {% endif %}
             {% if prod.productor.perfil.es_demo %}<span class="chip chip-demo" title="Publicación de prueba con datos de ejemplo"><i class="bi bi-robot" aria-hidden="true"></i>Demo</span>{% endif %}
         </div>
+        <span class="chip-frescura {{ frescura }}" title="{{ prod.texto_frescura }}"><i class="bi {% if frescura == 'fresco' %}bi-flower1{% elif frescura == 'normal' %}bi-clock{% else %}bi-hourglass-split{% endif %}" aria-hidden="true"></i><span class="texto-frescura">{{ prod.nombre_frescura }}</span><span class="visually-hidden">: {{ prod.texto_frescura }}</span></span>
         <span class="stock-vivo {% if prod.stock <= 5 %}poco{% endif %}" data-existencias>
             <span class="punto" aria-hidden="true"></span><span data-texto-stock>{% if prod.stock %}Quedan {{ prod.stock }} {{ prod.nombre_unidad_stock }}{% else %}Agotado{% endif %}</span>
         </span>
@@ -42,3 +50,4 @@ El stock se refresca solo (static/js/stock-vivo.js) si un contenedor padre tiene
         </div>
     </div>
 </article>
+{% endwith %}
