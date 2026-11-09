@@ -35,7 +35,7 @@ class Command(BaseCommand):
             usuario = User.objects.filter(email__iexact=correo).first()
             # Si ya tenia ofertas esperando el pago, se publican de una vez
             publicadas = Producto.objects.filter(productor=usuario, en_oferta=True, oferta_pendiente_pago=True).update(
-                oferta_pendiente_pago=False) if usuario else 0
+                oferta_pendiente_pago=False, tipo_oferta='PREMIUM') if usuario else 0
             estado = 'agregado' if nuevo else 'ya estaba'
             cuenta = f'cuenta {usuario.username}' if usuario else 'aún nadie se registró con ese correo'
             extra = f', {publicadas} oferta(s) publicadas' if publicadas else ''
