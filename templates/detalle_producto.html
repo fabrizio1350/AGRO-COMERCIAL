@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ producto.nombre }} | AgroComercial{% endblock %}
+{% block title %}{{ producto.nombre }} | MercOfertas{% endblock %}
 
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3 small">
@@ -115,7 +115,7 @@
                 <div class="min-w-0">
                     <span class="antetitulo mb-0"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Dónde comprar</span>
                     <h2 class="h5 fw-bold mb-0" id="tituloDonde">{{ lugar.nombre }}</h2>
-                    {% if producto.productor.perfil.vendedor_verificado %}<span class="insignia-verificado" title="AgroComercial comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span>{% endif %}
+                    {% if producto.productor.perfil.vendedor_verificado %}<span class="insignia-verificado" title="MercOfertas comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span>{% endif %}
                     {% if lugar == puesto %}
                     <div class="text-muted small">{{ puesto.titulo_puesto }}{% if puesto.referencia %} · {{ puesto.referencia }}{% endif %}</div>
                     {% else %}
