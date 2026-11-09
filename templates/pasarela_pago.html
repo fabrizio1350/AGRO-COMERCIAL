@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Confirmar Compra con Culqi | AgroComercial{% endblock %}
+{% block title %}Confirmar Compra con Culqi | MercOfertas{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -211,7 +211,7 @@
     if (typeof Culqi !== 'undefined' && culqiPublicKey && culqiPublicKey !== 'pk_test_0000000000000000') {
         Culqi.publicKey = culqiPublicKey;
         Culqi.settings({
-            title: 'AgroComercial',
+            title: 'MercOfertas',
             currency: 'PEN',
             amount: {{ total_centimos }}
         });
