@@ -341,7 +341,7 @@ class VerificacionVendedorForm(forms.ModelForm):
             'foto_en_puesto': 'Foto tuya en tu puesto',
             'constancia_puesto': 'Constancia de tu puesto (opcional)',
             'declara_puesto': 'Declaro que atiendo el puesto que marqué en el mapa',
-            'acepta_tratamiento_datos': 'Autorizo a AgroComercial a usar estos datos solo para verificar mi puesto',
+            'acepta_tratamiento_datos': 'Autorizo a MercOfertas a usar estos datos solo para verificar mi puesto',
         }
         widgets = {
             'dni': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric', 'maxlength': '8', 'placeholder': '8 dígitos', 'autocomplete': 'off'}),
