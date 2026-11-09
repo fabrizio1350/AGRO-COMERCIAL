@@ -258,6 +258,8 @@ def asegurar_datos_iniciales():
 
     productos_creados = []
     for datos in productos_demo:
+        if datos.get("en_oferta"):
+            datos.setdefault("tipo_oferta", "PREMIUM")
         prod = Producto.objects.create(**datos)
         productos_creados.append(prod)
 
@@ -279,9 +281,9 @@ def asegurar_datos_iniciales():
 
 
 def ofertas_destacadas(limite=10):
-    """Ofertas vigentes para el carrusel: primero las de mayor descuento."""
+    """Ofertas premium vigentes para el carrusel: primero las de mayor descuento."""
     return (
-        Producto.objects.ofertas_activas()
+        Producto.objects.ofertas_premium()
         .select_related('categoria', 'productor', 'productor__puesto', 'ubicacion')
         .annotate(descuento_calc=ExpressionWrapper(
             (F('precio') - F('precio_oferta')) * 100 / F('precio'),
@@ -1681,7 +1683,7 @@ def crear_producto(request):
         'form': form,
         'accion': 'Publicar Nuevo Producto',
         'comision_porcentaje': 0,
-        'comision_minima': settings.TARIFA_OFERTA,
+        'comision_minima': settings.TARIFA_OFERTA_NORMAL,
     })
 
 
@@ -1725,7 +1727,7 @@ def editar_producto(request, producto_id):
         'producto': producto,
         'accion': 'Editar mi Producto Agrícola',
         'comision_porcentaje': 0,
-        'comision_minima': settings.TARIFA_OFERTA,
+        'comision_minima': settings.TARIFA_OFERTA_NORMAL,
     })
 
 
