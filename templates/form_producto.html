@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if producto.pk %}Editar producto{% else %}Publicar producto{% endif %} | AgroComercial{% endblock %}
+{% block title %}{% if producto.pk %}Editar producto{% else %}Publicar producto{% endif %} | MercOfertas{% endblock %}
 
 {% block extra_css %}
 {% if not maps_key %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endif %}
