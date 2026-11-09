@@ -1,8 +1,8 @@
 {% comment %}
 Tarjeta de producto. Uso: {% include 'includes/tarjeta_producto.html' with prod=producto %}
 El stock se refresca solo (static/js/stock-vivo.js) si un contenedor padre tiene data-stock-url.
-Arriba a la izquierda va la etiqueta "Oferta" (normal o premium) y arriba a la derecha la frescura:
-verde = fresco, amarillo = normal, gris = con más días desde que llegó al puesto.
+Sobre la foto solo van dos cosas: la etiqueta de oferta (arriba) y el stock en vivo (abajo).
+La frescura (verde = fresco, amarillo = normal, gris = con más días) va como punto debajo del puesto.
 {% endcomment %}
 {% with frescura=prod.nivel_frescura %}
 <article class="tarjeta-producto frescura-{{ frescura }}" data-stock-id="{{ prod.id }}">
@@ -10,42 +10,43 @@ verde = fresco, amarillo = normal, gris = con más días desde que llegó al pue
         <a href="{% url 'detalle_producto' prod.id %}" tabindex="-1" aria-hidden="true">
             <img src="{{ prod.url_imagen }}" alt="{{ prod.nombre }}" loading="lazy" style="view-transition-name: foto-producto-{{ prod.id }};" onerror="this.onerror=null;this.src='/static/imagenes/finca_productor.jpg';">
         </a>
+        {% if prod.oferta_activa %}
         <div class="chip-foto">
-            {% if prod.oferta_activa %}
-                {% if prod.es_premium %}<span class="chip chip-oferta premium" title="Oferta premium"><i class="bi bi-star-fill" aria-hidden="true"></i>Oferta</span>
-                {% else %}<span class="chip chip-oferta"><i class="bi bi-tag-fill" aria-hidden="true"></i>Oferta</span>{% endif %}
-                <span class="chip chip-descuento">-{{ prod.porcentaje_descuento }}%</span>
-            {% endif %}
-            {% if prod.productor.perfil.es_demo %}<span class="chip chip-demo" title="Publicación de prueba con datos de ejemplo"><i class="bi bi-robot" aria-hidden="true"></i>Demo</span>{% endif %}
+            <span class="chip chip-oferta{% if prod.es_premium %} premium{% endif %}"{% if prod.es_premium %} title="Oferta destacada"{% endif %}>{% if prod.es_premium %}<i class="bi bi-star-fill" aria-hidden="true"></i>{% endif %}Oferta -{{ prod.porcentaje_descuento }}%</span>
         </div>
-        <span class="chip-frescura {{ frescura }}" title="{{ prod.texto_frescura }}"><i class="bi {% if frescura == 'fresco' %}bi-flower1{% elif frescura == 'normal' %}bi-clock{% else %}bi-hourglass-split{% endif %}" aria-hidden="true"></i><span class="texto-frescura">{{ prod.nombre_frescura }}</span><span class="visually-hidden">: {{ prod.texto_frescura }}</span></span>
+        {% endif %}
         <span class="stock-vivo {% if prod.stock <= 5 %}poco{% endif %}" data-existencias>
             <span class="punto" aria-hidden="true"></span><span data-texto-stock>{% if prod.stock %}Quedan {{ prod.stock }} {{ prod.nombre_unidad_stock }}{% else %}Agotado{% endif %}</span>
         </span>
     </div>
     <div class="cuerpo">
-        <div class="meta text-truncate"><i class="bi bi-shop me-1" aria-hidden="true"></i>{% with lugar=prod.lugar %}{{ lugar.nombre|default:"Mercado local" }}{% if lugar.numero %} · Puesto {{ lugar.numero }}{% endif %}{% endwith %}</div>
-        {% if prod.productor.perfil.vendedor_verificado %}<div class="mb-1"><span class="insignia-verificado chica" title="MercOfertas comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Puesto verificado</span></div>{% endif %}
         <h3><a href="{% url 'detalle_producto' prod.id %}">{{ prod.nombre }}</a></h3>
+        <div class="meta text-truncate">{% with lugar=prod.lugar %}{{ lugar.nombre|default:"Mercado local" }}{% if lugar.numero %} · Puesto {{ lugar.numero }}{% endif %}{% endwith %}</div>
+        <div class="datos-extra">
+            <span class="frescura-texto" title="{{ prod.texto_frescura }}"><span class="punto-frescura {{ frescura }}" aria-hidden="true"></span>{{ prod.nombre_frescura }}</span>
+            {% if prod.productor.perfil.vendedor_verificado %}<span class="insignia-verificado chica" title="MercOfertas comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Verificado</span>{% endif %}
+            {% if prod.productor.perfil.es_demo %}<span class="texto-demo" title="Publicación de prueba con datos de ejemplo">Demo</span>{% endif %}
+        </div>
         {% with pagos=prod.productor.puesto.iconos_pago %}
-        {% if pagos %}<div class="pagos-mini" aria-label="Pagos en el puesto">{% for icono, nombre in pagos %}<span title="{{ nombre }}"><i class="bi {{ icono }}" aria-hidden="true"></i><span class="visually-hidden">{{ nombre }}</span></span>{% endfor %}</div>{% endif %}
+        {% if pagos %}<div class="pagos-texto">Paga con {% for icono, nombre in pagos %}{{ nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
         {% endwith %}
         <div class="pie">
-            <div>
+            <div class="precios">
                 {% if prod.oferta_activa %}
-                    <span class="precio-anterior d-block">S/ {{ prod.precio }}</span>
                     <span class="precio en-oferta">S/ <span data-precio>{{ prod.precio_oferta }}</span></span>
+                    <span class="unidad">/ {{ prod.unidad_corta }}</span>
+                    <span class="precio-anterior d-block">Antes S/ {{ prod.precio }}</span>
                 {% else %}
                     <span class="precio">S/ <span data-precio>{{ prod.precio }}</span></span>
+                    <span class="unidad">/ {{ prod.unidad_corta }}</span>
                 {% endif %}
-                <span class="small text-muted">/ {{ prod.unidad_corta }}</span>
             </div>
             {% if user.is_authenticated and prod.productor_id == user.id %}
                 {# Es un producto de su propio puesto: solo lo ve #}
-                <a href="{% url 'detalle_producto' prod.id %}" class="boton-circular" aria-label="Ver {{ prod.nombre }}"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+                <a href="{% url 'detalle_producto' prod.id %}" class="boton-comprar secundario" aria-label="Ver {{ prod.nombre }}">Ver</a>
             {% else %}
                 {# Lleva a la ficha, donde el comprador elige cuánto quiere antes de guardarlo #}
-                <a href="{% url 'detalle_producto' prod.id %}#comprar" class="boton-comprar" aria-label="Comprar {{ prod.nombre }}"><i class="bi bi-bag" aria-hidden="true"></i>Comprar</a>
+                <a href="{% url 'detalle_producto' prod.id %}#comprar" class="boton-comprar" aria-label="Comprar {{ prod.nombre }}">Comprar</a>
             {% endif %}
         </div>
     </div>
