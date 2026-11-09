@@ -13,7 +13,7 @@
     <link href="{% static 'vendor/swiper-bundle.min.css' %}" rel="stylesheet">
     <link href="{% static 'css/estilos.css' %}?v={{ version_estaticos }}" rel="stylesheet">
     <link href="{% static 'css/tema.css' %}?v={{ version_estaticos }}" rel="stylesheet">
-    <link rel="icon" type="image/png" href="{% static 'imagenes/favicon.png' %}">
+    <link rel="icon" type="image/png" href="{% include 'includes/favicon_url.html' %}">
     <link rel="apple-touch-icon" href="{% static 'imagenes/apple-touch-icon.png' %}">
     {% include 'includes/estilos_ofertas.html' %}
     <meta name="theme-color" content="#15803d">
@@ -46,7 +46,7 @@
         <div class="cabecera-principal">
             <div class="container-xxl d-flex align-items-center gap-2 gap-lg-4">
                 <a class="logo-marca d-inline-flex align-items-center gap-2 text-decoration-none" href="{% url 'inicio' %}">
-                    <span class="logo-icono logo-imagen"><img src="{% static 'imagenes/logo-mercofertas.png' %}" alt="" width="38" height="38"></span>
+                    <span class="logo-icono logo-imagen"><img src="{% include 'includes/logo_url.html' %}" alt="" width="38" height="38"></span>
                     <span class="logo-texto">Merc<span>Ofertas</span></span>
                 </a>
 
@@ -166,7 +166,7 @@
     <div class="offcanvas offcanvas-end menu-movil" tabindex="-1" id="menuNavegacion" aria-labelledby="tituloMenu">
         <div class="offcanvas-header">
             <h5 class="offcanvas-title fw-bold d-flex align-items-center gap-2" id="tituloMenu">
-                <span class="logo-icono logo-imagen"><img src="{% static 'imagenes/logo-mercofertas.png' %}" alt="" width="38" height="38"></span>MercOfertas
+                <span class="logo-icono logo-imagen"><img src="{% include 'includes/logo_url.html' %}" alt="" width="38" height="38"></span>MercOfertas
             </h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
         </div>
@@ -229,7 +229,7 @@
             <div class="row g-4 pie-columnas">
                 <div class="col-12 col-lg-4">
                     <a class="logo-marca d-inline-flex align-items-center gap-2 text-decoration-none mb-3" href="{% url 'inicio' %}">
-                        <span class="logo-icono logo-imagen"><img src="{% static 'imagenes/logo-mercofertas.png' %}" alt="" width="38" height="38"></span>
+                        <span class="logo-icono logo-imagen"><img src="{% include 'includes/logo_url.html' %}" alt="" width="38" height="38"></span>
                         <span class="logo-texto text-white">Merc<span>Ofertas</span></span>
                     </a>
                     <p class="mb-3">Tus mercados favoritos, sus mejores ofertas, en un solo lugar. Compara precios, mira el stock en tiempo real y compra directo en el puesto.</p>
