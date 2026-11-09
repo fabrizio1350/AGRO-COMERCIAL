@@ -19,7 +19,7 @@
         {% if user.is_authenticated and productor != user and productos %}
             <form action="{% url 'iniciar_chat' productos.0.id %}" method="post" class="m-0">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-warning"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Enviar mensaje</button>
+                <button type="submit" class="btn btn-success"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Enviar mensaje</button>
             </form>
         {% endif %}
     </div>
