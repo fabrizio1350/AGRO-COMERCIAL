@@ -2206,3 +2206,75 @@ a:hover { color: var(--verde-oscuro); }
 .btn-check:checked + .opcion-frescura.normal > i { color: #a8700a; }
 .btn-check:checked + .opcion-frescura.antiguo { border-color: #8a8f88; background: #f1f0ec; }
 .btn-check:focus-visible + .opcion-frescura { outline: 3px solid rgba(22, 122, 62, 0.35); outline-offset: 2px; }
+
+/* ===== Tiempo de la publicacion en tarjetas, boton de cuenta y contacto ===== */
+.vigencia-publicacion {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0.15rem 0 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--verde-oscuro);
+}
+.vigencia-publicacion.nivel-medio { color: #9a6200; }
+.vigencia-publicacion.nivel-poco { color: #b8470d; }
+.boton-cuenta, .boton-correo { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
+.boton-cuenta { border-radius: 999px; }
+.correo-pie { word-break: break-all; }
+
+/* ===== Animaciones (solo si la persona no pidio reducir movimiento) ===== */
+@keyframes mo-subir { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mo-brillo { from { transform: translateX(-120%) skewX(-20deg); } to { transform: translateX(220%) skewX(-20deg); } }
+@keyframes mo-latido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes mo-reloj { 0%, 80% { transform: rotate(0); } 90% { transform: rotate(180deg); } 100% { transform: rotate(180deg); } }
+
+@media (prefers-reduced-motion: no-preference) {
+    .btn, .boton-comprar, .boton-circular, .icono-cabecera {
+        transition: transform 0.18s cubic-bezier(.2,.8,.3,1.2), box-shadow 0.18s ease,
+                    background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .btn:hover, .boton-comprar:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(20, 60, 35, 0.18); }
+    .btn:active, .boton-comprar:active, .boton-circular:active, .icono-cabecera:active {
+        transform: translateY(0) scale(0.96);
+        box-shadow: none;
+        transition-duration: 0.06s;
+    }
+    .btn-link:hover, .dropdown-item:hover { transform: none; box-shadow: none; }
+    /* Destello que cruza los botones verdes al pasar el mouse */
+    .btn-success, .boton-comprar, .boton-cuenta { position: relative; overflow: hidden; }
+    .btn-success::after, .boton-comprar::after, .boton-cuenta::after {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 40%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+        transform: translateX(-120%) skewX(-20deg);
+        pointer-events: none;
+    }
+    .btn-success:hover::after, .boton-comprar:hover::after, .boton-cuenta:hover::after { animation: mo-brillo 0.7s ease; }
+    .boton-cuenta i { transition: transform 0.25s ease; }
+    .boton-cuenta:hover i { transform: rotate(-12deg) scale(1.15); }
+
+    /* Tarjetas: suben un poco y la foto hace zoom */
+    .tarjeta-producto { transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease; }
+    .tarjeta-producto:hover { transform: translateY(-4px); }
+    .tarjeta-producto .foto img { transition: transform 0.5s ease; }
+    .tarjeta-producto:hover .foto img { transform: scale(1.06); }
+    .tarjeta-producto .chip-oferta { animation: mo-latido 2.4s ease-in-out infinite; }
+    .vigencia-publicacion.nivel-poco i, .barra-tiempo.nivel-poco .bi-hourglass-split { display: inline-block; animation: mo-reloj 3s ease-in-out infinite; }
+    .barra-tiempo-relleno { transition: width 0.8s ease; }
+
+    /* Entrada suave de las tarjetas y bloques al cargar la pagina */
+    .tarjeta-producto, .info-bloque, .ficha-compra { animation: mo-subir 0.45s ease both; }
+    .row > :nth-child(2) > .tarjeta-producto { animation-delay: 0.05s; }
+    .row > :nth-child(3) > .tarjeta-producto { animation-delay: 0.1s; }
+    .row > :nth-child(4) > .tarjeta-producto { animation-delay: 0.15s; }
+    .row > :nth-child(5) > .tarjeta-producto { animation-delay: 0.2s; }
+    .row > :nth-child(n+6) > .tarjeta-producto { animation-delay: 0.25s; }
+
+    /* Enlaces del menu y del pie con subrayado que crece */
+    footer a:not(.btn), .enlace-ver-todo { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size 0.25s ease; }
+    footer a:not(.btn):hover, .enlace-ver-todo:hover { background-size: 100% 1px; }
+    .form-control, .form-select { transition: border-color 0.15s ease, box-shadow 0.2s ease; }
+}
