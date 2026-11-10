@@ -118,12 +118,21 @@ class PublicacionForm(forms.ModelForm):
     fecha_vence = forms.DateField(
         label='¿Qué día crees que se vence tu producto?', required=False,
         widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}))
+    # Frescura: la dice el vendedor, que conoce su producto. No se calcula sola ni vuelve a "fresco" por su cuenta
+    frescura = forms.ChoiceField(label='¿Cómo está tu producto hoy?', choices=Producto.FRESCURAS, required=False,
+                                 widget=forms.RadioSelect(attrs={'class': 'btn-check'}))
+    fresco_dias = forms.IntegerField(
+        label='¿Cuántos días seguirá fresco?', required=False, min_value=1, max_value=60,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 60, 'inputmode': 'numeric'}))
+    normal_dias = forms.IntegerField(
+        label='Después, ¿cuántos días estará normal?', required=False, min_value=0, max_value=90,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 90, 'inputmode': 'numeric'}))
 
     class Meta:
         model = Producto
-        fields = ('nombre', 'categoria', 'descripcion', 'imagen', 'unidad', 'stock', 'fecha_cosecha', 'precio',
+        fields = ('nombre', 'categoria', 'descripcion', 'imagen', 'unidad', 'stock', 'precio',
                   'precio_oferta', 'disponible')
-        labels = {'fecha_cosecha': '¿Cuándo llegó a tu puesto?','nombre': '¿Qué vendes?', 'imagen': 'Foto del producto', 'precio': 'Precio normal (S/)',
+        labels = {'nombre': '¿Qué vendes?', 'imagen': 'Foto del producto', 'precio': 'Precio normal (S/)',
                   'precio_oferta': 'Precio de oferta (S/)', 'disponible': 'Mostrar en la web',
                   'stock': 'Cantidad que tienes', 'unidad': 'Se vende por', 'descripcion': 'Descripción corta'}
         widgets = {
@@ -133,7 +142,6 @@ class PublicacionForm(forms.ModelForm):
             'imagen': forms.FileInput(attrs={'accept': 'image/jpeg,image/png,image/webp', 'class': 'd-none'}),
             'unidad': forms.Select(attrs={'class': 'form-select'}),
             'stock': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'inputmode': 'numeric'}),
-            'fecha_cosecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
             'precio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'inputmode': 'decimal'}),
             'precio_oferta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.10', 'min': '0.10', 'inputmode': 'decimal', 'placeholder': 'Opcional'}),
             'disponible': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
@@ -144,15 +152,22 @@ class PublicacionForm(forms.ModelForm):
         self.fields['categoria'].empty_label = 'Elige una categoría'
         self.fields['categoria'].queryset = Categoria.objects.order_by('nombre')
         self.fields['descripcion'].required = False
-        # Con esta fecha se pinta la frescura (verde, amarillo o gris) en la tarjeta
-        self.fields['fecha_cosecha'].required = False
-        self.fields['fecha_cosecha'].widget.attrs['max'] = timezone.localdate().isoformat()
         actual = self.instance.unidad if self.instance and self.instance.pk else None
         self.fields['unidad'].choices = [c for c in Producto.UNIDADES if c[0] in UNIDADES_MERCADO or c[0] == actual]
         if not self.instance.pk:
             self.initial.setdefault('unidad', 'KG')
             self.initial.setdefault('disponible', True)
-            self.initial.setdefault('fecha_cosecha', timezone.localdate())
+        # Al editar se muestra como esta HOY y lo que le queda; si el vendedor no lo toca, no cambia nada
+        if self.instance.pk:
+            queda_fresco, queda_normal = self.instance.tramos_frescura()
+            self.frescura_actual = {
+                'frescura': self.instance.nivel_frescura().upper(),
+                'fresco_dias': queda_fresco or self.instance.dias_fresco, 'normal_dias': queda_normal or self.instance.dias_normal,
+            }
+        else:
+            self.frescura_actual = {'frescura': 'FRESCO', 'fresco_dias': 3, 'normal_dias': 4}
+        for campo, valor in self.frescura_actual.items():
+            self.initial.setdefault(campo, valor)
         hoy = timezone.localdate()
         self.ultimo_dia = hoy + timedelta(days=settings.PUBLICACION_DIAS_MAXIMO)
         for campo in ('fecha_oferta', 'fecha_vence'):
@@ -192,11 +207,17 @@ class PublicacionForm(forms.ModelForm):
     def clean_imagen(self):
         return validar_foto(self.cleaned_data['imagen'])
 
-    def clean_fecha_cosecha(self):
-        fecha = self.cleaned_data.get('fecha_cosecha') or timezone.localdate()
-        if fecha > timezone.localdate():
-            raise forms.ValidationError('La fecha de llegada no puede ser en el futuro.')
-        return fecha
+    def frescura_elegida(self):
+        """(estado, dias fresco, dias normal) que eligio el vendedor, o None si lo dejo como estaba."""
+        datos = self.cleaned_data
+        elegido = {
+            'frescura': datos.get('frescura') or self.frescura_actual['frescura'],
+            'fresco_dias': datos.get('fresco_dias') or self.frescura_actual['fresco_dias'],
+            'normal_dias': self.frescura_actual['normal_dias'] if datos.get('normal_dias') is None else datos['normal_dias'],
+        }
+        if self.instance.pk and elegido == self.frescura_actual:
+            return None
+        return elegido['frescura'], elegido['fresco_dias'], elegido['normal_dias']
 
     def clean(self):
         datos = super().clean()
@@ -624,6 +645,11 @@ def publicar(request, producto_id=None):
         producto.oferta_fin = None
         producto.acepta_ofertas = False
         producto.minimo_compra = 1
+        frescura = form.frescura_elegida()
+        if frescura:
+            # Los dias se cuentan desde hoy, que es cuando el vendedor dijo como esta su producto
+            producto.frescura_inicial, producto.dias_fresco, producto.dias_normal = frescura
+            producto.fecha_cosecha = timezone.localdate()
         ubicacion = form.ubicacion_elegida()
         if ubicacion is not None and ubicacion.pk is None:
             ubicacion.save()
@@ -798,11 +824,8 @@ def actualizar_stock(request, producto_id):
                      'total_venta': str(Decimal(venta.total()).quantize(Decimal('0.01')))}
             return responder(True, f'Vendiste {cantidad} {producto.unidad_corta()} de {producto.nombre}.', producto, extra=extra)
         elif accion == 'sumar':
-            # Si llego mas mercaderia, la publicacion sigue visible otros dias
-            # y vuelve a contar como fresco (llego hoy)
-            Producto.objects.filter(pk=producto.pk).update(stock=F('stock') + cantidad, stock_actualizado=ahora,
-                                                           fecha_cosecha=timezone.localdate(),
-                                                           fecha_vencimiento=fecha_vencimiento_por_defecto())
+            # Solo suma stock. La frescura y el vencimiento los decide el vendedor al editar su producto
+            Producto.objects.filter(pk=producto.pk).update(stock=F('stock') + cantidad, stock_actualizado=ahora)
             texto = f'Agregaste {cantidad} a {producto.nombre}.'
         else:
             if accion == 'agotado':
