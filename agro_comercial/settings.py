@@ -33,6 +33,17 @@ SECURE_SSL_REDIRECT = not DEBUG and os.environ.get('REDIRIGIR_HTTPS', 'True').lo
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SILENCED_SYSTEM_CHECKS = ['security.W021']  # la lista "preload" solo aplica a dominios principales
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+# Las cookies de sesion no las puede leer JavaScript ni viajan en pedidos que vienen de otras webs
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+# Limites para que nadie tumbe el servidor mandando formularios gigantes
+DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
 if os.environ.get('TRUST_PROXY_HTTPS', '').lower() == 'true':
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Dominios con https que envian formularios, ej. https://agro.proyects.site
@@ -118,6 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 10},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -171,6 +183,24 @@ LOGOUT_REDIRECT_URL = 'inicio'
 # Premium: ademas sale en el carrusel, la pagina Ofertas y el inicio.
 TARIFA_OFERTA_NORMAL = float(os.environ.get('TARIFA_OFERTA_NORMAL', '0.50'))
 TARIFA_OFERTA_PREMIUM = float(os.environ.get('TARIFA_OFERTA_PREMIUM', '1.00'))
+# UNICO numero de Yape/Plin que recibe los pagos. Va escrito aqui (no en .env ni en la base de datos)
+# para que nadie lo pueda cambiar desde la web ni desde el panel de administracion.
+TELEFONO_PAGOS = '900817270'
+# Nombre que le sale al vendedor en Yape al pagar, para que confirme que es la cuenta correcta (opcional)
+TITULAR_PAGOS = os.environ.get('TITULAR_PAGOS', '')
+# Maximo de pagos que una cuenta puede enviar a revision en 24 horas (evita que prueben numeros al azar)
+PAGOS_MAXIMO_POR_DIA = int(os.environ.get('PAGOS_MAXIMO_POR_DIA', '6'))
+
+# Los intentos raros (formularios alterados, hosts falsos, errores) quedan en el registro de gunicorn
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'consola': {'class': 'logging.StreamHandler'}},
+    'loggers': {
+        'django.security': {'handlers': ['consola'], 'level': 'WARNING', 'propagate': False},
+        'mercado.pagos': {'handlers': ['consola'], 'level': 'INFO', 'propagate': False},
+    },
+}
 
 # Frescura: dias desde que el producto llego al puesto
 FRESCURA_DIAS_FRESCO = int(os.environ.get('FRESCURA_DIAS_FRESCO', '2'))   # 0 a 2 dias: verde
