@@ -28,6 +28,11 @@ La frescura va siempre escrita con su ícono (Fresco, Normal, Con más días) y 
             {% if prod.productor.perfil.vendedor_verificado %}<span class="insignia-verificado chica" title="MercOfertas comprobó que esta persona atiende el puesto"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Verificado</span>{% endif %}
             {% if prod.productor.perfil.es_demo %}<span class="texto-demo" title="Publicación de prueba con datos de ejemplo">Demo</span>{% endif %}
         </div>
+        {% with limite=prod.fecha_limite %}{% if limite %}
+        <div class="vigencia-publicacion nivel-{{ prod.nivel_tiempo_restante }}" title="Hasta cuándo se ve esta publicación">
+            <i class="bi bi-hourglass-split" aria-hidden="true"></i><span>{% if prod.oferta_activa and prod.oferta_fin %}Oferta{% else %}Publicado{% endif %} hasta el {{ limite|date:"d/m" }} · {{ prod.texto_tiempo_restante }}</span>
+        </div>
+        {% endif %}{% endwith %}
         {% with pagos=prod.productor.puesto.iconos_pago %}
         {% if pagos %}<div class="pagos-texto">Paga con {% for icono, nombre in pagos %}{{ nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
         {% endwith %}
