@@ -2265,16 +2265,113 @@ a:hover { color: var(--verde-oscuro); }
     .vigencia-publicacion.nivel-poco i, .barra-tiempo.nivel-poco .bi-hourglass-split { display: inline-block; animation: mo-reloj 3s ease-in-out infinite; }
     .barra-tiempo-relleno { transition: width 0.8s ease; }
 
-    /* Entrada suave de las tarjetas y bloques al cargar la pagina */
-    .tarjeta-producto, .info-bloque, .ficha-compra { animation: mo-subir 0.45s ease both; }
-    .row > :nth-child(2) > .tarjeta-producto { animation-delay: 0.05s; }
-    .row > :nth-child(3) > .tarjeta-producto { animation-delay: 0.1s; }
-    .row > :nth-child(4) > .tarjeta-producto { animation-delay: 0.15s; }
-    .row > :nth-child(5) > .tarjeta-producto { animation-delay: 0.2s; }
-    .row > :nth-child(n+6) > .tarjeta-producto { animation-delay: 0.25s; }
+    /* Entrada suave: la ficha del producto al abrirla (las tarjetas y secciones aparecen al hacer scroll, ver abajo) */
+    .ficha-compra { animation: mo-subir 0.45s ease both; }
 
     /* Enlaces del menu y del pie con subrayado que crece */
     footer a:not(.btn), .enlace-ver-todo { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size 0.25s ease; }
     footer a:not(.btn):hover, .enlace-ver-todo:hover { background-size: 100% 1px; }
     .form-control, .form-select { transition: border-color 0.15s ease, box-shadow 0.2s ease; }
+}
+
+/* ===== Transiciones y animaciones (2da ronda) ===== */
+@keyframes mo-aparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mo-desplegar { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes mo-deslizar { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@keyframes mo-rebote { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 65% { transform: scale(0.9); } 100% { transform: scale(1); } }
+@keyframes mo-carga { from { transform: scaleX(0); } to { transform: scaleX(0.85); } }
+@keyframes mo-llenar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Barra fina arriba mientras carga la siguiente pagina */
+.barra-carga {
+    position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 2000;
+    background: linear-gradient(90deg, var(--verde-campo), var(--amarillo));
+    transform-origin: left; transform: scaleX(0); opacity: 0; pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    /* Navegadores sin transicion entre paginas: la pagina entra con un fundido */
+    @supports not (view-transition-name: none) {
+        main#contenido { animation: mo-aparecer 0.35s ease both; }
+    }
+    .barra-carga.cargando { opacity: 1; animation: mo-carga 2.5s cubic-bezier(.1,.7,.2,1) forwards; }
+
+    /* Aparecer al hacer scroll: la clase .revelar solo la pone el JS, asi sin JS todo se ve igual */
+    .revelar { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.2,.7,.2,1); transition-delay: var(--retraso, 0s); }
+    .revelar.revelado { opacity: 1; transform: none; }
+    .tarjeta-producto.revelar { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.2,.7,.2,1), box-shadow 0.25s ease, border-color 0.25s ease; }
+    .tarjeta-producto.revelado:hover { transform: translateY(-4px); transition-delay: 0s; }
+    .revelar.revelado .barra-tiempo-relleno { animation: mo-llenar 0.9s ease both; transform-origin: left; }
+
+    /* Menus desplegables, ventanas y avisos */
+    .dropdown-menu.show { animation: mo-desplegar 0.18s ease both; transform-origin: top right; }
+    .modal.fade .modal-dialog { transform: translateY(16px) scale(0.97); transition: transform 0.3s cubic-bezier(.2,.8,.3,1.1); }
+    .modal.show .modal-dialog { transform: none; }
+    .alert { animation: mo-deslizar 0.4s cubic-bezier(.2,.8,.3,1.1) both; }
+    .offcanvas.showing .menu-movil-enlaces a, .offcanvas.show .menu-movil-enlaces a { animation: mo-deslizar 0.35s ease both; }
+    .offcanvas .menu-movil-enlaces a:nth-child(2) { animation-delay: 0.04s; }
+    .offcanvas .menu-movil-enlaces a:nth-child(3) { animation-delay: 0.08s; }
+    .offcanvas .menu-movil-enlaces a:nth-child(4) { animation-delay: 0.12s; }
+    .offcanvas .menu-movil-enlaces a:nth-child(5) { animation-delay: 0.16s; }
+    .offcanvas .menu-movil-enlaces a:nth-child(n+6) { animation-delay: 0.2s; }
+
+    /* Iconos de la cabecera y barra inferior */
+    .icono-cabecera i, .barra-inferior a i { display: inline-block; transition: transform 0.2s cubic-bezier(.2,.8,.3,1.4); }
+    .icono-cabecera:hover i, .barra-inferior a:hover i { transform: translateY(-2px) scale(1.1); }
+    .barra-inferior a.activo i { transform: translateY(-2px); }
+    .rebote { animation: mo-rebote 0.5s ease; }
+
+    /* Campos del formulario: el borde se ilumina al escribir */
+    .form-control:focus, .form-select:focus { box-shadow: 0 0 0 4px rgba(22, 122, 62, 0.15); }
+    .form-check-input { transition: background-color 0.15s ease, transform 0.15s ease; }
+    .form-check-input:active { transform: scale(0.9); }
+
+    /* Volver arriba */
+    #btnSubir { transition: opacity 0.25s ease, transform 0.25s cubic-bezier(.2,.8,.3,1.3); }
+}
+
+/* ===== Barra de tiempo bien visible: sobre la foto de la tarjeta y en el detalle ===== */
+.tiempo-foto { --tono: #1f9d55; --tono-claro: #7ee2a1; }
+.tiempo-foto.nivel-medio, .barra-tiempo.nivel-medio { --tono: #e08a00; --tono-claro: #ffd166; }
+.tiempo-foto.nivel-poco, .barra-tiempo.nivel-poco { --tono: #d9480f; --tono-claro: #ff8a5b; }
+.barra-tiempo { --tono: #1f9d55; --tono-claro: #7ee2a1; }
+.tiempo-foto-etiqueta {
+    position: absolute; top: 10px; right: 10px; z-index: 2;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.22rem 0.6rem; border-radius: 999px;
+    background: var(--tono); color: #ffffff;
+    font-size: 0.74rem; font-weight: 800; letter-spacing: 0.01em;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+.tiempo-foto-pista {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+    height: 7px; background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(2px);
+}
+.tiempo-foto-relleno, .barra-tiempo .barra-tiempo-relleno {
+    height: 100%;
+    background-color: var(--tono);
+    background-image: linear-gradient(90deg, var(--tono), var(--tono-claro)),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.25) 0 6px, transparent 6px 12px);
+    background-blend-mode: overlay;
+    background-size: 100% 100%, 24px 24px;
+    box-shadow: 0 0 10px var(--tono-claro);
+}
+.tiempo-foto-relleno { border-radius: 0 999px 999px 0; }
+.tarjeta-producto .stock-vivo { bottom: 14px; }
+/* En el detalle la barra es grande */
+.ficha-compra .barra-tiempo { padding: 0.75rem 0.9rem; border-radius: 12px; background: #f4faf6; border: 1px solid #d5ecdd; font-size: 0.88rem; }
+.ficha-compra .barra-tiempo.nivel-medio { background: #fff8e6; border-color: #f6dfa4; }
+.ficha-compra .barra-tiempo.nivel-poco { background: #fff1ea; border-color: #f8c9b2; }
+.ficha-compra .barra-tiempo-texto { color: var(--tono) !important; }
+.ficha-compra .barra-tiempo-pista { height: 12px; background: rgba(0, 0, 0, 0.08) !important; }
+.ficha-compra .barra-tiempo .barra-tiempo-relleno { border-radius: 999px; }
+
+@keyframes mo-rayas { from { background-position: 0 0, 0 0; } to { background-position: 0 0, 24px 0; } }
+@keyframes mo-pulso-tono { 0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.22); } 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--tono) 30%, transparent), 0 4px 12px rgba(0,0,0,0.22); } }
+@media (prefers-reduced-motion: no-preference) {
+    .tiempo-foto-relleno, .barra-tiempo .barra-tiempo-relleno { animation: mo-rayas 1.2s linear infinite; }
+    .tiempo-foto.nivel-poco .tiempo-foto-etiqueta { animation: mo-pulso-tono 1.6s ease-in-out infinite; }
+    .tarjeta-producto.revelado .tiempo-foto-relleno, .revelar.revelado .barra-tiempo-relleno {
+        animation: mo-llenar 0.9s ease both, mo-rayas 1.2s linear 0.9s infinite; transform-origin: left;
+    }
 }
