@@ -1,5 +1,6 @@
 """
-Crea vendedores de mercado y compradores de prueba (con su puesto en el mapa), marcados como Demo.
+Crea vendedores de mercado y compradores de prueba (con su puesto en el mapa), marcados como Demo,
+y algo de movimiento entre ellos: ventas de hoy, favoritos, listas de compras y mensajes.
 
 Uso:
     python manage.py crear_datos_demo          # crea o actualiza los bots
@@ -19,7 +20,10 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.files import File
 
-from mercado.models import Categoria, PerfilUsuario, Producto, Puesto, ResenaProducto, CATEGORIAS_AGRICOLAS
+from mercado.models import (
+    Categoria, Conversacion, Favorito, ItemCarrito, Mensaje, PerfilUsuario, Producto, Puesto, ResenaProducto,
+    VentaPuesto, CATEGORIAS_AGRICOLAS,
+)
 
 # Cuentas de prueba que ya existian: tambien se marcan como Demo
 CUENTAS_DEMO_ANTERIORES = ['productor_mantaro', 'productor_huaral', 'comprador_lima']
@@ -87,6 +91,84 @@ PRODUCTORES = [
                  descripcion='Papa amarilla para causa y frituras.', dias=9),
         ],
     },
+    {
+        'usuario': 'demo_vendedor_sanmartin', 'nombre': 'Elena', 'apellido': 'Huamaní',
+        'ubicacion': 'Arequipa (Cercado), Arequipa', 'finca': 'Frutería Elena (Demo)',
+        'puesto': dict(nombre='Mercado San Camilo', numero='201', referencia='Nave de frutas, segundo pasillo',
+                       horario='Lunes a domingo, 6 a. m. a 7 p. m.', lat='-16.401980', lng='-71.533560',
+                       foto='mandarina.jpg', efectivo=True, tarjeta=True, yape_plin=True),
+        'productos': [
+            dict(nombre='Mandarina sin pepa', categoria='Frutas de Estación', precio='5.00', oferta='4.00', unidad='KG',
+                 stock=50, imagen='/static/imagenes/mandarina.jpg',
+                 descripcion='Mandarina dulce, fácil de pelar. Ideal para la lonchera.', dias=1),
+            dict(nombre='Palta hass', categoria='Frutas de Estación', precio='9.00', unidad='KG',
+                 stock=22, imagen='/static/imagenes/palta_hass.jpg',
+                 descripcion='Palta hass de cáscara negra, lista para comer.', dias=2),
+            dict(nombre='Tomate cherry', categoria='Hortalizas y Verduras', precio='6.00', oferta='5.00', unidad='KG',
+                 stock=12, imagen='/static/imagenes/tomate.jpg',
+                 descripcion='Tomatito cherry para ensaladas y piqueos.', tipo_oferta='NORMAL'),
+        ],
+    },
+    {
+        'usuario': 'demo_vendedor_altiplano', 'nombre': 'Teófilo', 'apellido': 'Mamani',
+        'ubicacion': 'Arequipa (Cercado), Arequipa', 'finca': 'Papas del Altiplano (Demo)',
+        'puesto': dict(nombre='Mercado El Altiplano', numero='9', referencia='Entrada principal, a la derecha',
+                       horario='Lunes a sábado, 5 a. m. a 3 p. m.', lat='-16.394700', lng='-71.540600',
+                       foto='papa_amarilla.jpg', efectivo=True, tarjeta=False, yape_plin=True),
+        'productos': [
+            dict(nombre='Papa blanca', categoria='Tubérculos y Raíces', precio='2.20', oferta='1.80', unidad='KG',
+                 stock=120, imagen='/static/imagenes/papa_amarilla.jpg',
+                 descripcion='Papa blanca para el día a día. Por saco o por kilo.', dias=5),
+            dict(nombre='Papa canchán', categoria='Tubérculos y Raíces', precio='2.50', unidad='KG',
+                 stock=80, imagen='/static/imagenes/papa_amarilla.jpg',
+                 descripcion='Papa canchán buena para freír.', dias=6),
+        ],
+    },
+    {
+        'usuario': 'demo_vendedor_avelino', 'nombre': 'Carmen', 'apellido': 'Ccama',
+        'ubicacion': 'José Luis Bustamante y Rivero, Arequipa', 'finca': 'Verduras Doña Carmen (Demo)',
+        'puesto': dict(nombre='Mercado Avelino Cáceres', numero='118', referencia='Nave de verduras, frente a la puerta 1',
+                       horario='Todos los días, 4 a. m. a 3 p. m.', lat='-16.423200', lng='-71.521300',
+                       foto='zanahoria.jpg', efectivo=True, tarjeta=False, yape_plin=True),
+        'productos': [
+            dict(nombre='Zanahoria por saco', categoria='Hortalizas y Verduras', precio='1.50', oferta='1.20', unidad='KG',
+                 stock=150, imagen='/static/imagenes/zanahoria.jpg',
+                 descripcion='Zanahoria mediana, precio especial por cantidad.', dias=2),
+            dict(nombre='Tomate de ensalada', categoria='Hortalizas y Verduras', precio='3.20', unidad='KG',
+                 stock=40, imagen='/static/imagenes/tomate.jpg',
+                 descripcion='Tomate rojo y firme, recién llegado de Majes.'),
+        ],
+    },
+    {
+        'usuario': 'demo_vendedor_palomar', 'nombre': 'Wilber', 'apellido': 'Apaza',
+        'ubicacion': 'Arequipa (Cercado), Arequipa', 'finca': 'Granos Wilber (Demo)',
+        'puesto': dict(nombre='Mercado El Palomar', numero='56', referencia='Pasillo de abarrotes',
+                       horario='Lunes a sábado, 7 a. m. a 6 p. m.', lat='-16.410900', lng='-71.528400',
+                       foto='quinua_blanca.jpg', efectivo=True, tarjeta=True, yape_plin=True),
+        'productos': [
+            dict(nombre='Quinua blanca', categoria='Granos y Cereales', precio='10.00', oferta='8.50', unidad='KG',
+                 stock=30, imagen='/static/imagenes/quinua_blanca.jpg',
+                 descripcion='Quinua blanca lavada, grano grande.', dias=10),
+            dict(nombre='Quinua perlada', categoria='Granos y Cereales', precio='11.00', unidad='KG',
+                 stock=18, imagen='/static/imagenes/quinua_blanca.jpg',
+                 descripcion='Quinua perlada para sopas y postres.', dias=12),
+        ],
+    },
+    {
+        'usuario': 'demo_vendedor_ciudadmi', 'nombre': 'Rocío', 'apellido': 'Turpo',
+        'ubicacion': 'Paucarpata, Arequipa', 'finca': 'Puesto Rocío (Demo)',
+        'puesto': dict(nombre='Mercado de Ciudad Mi Trabajo', numero='73', referencia='Zona de frutas y verduras',
+                       horario='Lunes a domingo, 6 a. m. a 4 p. m.', lat='-16.430900', lng='-71.506600',
+                       foto='palta_hass.jpg', efectivo=True, tarjeta=False, yape_plin=True),
+        'productos': [
+            dict(nombre='Palta criolla', categoria='Frutas de Estación', precio='6.00', oferta='4.50', unidad='KG',
+                 stock=6, imagen='/static/imagenes/palta_hass.jpg',
+                 descripcion='Palta criolla madura. Últimos kilos del día.', dias=3),
+            dict(nombre='Mandarina de Chala', categoria='Frutas de Estación', precio='3.50', unidad='KG',
+                 stock=35, imagen='/static/imagenes/mandarina.jpg',
+                 descripcion='Mandarina jugosa para jugo.', dias=2),
+        ],
+    },
 ]
 
 COMPRADORES = [
@@ -96,6 +178,16 @@ COMPRADORES = [
      'ubicacion': 'Arequipa (Cercado), Arequipa', 'empresa': 'Puesto Demo Mercado San Camilo'},
     {'usuario': 'demo_comprador_distribuidor', 'nombre': 'Carmen', 'apellido': 'Torres',
      'ubicacion': 'Cerro Colorado, Arequipa', 'empresa': 'Distribuidora Demo del Sur'},
+    {'usuario': 'demo_comprador_menu', 'nombre': 'Patricia', 'apellido': 'Salas',
+     'ubicacion': 'Cayma, Arequipa', 'empresa': 'Menú Demo La Casona'},
+    {'usuario': 'demo_comprador_juguera', 'nombre': 'Jhon', 'apellido': 'Chávez',
+     'ubicacion': 'Arequipa (Cercado), Arequipa', 'empresa': 'Juguería Demo San Camilo'},
+    {'usuario': 'demo_comprador_casa', 'nombre': 'Milagros', 'apellido': 'Pari',
+     'ubicacion': 'Miraflores, Arequipa', 'empresa': 'Compras de casa (Demo)'},
+    {'usuario': 'demo_comprador_bodega', 'nombre': 'Ronald', 'apellido': 'Quispe',
+     'ubicacion': 'Paucarpata, Arequipa', 'empresa': 'Bodega Demo Don Ronald'},
+    {'usuario': 'demo_comprador_picanteria', 'nombre': 'Gloria', 'apellido': 'Zúñiga',
+     'ubicacion': 'Sachaca, Arequipa', 'empresa': 'Picantería Demo La Lucila'},
 ]
 
 # Comentarios de los compradores bot: (comprador, nombre del producto, estrellas, texto)
@@ -106,7 +198,37 @@ COMENTARIOS = [
     (0, 'Quinua roja del Colca', 4, 'Grano limpio, aceptan Yape.'),
     (1, 'Tomate redondo', 5, 'Buen precio en oferta.'),
     (2, 'Mandarina', 4, 'Dulces, volveré.'),
+    (3, 'Papa blanca', 5, 'Buen precio por saco para el menú.'),
+    (4, 'Mandarina sin pepa', 5, 'Salen bastantes jugos, muy dulces.'),
+    (5, 'Palta hass', 4, 'Madura, aunque llegué tarde y quedaban pocas.'),
+    (6, 'Quinua blanca', 5, 'Grano limpio, la uso para la mazamorra.'),
+    (7, 'Zanahoria por saco', 4, 'Llevé un saco, todo buena.'),
+    (3, 'Tomate de ensalada', 5, 'Firmes y rojitos.'),
+    (4, 'Palta criolla', 4, 'Buena para el desayuno.'),
+    (5, 'Tomate cherry', 5, 'Perfectos para la ensalada.'),
+    (6, 'Papa huayro', 5, 'Para la ocopa quedó buenaza.'),
+    (7, 'Quinua perlada', 4, 'Rinde bastante.'),
 ]
+
+# Movimiento de ejemplo (todo entre cuentas Demo): ventas de hoy, favoritos, listas de compras y mensajes.
+# (comprador, producto, cantidad)
+LISTAS = [
+    (0, 'Tomate italiano', 5), (0, 'Papa blanca', 10), (3, 'Zanahoria por saco', 8),
+    (4, 'Mandarina sin pepa', 6), (5, 'Palta hass', 2), (7, 'Quinua blanca', 3),
+]
+# (comprador, producto, [mensajes alternando comprador y vendedor])
+CHARLAS = [
+    (0, 'Tomate italiano', ['Buenas, ¿mañana a las 7 todavía tendrá tomate?', 'Sí, casera, llega temprano. Le separo 5 kilos.']),
+    (4, 'Mandarina sin pepa', ['¿Me hace precio si llevo 10 kilos?', 'Le dejo a S/ 3.80 el kilo si viene hoy.', 'Perfecto, paso a las 4.']),
+    (3, 'Papa blanca', ['¿Tiene saco de 50 kilos?', 'Sí, me quedan tres sacos.']),
+    (6, 'Quinua blanca', ['¿Acepta Yape?', 'Sí, Yape y Plin. Estoy en el puesto 56.']),
+]
+# Cuantas ventas de hoy tiene cada producto (las horas se reparten en la mañana)
+VENTAS_HOY = {
+    'Tomate italiano': [3, 2, 5], 'Papa huayro': [4], 'Palta fuerte': [2, 1], 'Mandarina sin pepa': [6, 3, 2],
+    'Papa blanca': [10, 5], 'Zanahoria por saco': [8, 4, 2], 'Quinua blanca': [2, 1], 'Palta criolla': [3],
+    'Tomate redondo': [2], 'Tomate de ensalada': [5, 2],
+}
 
 
 class Command(BaseCommand):
@@ -168,11 +290,54 @@ class Command(BaseCommand):
                 defaults={'calificacion': estrellas, 'comentario': texto},
             )
 
+        movimiento = self.crear_movimiento(productos, compradores)
+
         self.stdout.write(self.style.SUCCESS(
             f'Listo: {len(PRODUCTORES)} productores Demo, {len(productos)} productos, '
             f'{len(compradores)} compradores Demo y {len(COMENTARIOS)} comentarios. '
-            f'Cuentas anteriores marcadas como Demo: {marcados}.'
+            f'Movimiento: {movimiento}. Cuentas anteriores marcadas como Demo: {marcados}.'
         ))
+
+    def crear_movimiento(self, productos, compradores):
+        """Ventas de hoy, favoritos, listas y chats entre cuentas Demo. Se rehace cada vez para no duplicar."""
+        demo = list(productos.values())
+        VentaPuesto.objects.filter(producto__in=demo).delete()
+        Favorito.objects.filter(usuario__in=compradores).delete()
+        ItemCarrito.objects.filter(comprador__in=compradores).delete()
+        Conversacion.objects.filter(comprador__in=compradores).delete()
+
+        inicio_dia = timezone.localtime().replace(hour=6, minute=10, second=0, microsecond=0)
+        ventas = 0
+        for nombre, cantidades in VENTAS_HOY.items():
+            producto = productos[nombre]
+            for orden, cantidad in enumerate(cantidades):
+                venta = VentaPuesto.objects.create(
+                    producto=producto, vendedor=producto.productor, cantidad=cantidad,
+                    precio_unitario=producto.precio_actual(),
+                )
+                # fecha es auto_now_add: se ajusta despues para repartirlas en la manana (nunca en el futuro)
+                hora = min(inicio_dia + timedelta(minutes=35 * (orden + 1) + 7 * len(nombre)), timezone.now())
+                VentaPuesto.objects.filter(pk=venta.pk).update(fecha=hora)
+                ventas += 1
+
+        favoritos = 0
+        for indice, comprador in enumerate(compradores):
+            for producto in demo[indice::len(compradores)][:3]:
+                Favorito.objects.get_or_create(usuario=comprador, producto=producto)
+                favoritos += 1
+
+        for indice, nombre, cantidad in LISTAS:
+            ItemCarrito.objects.create(comprador=compradores[indice], producto=productos[nombre], cantidad=cantidad)
+
+        for indice, nombre, textos in CHARLAS:
+            producto = productos[nombre]
+            charla = Conversacion.objects.create(producto=producto, comprador=compradores[indice], vendedor=producto.productor)
+            for orden, texto in enumerate(textos):
+                autor = charla.comprador if orden % 2 == 0 else charla.vendedor
+                Mensaje.objects.create(conversacion=charla, autor=autor, texto=texto, leido=True)
+
+        return (f'{ventas} ventas de hoy, {favoritos} favoritos, {len(LISTAS)} productos en listas '
+                f'y {len(CHARLAS)} conversaciones')
 
     def crear_puesto(self, usuario, datos):
         puesto, _ = Puesto.objects.update_or_create(vendedor=usuario, defaults=dict(
