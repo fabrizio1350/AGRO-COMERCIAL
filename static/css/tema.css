@@ -2178,3 +2178,18 @@ a:hover { color: var(--verde-oscuro); }
 .compra-terminada summary { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.4rem 1rem; padding: 0.8rem 1rem; cursor: pointer; }
 .compra-terminada-grupo { padding: 0.6rem 1rem; border-top: 1px solid var(--borde); }
 @media (max-width: 420px) { .numero-pago .telefono { font-size: 1.4rem; } }
+
+
+/* Buscador del mapa con lupa y lugares recomendados */
+.buscador-lugares { position: relative; }
+.buscador-lugares .lupa { position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--texto-secundario); pointer-events: none; z-index: 2; }
+.buscador-lugares .spinner-border.lupa { top: calc(50% - 0.5rem); transform: none; }
+.buscador-lugares input { padding-left: 2.4rem; }
+.sugerencias-lugar { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 1100; margin: 0; padding: 0.3rem; list-style: none; background: #fff; border: 1px solid var(--borde); border-radius: 12px; box-shadow: 0 10px 24px rgba(28, 42, 33, 0.14); max-height: 300px; overflow-y: auto; }
+.sugerencias-lugar li { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.55rem 0.65rem; border-radius: 8px; cursor: pointer; }
+.sugerencias-lugar li > i { color: var(--verde-campo); margin-top: 0.15rem; }
+.sugerencias-lugar li span { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.sugerencias-lugar li small { color: var(--texto-secundario); }
+.sugerencias-lugar li.activo { background: var(--verde-suave); }
+.sugerencias-lugar li.sin-resultados { cursor: default; color: var(--texto-secundario); font-size: 0.9rem; }
+#btnMiUbicacion.activo { background: var(--verde-campo); border-color: var(--verde-campo); color: #fff; }
