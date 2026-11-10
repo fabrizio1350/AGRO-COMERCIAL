@@ -1,0 +1,61 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Inicio</a> &rsaquo;
+    <a href="{% url 'admin:mercado_pagocomision_changelist' %}">Pagos de ofertas</a> &rsaquo; Revisar pago
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:760px;">
+    <h1>Revisar pago de {{ pago.productor.get_full_name|default:pago.productor.username }}</h1>
+
+    <div style="padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;
+        {% if pago.estado == 'PENDIENTE' %}background:#fdf3ea;border:2px solid #ef6c1a;color:#8f3a10;
+        {% elif pago.estado == 'CONFIRMADO' %}background:#eef7f0;border:2px solid #167a3e;color:#0f4a26;
+        {% else %}background:#fdecea;border:2px solid #c93a2e;color:#8a1f15;{% endif %}">
+        {% if pago.estado == 'PENDIENTE' %}Este pago está esperando que lo confirmes. La oferta todavía NO se ve en la web.
+        {% elif pago.estado == 'CONFIRMADO' %}Pago confirmado{% if pago.revisado_por %} por {{ pago.revisado_por.username }}{% endif %}{% if pago.fecha_revision %} el {{ pago.fecha_revision|date:"d/m/Y H:i" }}{% endif %}. La oferta ya está publicada.
+        {% else %}Pago rechazado{% if pago.revisado_por %} por {{ pago.revisado_por.username }}{% endif %}. Motivo: {{ pago.motivo_rechazo }}{% endif %}
+    </div>
+
+    <table style="width:100%;margin-bottom:18px;">
+        <tr><th style="width:40%;">Monto que debe aparecer</th><td style="font-size:22px;font-weight:700;">S/ {{ pago.monto }}</td></tr>
+        <tr><th>N.º de operación</th><td style="font-size:22px;font-weight:700;letter-spacing:1px;">{{ pago.numero_operacion|default:"(sin número)" }}</td></tr>
+        <tr><th>Nombre en su Yape o Plin</th><td>{{ pago.nombre_pagador|default:"-" }}</td></tr>
+        <tr><th>Pagado al número</th><td>{{ pago.telefono_destino|default:"-" }}</td></tr>
+        <tr><th>Enviado el</th><td>{{ pago.fecha_pago|date:"d/m/Y H:i" }}</td></tr>
+        <tr><th>Producto</th><td>{{ pago.producto.nombre }} (S/ {{ pago.producto.precio_oferta }} en oferta, antes S/ {{ pago.producto.precio }})</td></tr>
+        <tr><th>Tipo de oferta</th><td>{{ pago.get_tipo_oferta_display }}</td></tr>
+        <tr><th>Vendedor</th><td>{{ pago.productor.username }}{% if pago.productor.email %} · {{ pago.productor.email }}{% endif %}</td></tr>
+    </table>
+
+    {% if pago.estado == 'PENDIENTE' %}
+    <div style="padding:14px 18px;border-radius:10px;border:1px solid #e7e2d8;background:#fff;margin-bottom:18px;">
+        <strong>Antes de confirmar:</strong>
+        <ol style="margin:6px 0 0;padding-left:20px;">
+            <li style="list-style:decimal;">Abre el Yape o Plin del número {{ telefono_pagos }}.</li>
+            <li style="list-style:decimal;">Busca un pago de <strong>S/ {{ pago.monto }}</strong> con el número de operación <strong>{{ pago.numero_operacion }}</strong>.</li>
+            <li style="list-style:decimal;">Si está y el monto coincide, confirma. Si no aparece, rechaza.</li>
+        </ol>
+    </div>
+
+    <form method="post" style="margin-bottom:22px;">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="confirmar">
+        <button type="submit" style="width:100%;padding:16px;font-size:17px;font-weight:700;border:0;border-radius:10px;background:#167a3e;color:#fff;cursor:pointer;">Sí, el pago llegó. Confirmar y publicar la oferta</button>
+    </form>
+
+    <form method="post" style="padding:14px 18px;border-radius:10px;border:1px solid #f3c2bd;background:#fdf6f5;">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="rechazar">
+        <label for="motivo" style="display:block;font-weight:600;margin-bottom:6px;">El pago no aparece. Mensaje para el vendedor (opcional):</label>
+        <input type="text" id="motivo" name="motivo" maxlength="200" style="width:100%;box-sizing:border-box;margin-bottom:10px;" placeholder="Ej. El monto no coincide: llegó S/ 0.50 y la oferta premium cuesta S/ 1.00">
+        <button type="submit" style="padding:10px 16px;font-weight:600;border:1px solid #c93a2e;border-radius:8px;background:#fff;color:#c93a2e;cursor:pointer;">Rechazar pago</button>
+    </form>
+    {% endif %}
+
+    <p style="margin-top:20px;"><a href="{% url 'admin:mercado_pagocomision_changelist' %}?estado__exact=PENDIENTE">&larr; Volver a los pagos por confirmar</a></p>
+</div>
+{% endblock %}
