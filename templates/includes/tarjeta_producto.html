@@ -2,7 +2,7 @@
 Tarjeta de producto. Uso: {% include 'includes/tarjeta_producto.html' with prod=producto %}
 El stock se refresca solo (static/js/stock-vivo.js) si un contenedor padre tiene data-stock-url.
 Sobre la foto solo van dos cosas: la etiqueta de oferta (arriba) y el stock en vivo (abajo).
-La frescura va siempre escrita con su ícono (Fresco, Normal, Con más días) y cuándo llegó, debajo del puesto.
+La frescura va siempre escrita con su ícono (Fresco, Normal, Con más días) y hasta cuándo, según el vendedor, debajo del puesto.
 {% endcomment %}
 {% with frescura=prod.nivel_frescura %}
 <article class="tarjeta-producto frescura-{{ frescura }}" data-stock-id="{{ prod.id }}">
