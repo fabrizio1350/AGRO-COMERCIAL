@@ -66,7 +66,7 @@ class PedidoAdmin(admin.ModelAdmin):
 class PagoComisionAdmin(admin.ModelAdmin):
     """Aqui se revisan los pagos por Yape/Plin: se compara el numero de operacion y el monto con el Yape
     del numero oficial y recien entonces se confirma. Nadie puede crear ni editar pagos a mano."""
-    list_display = ('estado_color', 'revisar', 'monto', 'numero_operacion', 'nombre_pagador', 'producto', 'productor', 'tipo_oferta', 'fecha_pago')
+    list_display = ('estado_color', 'revisar', 'monto', 'codigo_transaccion', 'numero_operacion', 'nombre_pagador', 'producto', 'productor', 'tipo_oferta', 'fecha_pago')
     list_display_links = None
     list_filter = ('estado', 'tipo_oferta')
     search_fields = ('numero_operacion', 'nombre_pagador', 'productor__username', 'codigo_transaccion')
