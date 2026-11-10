@@ -399,6 +399,14 @@ class Producto(models.Model):
             return f"Quedan {horas} h"
         return f"Quedan {max(1, resto // 60)} min"
 
+    def texto_tiempo_corto(self):
+        """Version corta para la etiqueta sobre la foto: "5 días", "1 día", "6 h", "20 min"."""
+        texto = self.texto_tiempo_restante()
+        for inicio in ("Quedan ", "Queda "):
+            if texto.startswith(inicio):
+                return texto[len(inicio):].split(" y ")[0]
+        return texto
+
     def nivel_tiempo_restante(self):
         """Color de la barra: ok, medio o poco."""
         limite = self.fecha_limite()
