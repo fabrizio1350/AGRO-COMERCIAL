@@ -1,0 +1,24 @@
+{% extends "admin/index.html" %}
+{% load panel_admin %}
+
+{% block content %}
+{% pendientes_admin as pendientes %}
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+    <a href="{% url 'admin:mercado_pagocomision_changelist' %}?estado__exact=PENDIENTE" style="flex:1 1 260px;padding:16px 18px;border-radius:10px;text-decoration:none;border:2px solid {% if pendientes.pagos %}#ef6c1a{% else %}#bfe0c8{% endif %};background:{% if pendientes.pagos %}#fdf3ea{% else %}#eef7f0{% endif %};color:#1c2a21;">
+        <strong style="display:block;font-size:28px;line-height:1.1;">{{ pendientes.pagos }}</strong>
+        <strong style="display:block;font-size:15px;">Pago{{ pendientes.pagos|pluralize }} por Yape/Plin por confirmar</strong>
+        <span style="font-size:13px;">{% if pendientes.pagos %}Entra aquí, compara con tu Yape y confirma.{% else %}No hay pagos esperando.{% endif %}</span>
+    </a>
+    <a href="{% url 'admin:mercado_cuentasinpagooferta_changelist' %}" style="flex:1 1 260px;padding:16px 18px;border-radius:10px;text-decoration:none;border:2px solid #e7e2d8;background:#fff;color:#1c2a21;">
+        <strong style="display:block;font-size:28px;line-height:1.1;">&#9733;</strong>
+        <strong style="display:block;font-size:15px;">Cuentas con ofertas premium gratis</strong>
+        <span style="font-size:13px;">Correos que publican ofertas sin pagar la publicidad.</span>
+    </a>
+    <a href="{% url 'admin:mercado_verificacionvendedor_changelist' %}" style="flex:1 1 260px;padding:16px 18px;border-radius:10px;text-decoration:none;border:2px solid #e7e2d8;background:#fff;color:#1c2a21;">
+        <strong style="display:block;font-size:28px;line-height:1.1;">{{ pendientes.verificaciones }}</strong>
+        <strong style="display:block;font-size:15px;">Puesto{{ pendientes.verificaciones|pluralize }} por verificar</strong>
+        <span style="font-size:13px;">Vendedores que enviaron sus documentos.</span>
+    </a>
+</div>
+{{ block.super }}
+{% endblock %}
