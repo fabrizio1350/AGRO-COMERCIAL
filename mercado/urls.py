@@ -15,6 +15,7 @@ urlpatterns = [
     path('carrito/', presencial.lista, name='carrito'),
     path('carrito/agregar/<int:producto_id>/', presencial.guardar_lista, name='agregar_al_carrito'),
     path('carrito/eliminar/<int:item_id>/', presencial.quitar_de_lista, name='eliminar_del_carrito'),
+    path('carrito/terminar/', presencial.terminar_compra, name='terminar_compra'),
     path('pasarela-pago/', RedirectView.as_view(pattern_name='carrito'), name='pasarela_pago'),
     path('comprobante/<str:codigo>/', views.comprobante_pago, name='comprobante_pago'),
     path('registro/', views.registro_vista, name='registro'),
