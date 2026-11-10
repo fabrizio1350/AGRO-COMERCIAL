@@ -52,15 +52,32 @@
                     {{ form.stock }}
                     {% if form.stock.errors %}<div class="text-danger small mt-1">{{ form.stock.errors|striptags }}</div>{% endif %}
                 </div>
-                <div class="col-12 col-md-5">
-                    <label class="form-label small fw-semibold" for="{{ form.fecha_cosecha.id_for_label }}">{{ form.fecha_cosecha.label }}</label>
-                    {{ form.fecha_cosecha }}
-                    {% if form.fecha_cosecha.errors %}<div class="text-danger small mt-1">{{ form.fecha_cosecha.errors|striptags }}</div>{% endif %}
+                <div class="col-12">
+                    <span class="form-label small fw-semibold d-block" id="tituloFrescura">{{ form.frescura.label }}</span>
+                    <div class="opciones-frescura" role="radiogroup" aria-labelledby="tituloFrescura">
+                        {% for opcion in form.frescura %}
+                        {{ opcion.tag }}
+                        <label class="opcion-frescura {{ opcion.data.value|lower }}" for="{{ opcion.id_for_label }}">
+                            <i class="bi {% if opcion.data.value == 'FRESCO' %}bi-flower1{% elif opcion.data.value == 'NORMAL' %}bi-clock{% else %}bi-hourglass-split{% endif %}" aria-hidden="true"></i>
+                            <span><strong>{{ opcion.choice_label }}</strong><small>{% if opcion.data.value == 'FRESCO' %}Recién llegó o está en su mejor punto{% elif opcion.data.value == 'NORMAL' %}Bueno, pero ya no es de hoy{% else %}Ya tiene varios días{% endif %}</small></span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <p class="small text-muted mt-2 mb-0">Tú conoces tu producto: así lo verá el comprador. Cambia solo cuando pasan los días que pongas aquí, y puedes editarlo cuando quieras.</p>
                 </div>
-                <div class="col-12 col-md-7"><p class="small text-muted mb-1">Con esta fecha el comprador ve qué tan fresco está:
-                    <span class="chip-frescura en-linea fresco">Fresco</span> hasta 2 días,
-                    <span class="chip-frescura en-linea normal">Normal</span> de 3 a 6 y
-                    <span class="chip-frescura en-linea antiguo">Con más días</span> desde 7. Al tocar <strong>Llegó</strong> en tu panel vuelve a fresco.</p></div>
+                <div class="col-6 col-md-5" data-frescura-campo="fresco">
+                    <label class="form-label small fw-semibold" for="{{ form.fresco_dias.id_for_label }}">{{ form.fresco_dias.label }}</label>
+                    {{ form.fresco_dias }}
+                    {% if form.fresco_dias.errors %}<div class="text-danger small mt-1">{{ form.fresco_dias.errors|striptags }}</div>{% endif %}
+                    <div class="form-text">Contando desde hoy.</div>
+                </div>
+                <div class="col-6 col-md-5" data-frescura-campo="normal">
+                    <label class="form-label small fw-semibold" for="{{ form.normal_dias.id_for_label }}">{{ form.normal_dias.label }}</label>
+                    {{ form.normal_dias }}
+                    {% if form.normal_dias.errors %}<div class="text-danger small mt-1">{{ form.normal_dias.errors|striptags }}</div>{% endif %}
+                    <div class="form-text">Luego pasa a "Con más días".</div>
+                </div>
+                <div class="col-12"><hr class="my-1"></div>
                 <div class="col-12 col-md-5">
                     <label class="form-label small fw-semibold" for="{{ form.fecha_vence.id_for_label }}">{{ form.fecha_vence.label }}</label>
                     {{ form.fecha_vence }}
@@ -180,6 +197,21 @@
 <script src="{% static 'js/mapa-puesto.js' %}?v={{ version_estaticos }}"></script>
 {% if maps_key %}<script async src="https://maps.googleapis.com/maps/api/js?key={{ maps_key|urlencode }}&amp;libraries=places,marker&amp;callback=iniciarMapaPuesto&amp;loading=async&amp;language=es&amp;region=PE"></script>{% endif %}
 <script>
+    // Frescura: solo se piden los dias que tienen sentido segun el estado elegido
+    (function () {
+        var opciones = document.querySelectorAll('input[name="frescura"]');
+        if (!opciones.length) return;
+        var etiquetaNormal = document.querySelector('[data-frescura-campo="normal"] label');
+        function ajustar() {
+            var elegido = document.querySelector('input[name="frescura"]:checked');
+            var valor = elegido ? elegido.value : 'FRESCO';
+            document.querySelector('[data-frescura-campo="fresco"]').classList.toggle('d-none', valor !== 'FRESCO');
+            document.querySelector('[data-frescura-campo="normal"]').classList.toggle('d-none', valor === 'ANTIGUO');
+            if (etiquetaNormal) etiquetaNormal.textContent = valor === 'NORMAL' ? '¿Cuántos días seguirá normal?' : 'Después, ¿cuántos días estará normal?';
+        }
+        opciones.forEach(function (o) { o.addEventListener('change', ajustar); });
+        ajustar();
+    })();
     // "Agregar otra ubicación" muestra el mapa; las demás opciones lo esconden
     (function () {
         var bloque = document.getElementById('bloqueNuevaUbicacion');
