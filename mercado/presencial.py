@@ -75,7 +75,9 @@ class PuestoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['foto'].required = not (self.instance and self.instance.foto)
+        # La foto ayuda pero no es obligatoria: asi el puesto queda guardado con solo marcar el mapa
+        # y no se vuelve a pedir la ubicacion cada vez que se quiere publicar
+        self.fields['foto'].required = False
         # No todos los puestos tienen numero o un mercado con nombre: nada de esto es obligatorio
         self.fields['nombre'].required = False
 
