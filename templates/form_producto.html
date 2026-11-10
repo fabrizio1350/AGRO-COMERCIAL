@@ -89,12 +89,20 @@
 
         <section class="bloque-verificacion">
             <h2><span class="numero">3</span>Oferta (opcional)</h2>
+            <input type="hidden" name="oferta_con_interruptor" value="1">
+            <div class="interruptor-oferta form-check form-switch mb-2">
+                {{ form.activar_oferta }}
+                <label class="form-check-label fw-semibold" for="{{ form.activar_oferta.id_for_label }}">{{ form.activar_oferta.label }}</label>
+                <span class="d-block small text-muted">Actívalo si quieres vender este producto con un precio rebajado.</span>
+            </div>
             <div class="row g-3 align-items-start">
+                <div class="col-12 campos-oferta{% if form.activar_oferta.value or form.precio_oferta.errors %} abierto{% endif %}" data-campos-oferta>
+                <div class="campos-oferta-interior"><div class="row g-3 align-items-start pt-1">
                 <div class="col-sm-6">
                     <label class="form-label small fw-semibold" for="{{ form.precio_oferta.id_for_label }}">{{ form.precio_oferta.label }}</label>
                     {{ form.precio_oferta }}
                     {% if form.precio_oferta.errors %}<div class="text-danger small mt-1">{{ form.precio_oferta.errors|striptags }}</div>{% endif %}
-                    <div class="form-text">Tiene que ser menor al precio normal. Vacío = sin oferta.</div>
+                    <div class="form-text">Tiene que ser menor al precio normal.</div>
                 </div>
                 <div class="col-sm-6">
                     <label class="form-label small fw-semibold" for="{{ form.fecha_oferta.id_for_label }}">{{ form.fecha_oferta.label }}</label>
@@ -104,6 +112,8 @@
                 </div>
                 <div class="col-12"><p class="small text-muted mb-1">Pon un precio menor al normal y tu producto lleva la etiqueta <strong>Oferta</strong> mientras te quede stock. En el siguiente paso eliges si es normal o premium (premium sale también en el carrusel y en Ofertas).
                     {% if oferta_gratis %}Tu cuenta publica ofertas sin pagar la publicidad.{% elif producto.pk and producto.en_oferta and not producto.oferta_pendiente_pago %}Esta oferta ya está publicada.{% else %}La publicidad se paga por Yape o Plin y sale cuando confirmamos tu pago.{% endif %}</p></div>
+                </div></div>
+                </div>
                 <div class="col-12">
                     <label class="form-label small fw-semibold" for="{{ form.descripcion.id_for_label }}">{{ form.descripcion.label }} (opcional)</label>
                     {{ form.descripcion }}
@@ -227,5 +237,23 @@
             });
         });
     })();
+</script>
+<script>
+// Interruptor "Poner en oferta": abre y cierra los campos de la oferta con una transicion
+(function () {
+    var interruptor = document.querySelector('[data-interruptor-oferta]');
+    var campos = document.querySelector('[data-campos-oferta]');
+    if (!interruptor || !campos) return;
+    function actualizar(enfocar) {
+        campos.classList.toggle('abierto', interruptor.checked);
+        campos.querySelectorAll('input, select, textarea').forEach(function (campo) { campo.tabIndex = interruptor.checked ? 0 : -1; });
+        if (enfocar && interruptor.checked) {
+            var precio = campos.querySelector('input[name="precio_oferta"]');
+            if (precio) setTimeout(function () { precio.focus(); }, 300);
+        }
+    }
+    interruptor.addEventListener('change', function () { actualizar(true); });
+    actualizar(false);
+})();
 </script>
 {% endblock %}
