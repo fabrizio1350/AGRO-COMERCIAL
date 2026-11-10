@@ -319,3 +319,45 @@ class PanelDeAdministracionTests(Base):
         self.oferta.refresh_from_db()
         self.assertFalse(self.oferta.oferta_pendiente_pago)
         self.assertIn(self.oferta, Producto.objects.ofertas_premium())
+
+
+class PagoConUnToqueTests(TestCase):
+    """El vendedor yapea con el mensaje "Pago MercOfertas MO<id>-<n>" y solo toca "Ya yapeé"."""
+
+    def setUp(self):
+        from decimal import Decimal
+        from .models import Categoria, PerfilUsuario, Producto, Puesto
+        self.vendedor = User.objects.create_user('yapeador')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        Puesto.objects.create(vendedor=self.vendedor, nombre='Mercado', latitud=Decimal('-16.4'), longitud=Decimal('-71.5'))
+        self.producto = Producto.objects.create(
+            productor=self.vendedor, nombre='Tomate', descripcion='x', precio=Decimal('4'), precio_oferta=Decimal('3'),
+            en_oferta=True, oferta_pendiente_pago=True, stock=5, categoria=Categoria.objects.create(nombre='Verduras'))
+        self.client.force_login(self.vendedor)
+
+    def test_muestra_el_mensaje_y_se_envia_sin_llenar_nada(self):
+        url = reverse('pagar_comision_oferta', args=[self.producto.pk])
+        codigo = f'MO{self.producto.pk}-1'
+        self.assertContains(self.client.get(url), f'Pago MercOfertas {codigo}')
+        self.client.post(url, {'tipo_oferta': 'NORMAL'})
+        pago = PagoComision.objects.get()
+        self.assertEqual((pago.estado, pago.codigo_transaccion, pago.numero_operacion), ('PENDIENTE', codigo, None))
+        self.producto.refresh_from_db()
+        self.assertTrue(self.producto.oferta_pendiente_pago)
+        self.assertContains(self.client.get(url), f'Pago MercOfertas {codigo}')
+
+    def test_numero_de_operacion_opcional_se_valida_si_viene(self):
+        url = reverse('pagar_comision_oferta', args=[self.producto.pk])
+        self.assertContains(self.client.post(url, {'tipo_oferta': 'NORMAL', 'numero_operacion': 'abc'}), 'solo tiene números')
+        self.assertFalse(PagoComision.objects.exists())
+
+    def test_interruptor_apagado_quita_la_oferta(self):
+        from .presencial import PublicacionForm
+        base = {'nombre': 'Tomate', 'categoria': self.producto.categoria_id, 'unidad': 'KG', 'stock': 5, 'precio': '4',
+                'precio_oferta': '3', 'oferta_con_interruptor': '1', 'donde': ''}
+        form = PublicacionForm(data=base, vendedor=self.vendedor)
+        form.is_valid()
+        self.assertIsNone(form.cleaned_data.get('precio_oferta'))
+        form = PublicacionForm(data=dict(base, activar_oferta='on', precio_oferta=''), vendedor=self.vendedor)
+        self.assertFalse(form.is_valid())
+        self.assertIn('precio_oferta', form.errors)
