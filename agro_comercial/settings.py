@@ -215,7 +215,7 @@ def _version_estaticos():
 VERSION_ESTATICOS = _version_estaticos()
 
 # Correo de contacto que se muestra en la pagina de ayuda (opcional)
-CORREO_CONTACTO = os.environ.get('CORREO_CONTACTO', '')
+CORREO_CONTACTO = os.environ.get('CORREO_CONTACTO', 'mercofestas.peru@gmail.com')
 
 # Dias que dura una publicacion antes de vencer (y el maximo que puede elegir el vendedor)
 PUBLICACION_DIAS_VIGENCIA = int(os.environ.get('PUBLICACION_DIAS_VIGENCIA', '30'))
