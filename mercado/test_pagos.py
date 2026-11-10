@@ -224,3 +224,26 @@ class AjustesDeSeguridadTests(TestCase):
         with self.assertRaises(ValidationError):
             validate_password('Xk9!mq2Lp')
         validate_password('Xk9!mq2Lp7')
+
+
+class VendedorYaRegistradoTests(Base):
+    def test_vendedor_no_ve_empezar_a_vender(self):
+        inicio = self.client.get(reverse('inicio'))
+        self.assertContains(inicio, 'Empezar a vender')
+        self.client.force_login(self.comprador)
+        self.assertContains(self.client.get(reverse('inicio')), 'Empezar a vender')
+        self.client.force_login(self.vendedor)
+        for nombre in ('inicio', 'catalogo', 'panel_productor', 'carrito'):
+            pagina = self.client.get(reverse(nombre))
+            self.assertNotContains(pagina, 'Empezar a vender')
+            self.assertNotContains(pagina, reverse('quiero_vender'))
+        self.assertContains(self.client.get(reverse('inicio')), 'Ir a mi puesto')
+
+    def test_con_puesto_marcado_nunca_pide_activarlo_otra_vez(self):
+        # El perfil quedo como comprador aunque la cuenta ya tiene su puesto
+        PerfilUsuario.objects.filter(usuario=self.vendedor).update(rol='COMPRADOR')
+        self.client.force_login(self.vendedor)
+        self.assertRedirects(self.client.get(reverse('quiero_vender')), reverse('panel_productor'), fetch_redirect_response=False)
+        self.assertEqual(PerfilUsuario.objects.get(usuario=self.vendedor).rol, 'PRODUCTOR')
+        self.assertEqual(self.client.get(reverse('crear_producto')).status_code, 200)
+        self.assertNotContains(self.client.get(reverse('inicio')), 'Empezar a vender')
