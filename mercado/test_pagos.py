@@ -266,3 +266,56 @@ class VendedorYaRegistradoTests(Base):
         PerfilUsuario.objects.create(usuario=otro, rol='PRODUCTOR')
         self.client.force_login(otro)
         self.assertContains(self.client.post(reverse('configurar_puesto'), {'efectivo': 'on'}), 'Tu puesto todavía no se guardó')
+
+
+class PanelDeAdministracionTests(Base):
+    def test_portada_y_lista_explican_como_confirmar(self):
+        self.client.force_login(self.vendedor)
+        self.pagar(self.oferta, '11111111')
+        self.client.force_login(self.admin)
+        portada = self.client.get(reverse('admin:index'))
+        self.assertContains(portada, 'por Yape/Plin por confirmar')
+        self.assertContains(portada, 'Cuentas con ofertas premium gratis')
+        lista = self.client.get(reverse('admin:mercado_pagocomision_changelist'))
+        self.assertContains(lista, '1 pago(s) por confirmar')
+        self.assertContains(lista, 'Revisar y confirmar')
+        self.assertContains(lista, 'Por confirmar')
+
+    def test_pantalla_de_revision_confirma_o_rechaza(self):
+        self.client.force_login(self.vendedor)
+        self.pagar(self.oferta, '11111111')
+        pago = PagoComision.objects.get()
+        url = reverse('admin:mercado_pagocomision_revisar', args=[pago.pk])
+        # Solo el personal entra; el vendedor no puede confirmarse su propio pago
+        self.assertEqual(self.client.post(url, {'accion': 'confirmar'}).status_code, 302)
+        pago.refresh_from_db()
+        self.assertEqual(pago.estado, 'PENDIENTE')
+        self.client.force_login(self.admin)
+        pagina = self.client.get(url)
+        self.assertContains(pagina, '11111111')
+        self.assertContains(pagina, 'Confirmar y publicar la oferta')
+        self.assertRedirects(self.client.get(reverse('admin:mercado_pagocomision_change', args=[pago.pk])), url)
+        self.client.post(url, {'accion': 'confirmar'})
+        pago.refresh_from_db()
+        self.assertEqual(pago.estado, 'CONFIRMADO')
+        self.assertIn(self.oferta, Producto.objects.ofertas_premium())
+        self.assertNotContains(self.client.get(url), 'Confirmar y publicar la oferta')
+        # Rechazar con mensaje para el vendedor
+        otra = self.crear(self.vendedor, 'Mango', en_oferta=True, precio_oferta=Decimal('4'), oferta_pendiente_pago=True)
+        self.client.force_login(self.vendedor)
+        self.pagar(otra, '22222222')
+        self.client.force_login(self.admin)
+        segundo = PagoComision.objects.get(numero_operacion='22222222')
+        self.client.post(reverse('admin:mercado_pagocomision_revisar', args=[segundo.pk]), {'accion': 'rechazar', 'motivo': 'El monto no coincide'})
+        segundo.refresh_from_db()
+        self.assertEqual((segundo.estado, segundo.motivo_rechazo), ('RECHAZADO', 'El monto no coincide'))
+
+    def test_agregar_cuenta_gratis_desde_el_admin_publica_sus_ofertas(self):
+        self.vendedor.email = 'puesto@gmail.com'
+        self.vendedor.save()
+        self.client.force_login(self.admin)
+        self.assertContains(self.client.get(reverse('admin:mercado_cuentasinpagooferta_changelist')), 'publican ofertas premium gratis')
+        self.client.post(reverse('admin:mercado_cuentasinpagooferta_add'), {'correo': 'Puesto@Gmail.com', 'nota': 'socio'})
+        self.oferta.refresh_from_db()
+        self.assertFalse(self.oferta.oferta_pendiente_pago)
+        self.assertIn(self.oferta, Producto.objects.ofertas_premium())
