@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+
+{% block content %}
+{% if ayuda %}
+<div style="padding:14px 18px;margin-bottom:16px;border-radius:10px;border:1px solid #bfe0c8;background:#eef7f0;color:#1c2a21;max-width:900px;">
+    <strong style="display:block;font-size:15px;margin-bottom:6px;">{{ ayuda.titulo }}</strong>
+    <ol style="margin:0;padding-left:20px;">{% for paso in ayuda.pasos %}<li style="list-style:decimal;">{{ paso }}</li>{% endfor %}</ol>
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}
