@@ -47,13 +47,23 @@
             <div class="swiper-slide hero-slide" role="group" aria-label="4 de 4">
                 <div class="hero-fondo" style="background-image: url('{% static 'imagenes/finca_productor.jpg' %}');"></div>
                 <div class="hero-contenido">
+                    {% if rol_actual == 'PRODUCTOR' %}
+                    <span class="hero-etiqueta"><i class="bi bi-shop" aria-hidden="true"></i>Tu puesto</span>
+                    <h2 class="hero-titulo">¿Llegó mercadería hoy? <em>Publícala y que la vean antes de salir de casa</em></h2>
+                    <p class="hero-texto">Sube la foto, el precio y cuánto tienes. Cuando vendas, márcalo en tu puesto y el stock se actualiza solo para los compradores.</p>
+                    <div class="hero-acciones">
+                        <a href="{% url 'crear_producto' %}" class="btn btn-warning"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Publicar un producto</a>
+                        <a href="{% url 'panel_productor' %}" class="btn btn-vidrio">Ir a mi puesto</a>
+                    </div>
+                    {% else %}
                     <span class="hero-etiqueta"><i class="bi bi-shop" aria-hidden="true"></i>Para comerciantes</span>
                     <h2 class="hero-titulo">¿Tienes un puesto? <em>Que más compradores vean tus ofertas</em></h2>
                     <p class="hero-texto">Marca tu puesto en el mapa, publica tus productos con foto y precio, y avisa al instante lo que ya vendiste. No cobramos comisión por tus ventas.</p>
                     <div class="hero-acciones">
-                        <a href="{% if rol_actual == 'PRODUCTOR' %}{% url 'crear_producto' %}{% elif user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-warning">Publicar mis productos</a>
+                        <a href="{% if user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-warning">Publicar mis productos</a>
                         <a href="#como-funciona" class="btn btn-vidrio">Cómo funciona</a>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -167,13 +177,15 @@
             <li><strong>Ve al mercado</strong><span>La lista agrupa todo por puesto, con el número y cómo llegar.</span></li>
             <li><strong>Paga en el puesto</strong><span>En efectivo, tarjeta o Yape/Plin, según lo que acepte el vendedor.</span></li>
         </ol>
+        {% if rol_actual != 'PRODUCTOR' %}
         <div class="aviso-vender">
             <div>
                 <strong>¿Tienes un puesto?</strong>
                 <span>Publica tus productos gratis y marca tu puesto en el mapa. No cobramos comisión por tus ventas.</span>
             </div>
-            <a href="{% if rol_actual == 'PRODUCTOR' %}{% url 'crear_producto' %}{% elif user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-outline-success">Empezar a vender</a>
+            <a href="{% if user.is_authenticated %}{% url 'quiero_vender' %}{% else %}{% url 'registro' %}?rol=PRODUCTOR{% endif %}" class="btn btn-outline-success">Empezar a vender</a>
         </div>
+        {% endif %}
     </div>
 </section>
 {% endblock %}
