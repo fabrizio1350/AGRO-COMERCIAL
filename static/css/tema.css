@@ -2193,3 +2193,16 @@ a:hover { color: var(--verde-oscuro); }
 .sugerencias-lugar li.activo { background: var(--verde-suave); }
 .sugerencias-lugar li.sin-resultados { cursor: default; color: var(--texto-secundario); font-size: 0.9rem; }
 #btnMiUbicacion.activo { background: var(--verde-campo); border-color: var(--verde-campo); color: #fff; }
+
+/* Frescura que elige el vendedor al publicar */
+.opciones-frescura { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.opcion-frescura { display: flex; gap: 0.6rem; align-items: center; padding: 0.7rem 0.85rem; border: 1.5px solid var(--borde); border-radius: 12px; background: #fff; cursor: pointer; }
+.opcion-frescura > i { font-size: 1.3rem; color: var(--texto-secundario); }
+.opcion-frescura span { display: flex; flex-direction: column; line-height: 1.25; }
+.opcion-frescura small { color: var(--texto-secundario); }
+.btn-check:checked + .opcion-frescura { border-color: var(--verde-campo); background: var(--verde-suave); }
+.btn-check:checked + .opcion-frescura.fresco > i { color: var(--verde-campo); }
+.btn-check:checked + .opcion-frescura.normal { border-color: #d99a12; background: #fdf7e6; }
+.btn-check:checked + .opcion-frescura.normal > i { color: #a8700a; }
+.btn-check:checked + .opcion-frescura.antiguo { border-color: #8a8f88; background: #f1f0ec; }
+.btn-check:focus-visible + .opcion-frescura { outline: 3px solid rgba(22, 122, 62, 0.35); outline-offset: 2px; }
