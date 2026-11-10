@@ -27,6 +27,15 @@ class TiempoPublicacionYContactoTests(TestCase):
         self.assertContains(respuesta, 'vigencia-publicacion')
         self.assertContains(respuesta, f'Publicado hasta el {fecha}')
         self.assertContains(respuesta, 'Quedan 5 días')
+        self.assertContains(respuesta, 'tiempo-foto-pista')
+        self.assertContains(respuesta, '</i>5 días</span>', html=False)
+
+    def test_texto_corto_del_tiempo(self):
+        self.assertEqual(self.producto.texto_tiempo_corto(), '5 días')
+        self.producto.fecha_vencimiento = timezone.now() + timedelta(days=1, hours=3, minutes=5)
+        self.assertEqual(self.producto.texto_tiempo_corto(), '1 día')
+        self.producto.fecha_vencimiento = timezone.now() - timedelta(hours=1)
+        self.assertEqual(self.producto.texto_tiempo_corto(), 'Vencida')
 
     def test_detalle_muestra_la_barra_de_tiempo(self):
         respuesta = self.client.get(reverse('detalle_producto', args=[self.producto.pk]))
