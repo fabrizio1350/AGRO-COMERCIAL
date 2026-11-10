@@ -72,17 +72,18 @@
 
         <section class="bloque-verificacion">
             <h2><span class="numero">3</span>Oferta (opcional)</h2>
-            <div class="row g-3 align-items-end">
-                <div class="col-md-5">
+            <div class="row g-3 align-items-start">
+                <div class="col-sm-6">
                     <label class="form-label small fw-semibold" for="{{ form.precio_oferta.id_for_label }}">{{ form.precio_oferta.label }}</label>
                     {{ form.precio_oferta }}
                     {% if form.precio_oferta.errors %}<div class="text-danger small mt-1">{{ form.precio_oferta.errors|striptags }}</div>{% endif %}
+                    <div class="form-text">Tiene que ser menor al precio normal. Vacío = sin oferta.</div>
                 </div>
-                <div class="col-md-5">
+                <div class="col-sm-6">
                     <label class="form-label small fw-semibold" for="{{ form.fecha_oferta.id_for_label }}">{{ form.fecha_oferta.label }}</label>
                     {{ form.fecha_oferta }}
                     {% if form.fecha_oferta.errors %}<div class="text-danger small mt-1">{{ form.fecha_oferta.errors|striptags }}</div>{% endif %}
-                    <div class="form-text">Déjalo en hoy si empieza ya. Dura hasta el día en que se vence el producto.</div>
+                    <div class="form-text">Déjalo en hoy si empieza ya. Dura hasta que se vence el producto.</div>
                 </div>
                 <div class="col-12"><p class="small text-muted mb-1">Pon un precio menor al normal y tu producto lleva la etiqueta <strong>Oferta</strong> mientras te quede stock. En el siguiente paso eliges si es normal o premium (premium sale también en el carrusel y en Ofertas).
                     {% if oferta_gratis %}Tu cuenta publica ofertas sin pagar la publicidad.{% elif producto.pk and producto.en_oferta and not producto.oferta_pendiente_pago %}Esta oferta ya está publicada.{% else %}La publicidad se paga por Yape o Plin y sale cuando confirmamos tu pago.{% endif %}</p></div>
