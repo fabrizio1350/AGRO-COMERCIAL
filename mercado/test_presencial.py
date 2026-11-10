@@ -195,19 +195,52 @@ class MercadoPresencialTests(TestCase):
             self.assertEqual(self.producto.nivel_frescura(), nivel, dias)
         self.producto.save()
         self.assertContains(self.client.get(reverse('catalogo')), 'frescura-antiguo')
-        # Al tocar Llego vuelve a fresco
+        # Al tocar Llego solo sube el stock: la frescura la decide el vendedor
         self.client.force_login(self.vendedor)
         self.client.post(reverse('actualizar_stock', args=[self.producto.pk]), {'accion': 'sumar', 'cantidad': 3})
         self.producto.refresh_from_db()
-        self.assertEqual(self.producto.nivel_frescura(), 'fresco')
-        self.assertEqual(self.producto.texto_frescura(), 'Llegó hoy')
-        # No acepta una fecha de llegada futura
-        datos = {
-            'nombre': 'Palta', 'descripcion': 'Fresca', 'categoria': self.producto.categoria_id, 'unidad': 'KG',
-            'stock': 8, 'precio': '5.00', 'disponible': 'on', 'fecha_cosecha': (hoy + timedelta(days=1)).isoformat(),
-        }
-        self.assertContains(self.client.post(reverse('editar_producto', args=[self.producto.pk]), datos),
-                            'no puede ser en el futuro')
+        self.assertEqual(self.producto.stock, 11)
+        self.assertEqual(self.producto.nivel_frescura(), 'antiguo')
+
+    def test_el_vendedor_elige_la_frescura_y_cuanto_dura(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        hoy = timezone.localdate()
+        self.client.force_login(self.vendedor)
+        datos = {'nombre': 'Palta', 'descripcion': 'Fresca', 'categoria': self.producto.categoria_id, 'unidad': 'KG',
+                 'stock': 8, 'precio': '5.00', 'disponible': 'on'}
+        pagina = self.client.get(reverse('crear_producto'))
+        self.assertContains(pagina, '¿Cómo está tu producto hoy?')
+        self.assertNotContains(pagina, '¿Cuándo llegó a tu puesto?')
+        url = reverse('editar_producto', args=[self.producto.pk])
+        # Fresco 2 dias y despues normal 3 dias
+        self.client.post(url, dict(datos, frescura='FRESCO', fresco_dias=2, normal_dias=3))
+        self.producto.refresh_from_db()
+        self.assertEqual((self.producto.frescura_inicial, self.producto.dias_fresco, self.producto.dias_normal, self.producto.fecha_cosecha),
+                         ('FRESCO', 2, 3, hoy))
+        self.assertEqual(self.producto.texto_frescura(), f'hasta el {hoy + timedelta(days=1):%d/%m}')
+        for dias, nivel in ((0, 'fresco'), (1, 'fresco'), (2, 'normal'), (4, 'normal'), (5, 'antiguo')):
+            self.producto.fecha_cosecha = hoy - timedelta(days=dias)
+            self.assertEqual(self.producto.nivel_frescura(), nivel, dias)
+        # Pasaron 3 dias: al editar sin tocar la frescura sigue contando igual (no vuelve a fresco)
+        Producto.objects.filter(pk=self.producto.pk).update(fecha_cosecha=hoy - timedelta(days=3))
+        formulario = self.client.get(url).context['form']
+        self.assertEqual((formulario.initial['frescura'], formulario.initial['normal_dias']), ('NORMAL', 2))
+        self.client.post(url, dict(datos, frescura='NORMAL', fresco_dias=2, normal_dias=2, precio='6.00'))
+        self.producto.refresh_from_db()
+        self.assertEqual((self.producto.fecha_cosecha, self.producto.frescura_inicial), (hoy - timedelta(days=3), 'FRESCO'))
+        self.assertEqual(self.producto.nivel_frescura(), 'normal')
+        # El vendedor dice que ya tiene dias: queda asi
+        self.client.post(url, dict(datos, frescura='ANTIGUO'))
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.nivel_frescura(), 'antiguo')
+        self.assertContains(self.client.get(reverse('catalogo')), 'frescura-antiguo')
+        # Y si dice que esta normal por 5 dias, empieza a contar desde hoy
+        self.client.post(url, dict(datos, frescura='NORMAL', normal_dias=5))
+        self.producto.refresh_from_db()
+        self.assertEqual((self.producto.nivel_frescura(), self.producto.fecha_cosecha), ('normal', hoy))
+        self.producto.fecha_cosecha = hoy - timedelta(days=5)
+        self.assertEqual(self.producto.nivel_frescura(), 'antiguo')
 
 
 class PanelYListaTests(TestCase):
