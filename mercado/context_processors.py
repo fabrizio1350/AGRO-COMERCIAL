@@ -29,7 +29,8 @@ def datos_globales_usuario(request):
             'favoritos_ids': set(),
         }
 
-    perfil, _ = PerfilUsuario.objects.get_or_create(usuario=request.user)
+    from .views import obtener_o_crear_perfil
+    perfil = obtener_o_crear_perfil(request.user)
     total_carrito = ItemCarrito.objects.filter(comprador=request.user, precio_unitario_acordado__isnull=True).count()
     ofertas_vendedor = OfertaNegociacion.objects.filter(
         producto__productor=request.user,
