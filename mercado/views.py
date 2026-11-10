@@ -313,6 +313,15 @@ def leer_decimal(texto):
 
 def obtener_o_crear_perfil(usuario):
     perfil, _ = PerfilUsuario.objects.get_or_create(usuario=usuario)
+    return asegurar_rol_vendedor(perfil)
+
+
+def asegurar_rol_vendedor(perfil):
+    """Quien ya marco su puesto es vendedor: si su perfil quedo como comprador se corrige solo,
+    asi nunca se le vuelve a pedir que active su puesto."""
+    if perfil.rol != 'PRODUCTOR' and Puesto.objects.filter(vendedor_id=perfil.usuario_id).exists():
+        perfil.rol = 'PRODUCTOR'
+        perfil.save(update_fields=['rol'])
     return perfil
 
 
