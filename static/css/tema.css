@@ -2388,3 +2388,21 @@ a:hover { color: var(--verde-oscuro); }
 .btn-outline-success .onda-boton, .btn-light .onda-boton, .btn-outline-secondary .onda-boton, .btn-link .onda-boton { background: rgba(22, 122, 62, 0.2); }
 @keyframes mo-onda { to { transform: scale(2.6); opacity: 0; } }
 @media (max-width: 575.98px) { .tiempo-foto { width: 96px; top: 8px; right: 8px; } }
+
+/* ===== Interruptor "Poner en oferta" y mensaje del Yape ===== */
+.interruptor-oferta { padding: 0.75rem 0.9rem 0.75rem 3.4rem; border: 1px solid var(--borde, #e7e2d8); border-radius: 12px; background: #fffaf3; }
+.interruptor-oferta .form-check-input { width: 2.6rem; height: 1.4rem; margin-left: -2.8rem; cursor: pointer; }
+.interruptor-oferta .form-check-input:checked { background-color: #ef6c1a; border-color: #ef6c1a; }
+.interruptor-oferta .form-check-label { cursor: pointer; }
+/* Los campos se pliegan con grid (0fr -> 1fr): abre suave sin calcular alturas */
+.campos-oferta { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; }
+.campos-oferta.abierto { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
+.campos-oferta-interior { overflow: hidden; min-height: 0; }
+.mensaje-yape { padding: 0.7rem 0.9rem; border: 2px dashed #7b2fbf; border-radius: 12px; background: #f7f0fd; }
+.mensaje-yape strong { font-size: 1.15rem; color: #5b1e96; letter-spacing: 0.02em; }
+.datos-opcionales summary { cursor: pointer; color: var(--verde-oscuro); }
+@media (prefers-reduced-motion: no-preference) {
+    .campos-oferta { transition: grid-template-rows 0.35s ease, opacity 0.3s ease, visibility 0s linear 0.35s; }
+    .campos-oferta.abierto { transition: grid-template-rows 0.35s ease, opacity 0.3s ease 0.05s, visibility 0s; }
+    .datos-opcionales[open] > .row { animation: mo-desplegar 0.25s ease both; }
+}
