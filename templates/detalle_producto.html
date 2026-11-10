@@ -42,6 +42,7 @@
             {% with frescura=producto.nivel_frescura %}
             <div class="mb-2"><span class="chip-frescura en-linea {{ frescura }}"><i class="bi {% if frescura == 'fresco' %}bi-flower1{% elif frescura == 'normal' %}bi-clock{% else %}bi-hourglass-split{% endif %}" aria-hidden="true"></i>{{ producto.nombre_frescura }} · {{ producto.texto_frescura }}</span></div>
             {% endwith %}
+            <div class="mb-3">{% include 'includes/barra_tiempo.html' with prod=producto %}</div>
             <a href="#opiniones" class="resumen-estrellas mb-2">
                 {% if total_resenas %}
                     <span class="estrellas" aria-hidden="true">{% for i in "12345" %}<i class="bi {% if forloop.counter <= estrellas_promedio %}bi-star-fill{% else %}bi-star{% endif %}"></i>{% endfor %}</span>
