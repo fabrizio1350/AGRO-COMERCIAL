@@ -15,6 +15,15 @@ La frescura va siempre escrita con su ícono (Fresco, Normal, Con más días) y 
             <span class="chip chip-oferta{% if prod.es_premium %} premium{% endif %}"{% if prod.es_premium %} title="Oferta destacada"{% endif %}>{% if prod.es_premium %}<i class="bi bi-star-fill" aria-hidden="true"></i>{% endif %}Oferta -{{ prod.porcentaje_descuento }}%</span>
         </div>
         {% endif %}
+        {% with limite=prod.fecha_limite %}{% if limite %}
+        {# Tiempo que le queda a la publicacion, bien visible sobre la foto #}
+        <div class="tiempo-foto nivel-{{ prod.nivel_tiempo_restante }}">
+            <span class="tiempo-foto-etiqueta" title="{{ prod.texto_tiempo_restante }} (vence {{ limite|date:'d/m H:i' }})"><i class="bi bi-hourglass-split" aria-hidden="true"></i>{{ prod.texto_tiempo_corto }}</span>
+            <div class="tiempo-foto-pista" role="progressbar" aria-label="Tiempo que le queda a la publicación" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ prod.porcentaje_tiempo_restante }}" aria-valuetext="{{ prod.texto_tiempo_restante }}">
+                <div class="tiempo-foto-relleno" style="width: {{ prod.porcentaje_tiempo_restante }}%;"></div>
+            </div>
+        </div>
+        {% endif %}{% endwith %}
         <span class="stock-vivo {% if prod.stock <= 5 %}poco{% endif %}" data-existencias>
             <span class="punto" aria-hidden="true"></span><span data-texto-stock>{% if prod.stock %}Quedan {{ prod.stock }} {{ prod.nombre_unidad_stock }}{% else %}Agotado{% endif %}</span>
         </span>
