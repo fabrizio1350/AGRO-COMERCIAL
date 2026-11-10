@@ -1,5 +1,9 @@
 """Vistas del mercado presencial: el vendedor publica lo que tiene en su puesto y el comprador
-arma su lista, ve el stock en tiempo real y va al puesto a comprar (no hay pago en linea)."""
+arma su lista, ve el stock en tiempo real y va al puesto a comprar (la compra se paga en el puesto).
+El unico pago en la web es el de la publicidad de ofertas, por Yape/Plin al numero oficial."""
+import logging
+import re
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 
 from django import forms
@@ -8,7 +12,8 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.contrib.auth.models import User
+from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, F, Q, Sum
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,13 +25,15 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 import uuid
 
 from .models import (
-    Categoria, CuentaSinPagoOferta, ItemCarrito, Notificacion, PagoComision, Producto, Puesto, ResenaProducto,
+    Categoria, CompraTerminada, CuentaSinPagoOferta, ItemCarrito, Notificacion, PagoComision, Producto, Puesto, ResenaProducto,
     UbicacionVendedor, VentaPuesto,
     fecha_vencimiento_por_defecto,
 )
 from .forms import ResenaForm
 from .seguridad import renombrar_imagen, tipo_de_imagen
 from .views import asegurar_datos_iniciales, obtener_o_crear_perfil, ofertas_destacadas, con_precio_vigente
+
+registro_pagos = logging.getLogger('mercado.pagos')
 
 UNIDADES_MERCADO = ['UNIDAD', 'KG', 'DOCENA', 'ATADO', 'BOLSA', 'CAJA', 'SACO']
 
@@ -102,6 +109,13 @@ class PublicacionForm(forms.ModelForm):
                                        required=False, widget=forms.HiddenInput())
     nueva_longitud = forms.DecimalField(max_digits=9, decimal_places=6, min_value=-180, max_value=180,
                                         required=False, widget=forms.HiddenInput())
+    # Las dos fechas que elige el vendedor: desde cuando sale la oferta y cuando cree que se vence el producto
+    fecha_oferta = forms.DateField(
+        label='¿Desde qué día sale la oferta?', required=False,
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}))
+    fecha_vence = forms.DateField(
+        label='¿Qué día crees que se vence tu producto?', required=False,
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}))
 
     class Meta:
         model = Producto
@@ -137,6 +151,19 @@ class PublicacionForm(forms.ModelForm):
             self.initial.setdefault('unidad', 'KG')
             self.initial.setdefault('disponible', True)
             self.initial.setdefault('fecha_cosecha', timezone.localdate())
+        hoy = timezone.localdate()
+        self.ultimo_dia = hoy + timedelta(days=settings.PUBLICACION_DIAS_MAXIMO)
+        for campo in ('fecha_oferta', 'fecha_vence'):
+            self.fields[campo].widget.attrs.update({'min': hoy.isoformat(), 'max': self.ultimo_dia.isoformat()})
+        vence = inicio = None
+        if self.instance.pk:
+            if self.instance.fecha_vencimiento:
+                vence = timezone.localtime(self.instance.fecha_vencimiento).date()
+            if self.instance.oferta_inicio:
+                inicio = timezone.localtime(self.instance.oferta_inicio).date()
+        self.vence_por_defecto = hoy + timedelta(days=settings.PUBLICACION_DIAS_VIGENCIA)
+        self.initial.setdefault('fecha_vence', vence if vence and vence >= hoy else self.vence_por_defecto)
+        self.initial.setdefault('fecha_oferta', inicio if inicio and inicio > hoy else hoy)
         # Solo puede elegir sus propias ubicaciones
         self.ubicaciones = list(UbicacionVendedor.objects.filter(vendedor=vendedor)) if vendedor else []
         puesto = getattr(vendedor, 'puesto', None) if vendedor else None
@@ -177,6 +204,20 @@ class PublicacionForm(forms.ModelForm):
             self.add_error('precio', 'Ingresa un precio mayor a cero.')
         if oferta is not None and (precio is None or not 0 < oferta < precio):
             self.add_error('precio_oferta', 'El precio de oferta debe ser menor al precio normal.')
+        hoy = timezone.localdate()
+        vence = datos.get('fecha_vence') or self.vence_por_defecto
+        if 'fecha_vence' not in self.errors:
+            if vence < hoy:
+                self.add_error('fecha_vence', 'El día de vencimiento no puede ser un día que ya pasó.')
+            elif vence > self.ultimo_dia:
+                self.add_error('fecha_vence', f'Elige una fecha dentro de los próximos {settings.PUBLICACION_DIAS_MAXIMO} días.')
+        inicio = datos.get('fecha_oferta') or hoy
+        if oferta is not None and 'fecha_oferta' not in self.errors:
+            if inicio < hoy:
+                self.add_error('fecha_oferta', 'La oferta no puede empezar en un día que ya pasó.')
+            elif inicio > vence:
+                self.add_error('fecha_oferta', 'La oferta no puede empezar después del día en que se vence el producto.')
+        datos['fecha_vence'], datos['fecha_oferta'] = vence, inicio
         datos['donde'] = datos.get('donde') or 'puesto'
         if datos['donde'] == 'nueva':
             if not (datos.get('nueva_nombre') or '').strip():
@@ -359,10 +400,9 @@ def total_lista(usuario):
     return ItemCarrito.objects.filter(comprador=usuario, precio_unitario_acordado__isnull=True).count()
 
 
-@login_required
-def lista(request):
-    # Cualquier cuenta puede comprar, tambien la de un vendedor
-    items = list(ItemCarrito.objects.filter(comprador=request.user, precio_unitario_acordado__isnull=True)
+def lista_agrupada(usuario):
+    """Los productos de la lista y sus grupos: un grupo por cada lugar que hay que visitar."""
+    items = list(ItemCarrito.objects.filter(comprador=usuario, precio_unitario_acordado__isnull=True)
                  .select_related('producto__productor__puesto', 'producto__productor__perfil', 'producto__categoria',
                                  'producto__ubicacion')
                  .order_by('producto__productor_id', '-fecha_agregado'))
@@ -375,11 +415,44 @@ def lista(request):
         grupo['items'].append(item)
         if item.producto.esta_publicado():
             grupo['total'] += item.subtotal()
+    return items, list(grupos.values())
+
+
+@login_required
+def lista(request):
+    # Cualquier cuenta puede comprar, tambien la de un vendedor
+    items, grupos = lista_agrupada(request.user)
     return render(request, 'carrito.html', {
-        'grupos': list(grupos.values()),
+        'grupos': grupos,
         'total_items': len(items),
-        'total_estimado': sum((g['total'] for g in grupos.values()), Decimal('0')),
+        'total_estimado': sum((g['total'] for g in grupos), Decimal('0')),
+        'compras_terminadas': CompraTerminada.objects.filter(comprador=request.user)[:5],
     })
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def terminar_compra(request):
+    """El comprador ya fue al mercado: su lista se guarda en el historial y queda vacia.
+    Solo toca su propia lista. No cobra nada ni cambia el stock (eso lo hace el vendedor con "Vendí")."""
+    items, grupos = lista_agrupada(request.user)
+    if not items:
+        messages.info(request, 'Tu lista ya está vacía.')
+        return redirect('carrito')
+    detalle = [{
+        'puesto': (g['puesto'].nombre if g['puesto'] else 'Puesto sin ubicación')[:100],
+        'total': str(g['total'].quantize(Decimal('0.01'))),
+        'items': [{
+            'nombre': i.producto.nombre, 'cantidad': i.cantidad, 'unidad': i.producto.unidad_corta(),
+            'precio': str(i.precio_aplicado()), 'subtotal': str(i.subtotal()),
+        } for i in g['items']],
+    } for g in grupos]
+    total = sum((g['total'] for g in grupos), Decimal('0')).quantize(Decimal('0.01'))
+    CompraTerminada.objects.create(comprador=request.user, total=total, productos=len(items), puestos=len(grupos), detalle=detalle)
+    ItemCarrito.objects.filter(pk__in=[i.pk for i in items], comprador=request.user).delete()
+    messages.success(request, f'Terminaste tu compra de S/ {total}. Tu lista quedó vacía y la guardamos en tus compras terminadas.')
+    return redirect('carrito')
 
 
 @login_required
@@ -541,7 +614,12 @@ def publicar(request, producto_id=None):
         elif not antes.get('en_oferta'):
             # Oferta nueva: sale como oferta cuando el vendedor paga la publicidad (normal o premium)
             producto.oferta_pendiente_pago = True
-        producto.oferta_inicio = producto.oferta_fin = None
+        # La oferta dura hasta que el producto se vence; solo se guarda el inicio si es un dia que todavia no llega
+        hoy = timezone.localdate()
+        inicio = form.cleaned_data['fecha_oferta']
+        producto.oferta_inicio = (timezone.make_aware(datetime.combine(inicio, time.min))
+                                  if producto.en_oferta and inicio > hoy else None)
+        producto.oferta_fin = None
         producto.acepta_ofertas = False
         producto.minimo_compra = 1
         ubicacion = form.ubicacion_elegida()
@@ -550,12 +628,13 @@ def publicar(request, producto_id=None):
             messages.info(request, f'Guardamos la ubicación "{ubicacion.nombre}". La próxima vez solo la eliges.')
         producto.ubicacion = ubicacion
         producto.origen = (ubicacion or puesto).nombre[:120]
-        producto.fecha_vencimiento = fecha_vencimiento_por_defecto()
+        # Se muestra hasta el final del dia en que el vendedor cree que se vence
+        producto.fecha_vencimiento = timezone.make_aware(datetime.combine(form.cleaned_data['fecha_vence'], time(23, 59, 59)))
         if stock_antes != producto.stock:
             producto.stock_actualizado = timezone.now()
         producto.save()
         if producto.oferta_pendiente_pago:
-            messages.info(request, f'Guardaste {producto.nombre}. Para que salga como oferta, paga la publicidad.')
+            messages.info(request, f'Guardaste {producto.nombre}. Para que salga como oferta, paga la publicidad por Yape o Plin.')
             return redirect('pagar_comision_oferta', producto_id=producto.pk)
         messages.success(request, f'Guardaste {producto.nombre}. Ya se ve en la web.' if producto.esta_publicado()
                          else f'Guardaste {producto.nombre}.')
@@ -568,22 +647,52 @@ def publicar(request, producto_id=None):
     })
 
 
+class PagoYapeForm(forms.Form):
+    """Lo que escribe el vendedor despues de yapear: el plan, su numero de operacion y a nombre de quien esta su Yape.
+    El monto y el numero de destino NO vienen del formulario: los pone el servidor."""
+    tipo_oferta = forms.ChoiceField(choices=Producto.TIPOS_OFERTA, error_messages={
+        'required': 'Elige si tu oferta es normal o premium.', 'invalid_choice': 'Elige si tu oferta es normal o premium.'})
+    numero_operacion = forms.CharField(max_length=30, error_messages={'required': 'Escribe el número de operación de tu Yape o Plin.'})
+    nombre_pagador = forms.CharField(min_length=3, max_length=80, error_messages={
+        'required': 'Escribe el nombre que aparece en tu Yape o Plin.', 'min_length': 'Escribe el nombre que aparece en tu Yape o Plin.'})
+
+    def clean_numero_operacion(self):
+        numero = re.sub(r'[\s.\-]', '', self.cleaned_data['numero_operacion'])
+        if not re.fullmatch(r'\d{6,15}', numero):
+            raise forms.ValidationError('El número de operación solo tiene números (de 6 a 15). Cópialo tal cual sale en tu Yape o Plin.')
+        return numero
+
+    def clean_nombre_pagador(self):
+        return ' '.join(self.cleaned_data['nombre_pagador'].split())
+
+
+def telefono_pagos_legible():
+    numero = settings.TELEFONO_PAGOS
+    return ' '.join(numero[i:i + 3] for i in range(0, len(numero), 3))
+
+
 @login_required
+@never_cache
 @require_http_methods(['GET', 'POST'])
 def pagar_oferta(request, producto_id):
-    """El vendedor paga (en modo demo) la publicidad para que su producto salga como oferta.
+    """El vendedor paga la publicidad por Yape o Plin al numero oficial y envia su numero de operacion.
+    La oferta NO se publica aqui: queda en revision hasta que un administrador confirma el pago.
     No es una comision: la venta en el puesto no paga nada a MercOfertas."""
     if not es_vendedor(request.user):
         raise Http404()
     producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
+    if CuentaSinPagoOferta.incluye(request.user) and producto.en_oferta and producto.oferta_pendiente_pago:
+        Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False, tipo_oferta='PREMIUM')
+        messages.success(request, f'{producto.nombre} ya sale en Ofertas. Tu cuenta no paga la publicidad.')
+        return redirect('panel_productor')
+    base = {'producto': producto, 'telefono_pagos': telefono_pagos_legible(), 'titular_pagos': settings.TITULAR_PAGOS}
+    en_revision = PagoComision.objects.filter(producto=producto, estado='PENDIENTE').first()
+    if en_revision:
+        return render(request, 'pagar_oferta.html', dict(base, en_revision=en_revision, monto=en_revision.monto))
     # Dos casos: oferta nueva sin pagar (elige normal o premium) u oferta normal que pasa a premium
     mejora = producto.puede_pasar_a_premium()
     if not (producto.en_oferta and producto.oferta_pendiente_pago) and not mejora:
         messages.info(request, f'La oferta de {producto.nombre} no tiene pagos pendientes.')
-        return redirect('panel_productor')
-    if CuentaSinPagoOferta.incluye(request.user):
-        Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False, tipo_oferta='PREMIUM')
-        messages.success(request, f'{producto.nombre} ya sale en Ofertas. Tu cuenta no paga la publicidad.')
         return redirect('panel_productor')
     planes = [
         {'tipo': 'NORMAL', 'nombre': 'Oferta normal', 'monto': Producto.tarifa_oferta('NORMAL'),
@@ -596,35 +705,50 @@ def pagar_oferta(request, producto_id):
                        detalle='Pagas solo la diferencia y tu oferta sale también en el carrusel, en Ofertas y en el inicio.')]
     tipo = request.POST.get('tipo_oferta') or request.GET.get('tipo') or 'PREMIUM'
     plan = next((p for p in planes if p['tipo'] == tipo), planes[-1])
+    form = PagoYapeForm(request.POST if request.method == 'POST' else None)
     error = ''
     if request.method == 'POST':
-        metodo = request.POST.get('metodo_pago', '')
-        if metodo not in dict(PagoComision.METODOS):
-            error = 'Elige si pagas con tarjeta o con QR.'
-        elif not any(p['tipo'] == request.POST.get('tipo_oferta') for p in planes):
+        desde = timezone.now() - timedelta(hours=24)
+        if not form.is_valid():
+            error = ' '.join(mensaje for lista_errores in form.errors.values() for mensaje in lista_errores)
+        elif not any(p['tipo'] == form.cleaned_data['tipo_oferta'] for p in planes):
             error = 'Elige si tu oferta es normal o premium.'
+        elif PagoComision.objects.filter(productor=request.user, fecha_pago__gte=desde).count() >= settings.PAGOS_MAXIMO_POR_DIA:
+            error = 'Ya enviaste varios pagos hoy. Espera a que los revisemos antes de enviar otro.'
+            registro_pagos.warning('Limite diario de pagos alcanzado por el usuario %s', request.user.pk)
+        elif PagoComision.objects.filter(numero_operacion=form.cleaned_data['numero_operacion']).exists():
+            error = 'Ese número de operación ya fue registrado. Cada pago sirve para una sola oferta.'
+            registro_pagos.warning('Numero de operacion repetido enviado por el usuario %s', request.user.pk)
         else:
-            with transaction.atomic():
-                # El filtro evita registrar dos pagos si se presiona dos veces
-                if mejora:
-                    filtro = Producto.objects.filter(pk=producto.pk, oferta_pendiente_pago=False, tipo_oferta='NORMAL')
-                else:
-                    filtro = Producto.objects.filter(pk=producto.pk, oferta_pendiente_pago=True)
-                if filtro.update(oferta_pendiente_pago=False, tipo_oferta=plan['tipo']):
+            try:
+                with transaction.atomic():
+                    # Si se presiona dos veces, la segunda encuentra el pago ya en revision y no crea otro
+                    if PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exists():
+                        return redirect('pagar_comision_oferta', producto_id=producto.pk)
                     pago = PagoComision.objects.create(
                         producto=producto, productor=request.user, porcentaje=Decimal('0'), monto=plan['monto'],
-                        tipo_oferta=plan['tipo'], metodo_pago=metodo,
+                        tipo_oferta=plan['tipo'], metodo_pago='YAPE_PLIN', estado='PENDIENTE',
                         codigo_transaccion=f'OF-{uuid.uuid4().hex[:10].upper()}',
+                        numero_operacion=form.cleaned_data['numero_operacion'],
+                        nombre_pagador=form.cleaned_data['nombre_pagador'],
+                        telefono_destino=settings.TELEFONO_PAGOS,
                     )
-                    donde = ('ya sale en el carrusel y en Ofertas' if plan['tipo'] == 'PREMIUM'
-                             else 'ya sale con la etiqueta Oferta en Productos')
-                    messages.success(request, f'Pago demo de S/ {pago.monto} recibido (código {pago.codigo_transaccion}). '
-                                              f'{producto.nombre} {donde}.')
-            return redirect('panel_productor')
-    return render(request, 'pagar_oferta.html', {
-        'producto': producto, 'planes': planes, 'plan': plan, 'monto': plan['monto'], 'mejora': mejora,
-        'error': error, 'metodo': request.POST.get('metodo_pago', 'TARJETA'),
-    })
+            except IntegrityError:
+                error = 'Ese número de operación ya fue registrado. Cada pago sirve para una sola oferta.'
+            else:
+                registro_pagos.info('Pago %s enviado a revision por el usuario %s (S/ %s)', pago.codigo_transaccion, request.user.pk, pago.monto)
+                enlace = reverse('admin:mercado_pagocomision_changelist') + '?estado__exact=PENDIENTE'
+                for admin_usuario in User.objects.filter(is_staff=True, is_active=True):
+                    Notificacion.avisar(admin_usuario, f'Pago por revisar: S/ {pago.monto} de {request.user.username}, operación {pago.numero_operacion}.',
+                                        enlace, 'bi-cash-coin')
+                messages.success(request, f'Recibimos tu número de operación. Cuando confirmemos el pago, {producto.nombre} sale como oferta y te avisamos.')
+                return redirect('pagar_comision_oferta', producto_id=producto.pk)
+    ultimo = PagoComision.objects.filter(producto=producto).first()
+    rechazado = ultimo if ultimo and ultimo.estado == 'RECHAZADO' else None
+    return render(request, 'pagar_oferta.html', dict(
+        base, planes=planes, plan=plan, monto=plan['monto'], mejora=mejora, error=error, form=form,
+        rechazado=rechazado if rechazado and not error else None,
+    ))
 
 
 @login_required
