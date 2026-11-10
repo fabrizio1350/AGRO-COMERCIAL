@@ -22,7 +22,6 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-import uuid
 
 from .models import (
     Categoria, CompraTerminada, CuentaSinPagoOferta, ItemCarrito, Notificacion, PagoComision, Producto, Puesto, ResenaProducto,
@@ -118,6 +117,10 @@ class PublicacionForm(forms.ModelForm):
     fecha_vence = forms.DateField(
         label='¿Qué día crees que se vence tu producto?', required=False,
         widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}))
+    # Interruptor "Poner en oferta": los campos de la oferta solo se abren si el vendedor lo activa
+    activar_oferta = forms.BooleanField(
+        label='Poner en oferta', required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch', 'data-interruptor-oferta': ''}))
     # Frescura: la dice el vendedor, que conoce su producto. No se calcula sola ni vuelve a "fresco" por su cuenta
     frescura = forms.ChoiceField(label='¿Cómo está tu producto hoy?', choices=Producto.FRESCURAS, required=False,
                                  widget=forms.RadioSelect(attrs={'class': 'btn-check'}))
@@ -157,6 +160,7 @@ class PublicacionForm(forms.ModelForm):
         if not self.instance.pk:
             self.initial.setdefault('unidad', 'KG')
             self.initial.setdefault('disponible', True)
+        self.initial.setdefault('activar_oferta', bool(self.instance.pk and self.instance.precio_oferta))
         # Al editar se muestra como esta HOY y lo que le queda; si el vendedor no lo toca, no cambia nada
         if self.instance.pk:
             queda_fresco, queda_normal = self.instance.tramos_frescura()
@@ -222,6 +226,12 @@ class PublicacionForm(forms.ModelForm):
     def clean(self):
         datos = super().clean()
         precio = datos.get('precio')
+        # Con el interruptor apagado no hay oferta aunque quede un precio escrito (el formulario manda la marca)
+        if self.data.get('oferta_con_interruptor'):
+            if not datos.get('activar_oferta'):
+                datos['precio_oferta'] = None
+            elif datos.get('precio_oferta') is None and 'precio_oferta' not in self.errors:
+                self.add_error('precio_oferta', 'Escribe el precio de oferta o apaga "Poner en oferta".')
         oferta = datos.get('precio_oferta')
         if precio is not None and precio <= 0:
             self.add_error('precio', 'Ingresa un precio mayor a cero.')
@@ -676,22 +686,33 @@ def publicar(request, producto_id=None):
 
 
 class PagoYapeForm(forms.Form):
-    """Lo que escribe el vendedor despues de yapear: el plan, su numero de operacion y a nombre de quien esta su Yape.
+    """Despues de yapear el vendedor solo toca "Ya yapeé": el codigo que escribio en el mensaje del Yape
+    basta para encontrar el pago. El numero de operacion y el nombre son opcionales (ayudan si el mensaje falta).
     El monto y el numero de destino NO vienen del formulario: los pone el servidor."""
     tipo_oferta = forms.ChoiceField(choices=Producto.TIPOS_OFERTA, error_messages={
         'required': 'Elige si tu oferta es normal o premium.', 'invalid_choice': 'Elige si tu oferta es normal o premium.'})
-    numero_operacion = forms.CharField(max_length=30, error_messages={'required': 'Escribe el número de operación de tu Yape o Plin.'})
-    nombre_pagador = forms.CharField(min_length=3, max_length=80, error_messages={
-        'required': 'Escribe el nombre que aparece en tu Yape o Plin.', 'min_length': 'Escribe el nombre que aparece en tu Yape o Plin.'})
+    numero_operacion = forms.CharField(max_length=30, required=False)
+    nombre_pagador = forms.CharField(max_length=80, required=False)
 
     def clean_numero_operacion(self):
-        numero = re.sub(r'[\s.\-]', '', self.cleaned_data['numero_operacion'])
+        numero = re.sub(r'[\s.\-]', '', self.cleaned_data['numero_operacion'] or '')
+        if not numero:
+            return None
         if not re.fullmatch(r'\d{6,15}', numero):
             raise forms.ValidationError('El número de operación solo tiene números (de 6 a 15). Cópialo tal cual sale en tu Yape o Plin.')
         return numero
 
     def clean_nombre_pagador(self):
-        return ' '.join(self.cleaned_data['nombre_pagador'].split())
+        return ' '.join((self.cleaned_data['nombre_pagador'] or '').split())
+
+
+def codigo_pago(producto):
+    """Codigo corto que el vendedor escribe en el mensaje del Yape, ej. MO12-1 (producto 12, primer pago)."""
+    return f"MO{producto.pk}-{PagoComision.objects.filter(producto=producto).count() + 1}"
+
+
+def mensaje_yape(codigo):
+    return f"Pago MercOfertas {codigo}"
 
 
 def telefono_pagos_legible():
@@ -703,7 +724,7 @@ def telefono_pagos_legible():
 @never_cache
 @require_http_methods(['GET', 'POST'])
 def pagar_oferta(request, producto_id):
-    """El vendedor paga la publicidad por Yape o Plin al numero oficial y envia su numero de operacion.
+    """El vendedor paga la publicidad por Yape o Plin al numero oficial con un mensaje que lleva su codigo.
     La oferta NO se publica aqui: queda en revision hasta que un administrador confirma el pago.
     No es una comision: la venta en el puesto no paga nada a MercOfertas."""
     if not es_vendedor(request.user):
@@ -716,7 +737,8 @@ def pagar_oferta(request, producto_id):
     base = {'producto': producto, 'telefono_pagos': telefono_pagos_legible(), 'titular_pagos': settings.TITULAR_PAGOS}
     en_revision = PagoComision.objects.filter(producto=producto, estado='PENDIENTE').first()
     if en_revision:
-        return render(request, 'pagar_oferta.html', dict(base, en_revision=en_revision, monto=en_revision.monto))
+        return render(request, 'pagar_oferta.html', dict(base, en_revision=en_revision, monto=en_revision.monto,
+                                                         mensaje_yape=mensaje_yape(en_revision.codigo_transaccion)))
     # Dos casos: oferta nueva sin pagar (elige normal o premium) u oferta normal que pasa a premium
     mejora = producto.puede_pasar_a_premium()
     if not (producto.en_oferta and producto.oferta_pendiente_pago) and not mejora:
@@ -744,7 +766,7 @@ def pagar_oferta(request, producto_id):
         elif PagoComision.objects.filter(productor=request.user, fecha_pago__gte=desde).count() >= settings.PAGOS_MAXIMO_POR_DIA:
             error = 'Ya enviaste varios pagos hoy. Espera a que los revisemos antes de enviar otro.'
             registro_pagos.warning('Limite diario de pagos alcanzado por el usuario %s', request.user.pk)
-        elif PagoComision.objects.filter(numero_operacion=form.cleaned_data['numero_operacion']).exists():
+        elif form.cleaned_data['numero_operacion'] and PagoComision.objects.filter(numero_operacion=form.cleaned_data['numero_operacion']).exists():
             error = 'Ese número de operación ya fue registrado. Cada pago sirve para una sola oferta.'
             registro_pagos.warning('Numero de operacion repetido enviado por el usuario %s', request.user.pk)
         else:
@@ -756,7 +778,7 @@ def pagar_oferta(request, producto_id):
                     pago = PagoComision.objects.create(
                         producto=producto, productor=request.user, porcentaje=Decimal('0'), monto=plan['monto'],
                         tipo_oferta=plan['tipo'], metodo_pago='YAPE_PLIN', estado='PENDIENTE',
-                        codigo_transaccion=f'OF-{uuid.uuid4().hex[:10].upper()}',
+                        codigo_transaccion=codigo_pago(producto),
                         numero_operacion=form.cleaned_data['numero_operacion'],
                         nombre_pagador=form.cleaned_data['nombre_pagador'],
                         telefono_destino=settings.TELEFONO_PAGOS,
@@ -767,14 +789,15 @@ def pagar_oferta(request, producto_id):
                 registro_pagos.info('Pago %s enviado a revision por el usuario %s (S/ %s)', pago.codigo_transaccion, request.user.pk, pago.monto)
                 enlace = reverse('admin:mercado_pagocomision_changelist') + '?estado__exact=PENDIENTE'
                 for admin_usuario in User.objects.filter(is_staff=True, is_active=True):
-                    Notificacion.avisar(admin_usuario, f'Pago por revisar: S/ {pago.monto} de {request.user.username}, operación {pago.numero_operacion}.',
+                    Notificacion.avisar(admin_usuario, f'Pago por revisar: S/ {pago.monto} de {request.user.username}, mensaje "{mensaje_yape(pago.codigo_transaccion)}".',
                                         enlace, 'bi-cash-coin')
-                messages.success(request, f'Recibimos tu número de operación. Cuando confirmemos el pago, {producto.nombre} sale como oferta y te avisamos.')
+                messages.success(request, f'Listo, buscamos tu Yape con el mensaje "{mensaje_yape(pago.codigo_transaccion)}". Cuando lo confirmemos, {producto.nombre} sale como oferta y te avisamos.')
                 return redirect('pagar_comision_oferta', producto_id=producto.pk)
     ultimo = PagoComision.objects.filter(producto=producto).first()
     rechazado = ultimo if ultimo and ultimo.estado == 'RECHAZADO' else None
     return render(request, 'pagar_oferta.html', dict(
         base, planes=planes, plan=plan, monto=plan['monto'], mejora=mejora, error=error, form=form,
+        mensaje_yape=mensaje_yape(codigo_pago(producto)),
         rechazado=rechazado if rechazado and not error else None,
     ))
 
