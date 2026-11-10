@@ -36,7 +36,7 @@
                    (precision ? ' (precisión de ' + precision + ' m)' : '') + '. ' +
                    (zona && resumen ? '<button type="button" class="btn btn-success btn-sm ms-1" data-listo-mapa>Listo, usar este lugar</button>' : ''));
         } else if (zona && resumen) {
-            avisar('<i class="bi bi-check-circle-fill text-success me-1"></i>Punto marcado. ' +
+            avisar('<i class="bi bi-check-circle-fill text-success me-1"></i>Punto marcado. Revisa que sea el lugar y confirma. ' +
                    '<button type="button" class="btn btn-success btn-sm ms-1" data-listo-mapa>Listo, usar este lugar</button>');
         } else {
             avisar('<i class="bi bi-check-circle-fill text-success me-1"></i>Ubicación guardada. Puedes arrastrar el marcador para afinarla.');
@@ -361,20 +361,18 @@
                 ponerNombre(lugar.displayName);
                 ponerDireccion(lugar.formattedAddress);
                 mover(lugar.location.toJSON(), true);
-                cerrarMapa();
             });
         } catch (e) {
             activarSugerencias(buscador, function (lugar) {
                 detenerSeguimiento();
                 ponerNombre(lugar.nombre);
                 mover({ lat: lugar.lat, lng: lugar.lng }, true);
-                cerrarMapa();
             });
             buscador.addEventListener('keydown', function (ev) {
                 if (ev.key !== 'Enter' || !geocoder) return;
                 ev.preventDefault();
                 geocoder.geocode({ address: buscador.value + ', Arequipa, Perú' }).then(function (r) {
-                    if (r.results && r.results[0]) { ponerDireccion(r.results[0].formatted_address); mover(r.results[0].geometry.location.toJSON(), true); cerrarMapa(); }
+                    if (r.results && r.results[0]) { ponerDireccion(r.results[0].formatted_address); mover(r.results[0].geometry.location.toJSON(), true); }
                 });
             });
         }
@@ -414,7 +412,6 @@
             detenerSeguimiento();
             ponerNombre(lugar.nombre);
             mover({ lat: lugar.lat, lng: lugar.lng }, true);
-            cerrarMapa();
         });
         botonUbicacion.addEventListener('click', function () { pedirUbicacion(function (p, primera) { mover(p, primera); }); });
         buscador.addEventListener('keydown', function (ev) {
@@ -429,7 +426,6 @@
                     if (!res.length) { avisar('No encontramos ese lugar. Toca el mapa para marcarlo.'); return; }
                     ponerNombre(res[0].name || texto);
                     mover({ lat: Number(res[0].lat), lng: Number(res[0].lon) }, true);
-                    cerrarMapa();
                 })
                 .catch(function () { avisar('No se pudo buscar. Toca el mapa para marcarlo.'); });
         });
