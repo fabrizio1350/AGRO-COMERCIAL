@@ -2335,17 +2335,21 @@ a:hover { color: var(--verde-oscuro); }
 .tiempo-foto.nivel-medio, .barra-tiempo.nivel-medio { --tono: #e08a00; --tono-claro: #ffd166; }
 .tiempo-foto.nivel-poco, .barra-tiempo.nivel-poco { --tono: #d9480f; --tono-claro: #ff8a5b; }
 .barra-tiempo { --tono: #1f9d55; --tono-claro: #7ee2a1; }
-.tiempo-foto-etiqueta {
+/* Recuadro arriba a la derecha de la foto: tiempo + barra */
+.tiempo-foto {
     position: absolute; top: 10px; right: 10px; z-index: 2;
-    display: inline-flex; align-items: center; gap: 0.3rem;
-    padding: 0.22rem 0.6rem; border-radius: 999px;
-    background: var(--tono); color: #ffffff;
-    font-size: 0.74rem; font-weight: 800; letter-spacing: 0.01em;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+    width: 112px; padding: 0.35rem 0.5rem 0.45rem;
+    border-radius: 10px; background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+    border-top: 3px solid var(--tono);
+}
+.tiempo-foto-etiqueta {
+    display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;
+    color: var(--tono); font-size: 0.76rem; font-weight: 800; line-height: 1.1; white-space: nowrap;
 }
 .tiempo-foto-pista {
-    position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
-    height: 7px; background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(2px);
+    height: 8px; border-radius: 999px; overflow: hidden;
+    background: color-mix(in srgb, var(--tono) 18%, #ffffff);
 }
 .tiempo-foto-relleno, .barra-tiempo .barra-tiempo-relleno {
     height: 100%;
@@ -2356,8 +2360,7 @@ a:hover { color: var(--verde-oscuro); }
     background-size: 100% 100%, 24px 24px;
     box-shadow: 0 0 10px var(--tono-claro);
 }
-.tiempo-foto-relleno { border-radius: 0 999px 999px 0; }
-.tarjeta-producto .stock-vivo { bottom: 14px; }
+.tiempo-foto-relleno { border-radius: 999px; }
 /* En el detalle la barra es grande */
 .ficha-compra .barra-tiempo { padding: 0.75rem 0.9rem; border-radius: 12px; background: #f4faf6; border: 1px solid #d5ecdd; font-size: 0.88rem; }
 .ficha-compra .barra-tiempo.nivel-medio { background: #fff8e6; border-color: #f6dfa4; }
@@ -2370,8 +2373,18 @@ a:hover { color: var(--verde-oscuro); }
 @keyframes mo-pulso-tono { 0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.22); } 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--tono) 30%, transparent), 0 4px 12px rgba(0,0,0,0.22); } }
 @media (prefers-reduced-motion: no-preference) {
     .tiempo-foto-relleno, .barra-tiempo .barra-tiempo-relleno { animation: mo-rayas 1.2s linear infinite; }
-    .tiempo-foto.nivel-poco .tiempo-foto-etiqueta { animation: mo-pulso-tono 1.6s ease-in-out infinite; }
+    .tiempo-foto.nivel-poco { animation: mo-pulso-tono 1.6s ease-in-out infinite; }
     .tarjeta-producto.revelado .tiempo-foto-relleno, .revelar.revelado .barra-tiempo-relleno {
         animation: mo-llenar 0.9s ease both, mo-rayas 1.2s linear 0.9s infinite; transform-origin: left;
     }
 }
+
+/* ===== Onda al apretar un boton ===== */
+.onda-boton {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    background: rgba(255, 255, 255, 0.45);
+    transform: scale(0); animation: mo-onda 0.55s ease-out forwards;
+}
+.btn-outline-success .onda-boton, .btn-light .onda-boton, .btn-outline-secondary .onda-boton, .btn-link .onda-boton { background: rgba(22, 122, 62, 0.2); }
+@keyframes mo-onda { to { transform: scale(2.6); opacity: 0; } }
+@media (max-width: 575.98px) { .tiempo-foto { width: 96px; top: 8px; right: 8px; } }
