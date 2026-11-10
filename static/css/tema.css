@@ -2165,3 +2165,16 @@ a:hover { color: var(--verde-oscuro); }
 
 /* Logo en el pie: "Ofertas" en naranja tambien sobre fondo oscuro */
 .pie-pagina .logo-texto span { color: #f38a45; }
+
+/* Pago por Yape/Plin y compras terminadas */
+.numero-pago { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 1.1rem; border-radius: 14px; background: var(--verde-suave); border: 1px solid #bfe0c8; }
+.numero-pago .telefono { display: block; font-size: 1.7rem; line-height: 1.15; letter-spacing: 0.04em; color: var(--verde-bosque); font-variant-numeric: tabular-nums; }
+.numero-pago .monto { font-size: 1.35rem; color: var(--verde-campo); white-space: nowrap; }
+.datos-pago { display: grid; gap: 0.35rem; margin: 0; }
+.datos-pago > div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0; border-bottom: 1px solid var(--borde); font-size: 0.92rem; }
+.datos-pago dt { font-weight: 400; color: var(--texto-secundario); }
+.datos-pago dd { margin: 0; font-weight: 600; text-align: right; }
+.compra-terminada { background: #fff; border: 1px solid var(--borde); border-radius: 14px; margin-bottom: 0.6rem; }
+.compra-terminada summary { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.4rem 1rem; padding: 0.8rem 1rem; cursor: pointer; }
+.compra-terminada-grupo { padding: 0.6rem 1rem; border-top: 1px solid var(--borde); }
+@media (max-width: 420px) { .numero-pago .telefono { font-size: 1.4rem; } }
