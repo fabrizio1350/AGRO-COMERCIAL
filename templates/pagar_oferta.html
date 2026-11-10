@@ -6,20 +6,37 @@
 <div class="pago-oferta mx-auto">
     <div class="mb-3 entrar">
         <span class="antetitulo"><i class="bi bi-megaphone-fill" aria-hidden="true"></i>Publicidad de tu oferta</span>
-        <h1 class="h3 fw-bold mb-1">{% if mejora %}Pasa tu oferta a premium{% else %}Elige cómo se muestra tu oferta{% endif %}</h1>
+        <h1 class="h3 fw-bold mb-1">{% if en_revision %}Estamos revisando tu pago{% elif mejora %}Pasa tu oferta a premium{% else %}Paga la publicidad de tu oferta{% endif %}</h1>
         <p class="text-muted mb-0">Este pago es para MercOfertas por mostrar tu oferta a los compradores. Lo que vendas en tu puesto no paga comisión.</p>
-    </div>
-
-    <div class="aviso-demo mb-3" role="note">
-        <i class="bi bi-cone-striped" aria-hidden="true"></i>
-        <div><strong>Modo demo:</strong> no se cobra dinero real. No escribas los datos de una tarjeta real.</div>
     </div>
 
     <div class="row g-3">
         <div class="col-lg-7 order-2 order-lg-1">
-            <form method="post" class="bloque-verificacion entrar entrar-2" data-pago-oferta>
+            {% if en_revision %}
+            <div class="bloque-verificacion entrar entrar-2">
+                <div class="estado-verificacion estado-ok mb-3">
+                    <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                    <div>
+                        <strong class="d-block">Recibimos tu número de operación</strong>
+                        <span class="small">Lo comparamos con nuestro Yape y, si el pago está, tu oferta se publica y te llega un aviso.</span>
+                    </div>
+                </div>
+                <dl class="datos-pago mb-3">
+                    <div><dt>Monto</dt><dd>S/ {{ en_revision.monto }}</dd></div>
+                    <div><dt>Tipo de oferta</dt><dd>{{ en_revision.get_tipo_oferta_display }}</dd></div>
+                    <div><dt>N.º de operación</dt><dd>{{ en_revision.numero_operacion }}</dd></div>
+                    <div><dt>Pagado al número</dt><dd>{{ telefono_pagos }}</dd></div>
+                    <div><dt>Enviado</dt><dd>{{ en_revision.fecha_pago|date:"d/m/Y H:i" }}</dd></div>
+                </dl>
+                <p class="small text-muted">Mientras tanto tu producto se sigue viendo con su precio normal. No hace falta que pagues otra vez.</p>
+                <a href="{% url 'panel_productor' %}" class="btn btn-success w-100">Volver a mi puesto</a>
+            </div>
+            {% else %}
+            <form method="post" class="bloque-verificacion entrar entrar-2" data-pago-oferta novalidate>
                 {% csrf_token %}
                 {% if error %}<div class="alert alert-danger small" role="alert">{{ error }}</div>{% endif %}
+                {% if rechazado %}<div class="alert alert-warning small" role="alert"><strong>No pudimos confirmar tu pago anterior</strong> (operación {{ rechazado.numero_operacion }}). {{ rechazado.motivo_rechazo }}</div>{% endif %}
+
                 <h2><span class="numero">1</span>{% if mejora %}Tu nueva oferta{% else %}Tipo de oferta{% endif %}</h2>
                 <div class="planes-oferta mb-4" role="radiogroup" aria-label="Tipo de oferta">
                     {% for p in planes %}
@@ -33,48 +50,46 @@
                     </label>
                     {% endfor %}
                 </div>
-                <h2><span class="numero">2</span>¿Cómo quieres pagar?</h2>
-                <div class="metodos-pago" role="radiogroup" aria-label="Forma de pago">
-                    <input type="radio" class="btn-check" name="metodo_pago" id="pagoTarjeta" value="TARJETA" {% if metodo != 'YAPE_PLIN' %}checked{% endif %}>
-                    <label class="opcion-pago grande" for="pagoTarjeta"><i class="bi bi-credit-card-2-front" aria-hidden="true"></i><span><strong>Tarjeta</strong><small>Crédito o débito</small></span></label>
-                    <input type="radio" class="btn-check" name="metodo_pago" id="pagoQR" value="YAPE_PLIN" {% if metodo == 'YAPE_PLIN' %}checked{% endif %}>
-                    <label class="opcion-pago grande" for="pagoQR"><i class="bi bi-qr-code" aria-hidden="true"></i><span><strong>QR</strong><small>Yape o Plin</small></span></label>
-                </div>
 
-                <div class="panel-pago" data-panel="TARJETA">
-                    <p class="small text-muted mb-2">Datos de prueba ya escritos. Solo presiona pagar.</p>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold" for="tarjetaNumero">Número de tarjeta</label>
-                            <input id="tarjetaNumero" class="form-control" inputmode="numeric" autocomplete="off" value="4111 1111 1111 1111">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-semibold" for="tarjetaVence">Vence</label>
-                            <input id="tarjetaVence" class="form-control" inputmode="numeric" autocomplete="off" value="12/29">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-semibold" for="tarjetaCvv">CVV</label>
-                            <input id="tarjetaCvv" class="form-control" inputmode="numeric" autocomplete="off" value="123">
-                        </div>
+                <h2><span class="numero">2</span>Yapea o plinea a este número</h2>
+                <div class="numero-pago mb-2">
+                    <div>
+                        <span class="small text-muted d-block">Único número de MercOfertas</span>
+                        <strong class="telefono" data-telefono>{{ telefono_pagos }}</strong>
+                        {% if titular_pagos %}<span class="small d-block">A nombre de <strong>{{ titular_pagos }}</strong></span>{% endif %}
+                    </div>
+                    <div class="text-end">
+                        <span class="small text-muted d-block">Monto exacto</span>
+                        <strong class="monto">S/ <span data-monto>{{ monto }}</span></strong>
                     </div>
                 </div>
+                <button type="button" class="btn btn-outline-success btn-sm mb-3" data-copiar-telefono><i class="bi bi-copy me-1" aria-hidden="true"></i><span>Copiar número</span></button>
+                <div class="aviso-demo mb-4" role="note">
+                    <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                    <div>Paga <strong>solo</strong> al {{ telefono_pagos }}. Antes de confirmar en tu Yape o Plin revisa que el número sea ese. MercOfertas nunca te pide tu clave, tu código de aprobación ni pagos a otro número.</div>
+                </div>
 
-                <div class="panel-pago" data-panel="YAPE_PLIN" hidden>
-                    <div class="d-flex gap-3 align-items-center flex-wrap">
-                        <img src="/static/imagenes/qr_pago.svg" alt="Código QR de MercOfertas para pagar con Yape o Plin" class="qr-pago">
-                        <div class="small">
-                            <strong class="d-block mb-1">Escanea con Yape o Plin</strong>
-                            Paga exactamente <strong>S/ <span data-monto>{{ monto }}</span></strong> a MercOfertas y luego presiona "Ya pagué".
-                        </div>
+                <h2><span class="numero">3</span>Avísanos que ya pagaste</h2>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="numeroOperacion">N.º de operación</label>
+                        <input id="numeroOperacion" name="numero_operacion" class="form-control" inputmode="numeric" autocomplete="off" maxlength="30" required placeholder="Ej. 12345678" value="{{ form.numero_operacion.value|default:'' }}">
+                        <div class="form-text">Sale en el comprobante de tu Yape o Plin.</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="nombrePagador">Nombre en tu Yape o Plin</label>
+                        <input id="nombrePagador" name="nombre_pagador" class="form-control" autocomplete="name" maxlength="80" required placeholder="Ej. María Quispe" value="{{ form.nombre_pagador.value|default:'' }}">
+                        <div class="form-text">Así encontramos tu pago más rápido.</div>
                     </div>
                 </div>
 
                 <button type="submit" class="btn btn-success btn-lg w-100 mt-3" data-boton-pagar>
-                    <i class="bi bi-lock-fill me-1" aria-hidden="true"></i><span data-texto-pagar>Pagar S/ {{ monto }} y publicar oferta</span>
+                    <i class="bi bi-send-check me-1" aria-hidden="true"></i>Ya pagué, enviar a revisión
                 </button>
                 <a href="{% url 'panel_productor' %}" class="btn btn-link text-muted w-100 mt-1">Pagar después</a>
-                <p class="small text-muted mb-0">Si pagas después, tu producto se sigue viendo con su precio normal hasta que pagues.</p>
+                <p class="small text-muted mb-0">Tu oferta se publica cuando confirmamos el pago. Hasta entonces tu producto se ve con su precio normal.</p>
             </form>
+            {% endif %}
         </div>
 
         <div class="col-lg-5 order-1 order-lg-2">
@@ -90,7 +105,9 @@
                     </div>
                 </div>
                 <div class="d-flex justify-content-between small mb-1"><span>Stock en oferta</span><span>{{ producto.stock }} {{ producto.nombre_unidad_stock }}</span></div>
-                <div class="d-flex justify-content-between small mb-1 gap-2"><span>Se muestra en</span><span class="text-end" data-donde>{% if plan.tipo == 'PREMIUM' %}Productos, carrusel, Ofertas e inicio{% else %}Productos, con la etiqueta Oferta{% endif %}</span></div>
+                {% if producto.oferta_inicio %}<div class="d-flex justify-content-between small mb-1"><span>La oferta empieza</span><span>{{ producto.oferta_inicio|date:"d/m/Y" }}</span></div>{% endif %}
+                {% if producto.fecha_vencimiento %}<div class="d-flex justify-content-between small mb-1"><span>El producto vence</span><span>{{ producto.fecha_vencimiento|date:"d/m/Y" }}</span></div>{% endif %}
+                {% if not en_revision %}<div class="d-flex justify-content-between small mb-1 gap-2"><span>Se muestra en</span><span class="text-end" data-donde>{% if plan.tipo == 'PREMIUM' %}Productos, carrusel, Ofertas e inicio{% else %}Productos, con la etiqueta Oferta{% endif %}</span></div>{% endif %}
                 <hr>
                 <div class="d-flex justify-content-between align-items-baseline"><span class="fw-semibold">Total a pagar</span><strong class="fs-4 text-success">S/ <span data-monto>{{ monto }}</span></strong></div>
             </aside>
@@ -99,24 +116,28 @@
 </div>
 
 <script>
-// Muestra los datos de tarjeta o el QR segun lo elegido
+// Cambia el monto segun el plan elegido y copia el numero oficial
 (function () {
     var form = document.querySelector('[data-pago-oferta]');
     if (!form) return;
-    var texto = form.querySelector('[data-texto-pagar]');
     var donde = document.querySelector('[data-donde]');
     function actualizar() {
-        var elegido = form.querySelector('input[name="metodo_pago"]:checked');
-        var valor = elegido ? elegido.value : 'TARJETA';
         var plan = form.querySelector('input[name="tipo_oferta"]:checked');
-        var monto = plan ? plan.getAttribute('data-monto') : '{{ monto }}';
-        form.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== valor; });
-        document.querySelectorAll('[data-monto]').forEach(function (m) { if (m.tagName === 'SPAN') m.textContent = monto; });
-        if (donde && plan) donde.textContent = plan.value === 'PREMIUM' ? 'Productos, carrusel, Ofertas e inicio' : 'Productos, con la etiqueta Oferta';
-        texto.textContent = valor === 'YAPE_PLIN' ? 'Ya pagué S/ ' + monto + ', publicar oferta' : 'Pagar S/ ' + monto + ' y publicar oferta';
+        if (!plan) return;
+        document.querySelectorAll('span[data-monto]').forEach(function (m) { m.textContent = plan.getAttribute('data-monto'); });
+        if (donde) donde.textContent = plan.value === 'PREMIUM' ? 'Productos, carrusel, Ofertas e inicio' : 'Productos, con la etiqueta Oferta';
     }
     form.addEventListener('change', actualizar);
     form.addEventListener('submit', function () { form.querySelector('[data-boton-pagar]').disabled = true; });
+    var copiar = form.querySelector('[data-copiar-telefono]');
+    if (copiar && navigator.clipboard) {
+        copiar.addEventListener('click', function () {
+            var numero = form.querySelector('[data-telefono]').textContent.replace(/\s/g, '');
+            navigator.clipboard.writeText(numero).then(function () { copiar.querySelector('span').textContent = 'Número copiado'; });
+        });
+    } else if (copiar) {
+        copiar.hidden = true;
+    }
     actualizar();
 })();
 </script>
