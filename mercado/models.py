@@ -263,7 +263,17 @@ class Producto(models.Model):
     descripcion = models.TextField()
     variedad = models.CharField(max_length=80, blank=True, default='Fresco de campo')
     tipo_cultivo = models.CharField(max_length=20, choices=TIPOS_CULTIVO, default='TRADICIONAL')
+    # Desde que dia cuenta la frescura que declaro el vendedor (el dia en que la eligio)
     fecha_cosecha = models.DateField(default=timezone.now)
+    FRESCURAS = [
+        ('FRESCO', 'Fresco'),
+        ('NORMAL', 'Normal'),
+        ('ANTIGUO', 'Con más días'),
+    ]
+    # El vendedor conoce su producto: el dice como esta y cuantos dias aguanta en cada estado
+    frescura_inicial = models.CharField(max_length=8, choices=FRESCURAS, default='FRESCO')
+    dias_fresco = models.PositiveSmallIntegerField(default=3, help_text="Días que se mantiene fresco desde que lo declaró")
+    dias_normal = models.PositiveSmallIntegerField(default=4, help_text="Días que después se mantiene normal")
     calidad = models.CharField(max_length=20, choices=NIVELES_CALIDAD, default='PRIMERA')
     precio = models.DecimalField(max_digits=8, decimal_places=2)
     en_oferta = models.BooleanField(default=False)
@@ -444,7 +454,7 @@ class Producto(models.Model):
 
     # ---------------------------------------------------------- frescura
     def dias_desde_llegada(self):
-        """Dias desde que el producto llego al puesto (fecha_cosecha; se reinicia al marcar Llego)."""
+        """Dias desde que el vendedor declaro la frescura (fecha_cosecha)."""
         if not self.fecha_cosecha:
             return 0
         llegada = self.fecha_cosecha
@@ -452,12 +462,22 @@ class Producto(models.Model):
             llegada = llegada.date()
         return max((timezone.localdate() - llegada).days, 0)
 
-    def nivel_frescura(self):
-        """fresco, normal o antiguo, segun FRESCURA_DIAS_FRESCO y FRESCURA_DIAS_NORMAL."""
+    def tramos_frescura(self):
+        """(dias que le quedan de fresco, dias que le quedan de normal) contando desde hoy."""
         dias = self.dias_desde_llegada()
-        if dias <= settings.FRESCURA_DIAS_FRESCO:
+        if self.frescura_inicial == 'ANTIGUO':
+            return 0, 0
+        fresco = self.dias_fresco if self.frescura_inicial == 'FRESCO' else 0
+        queda_fresco = max(fresco - dias, 0)
+        queda_normal = max(fresco + self.dias_normal - dias, 0) - queda_fresco
+        return queda_fresco, queda_normal
+
+    def nivel_frescura(self):
+        """fresco, normal o antiguo, segun lo que declaro el vendedor y los dias que pasaron desde entonces."""
+        queda_fresco, queda_normal = self.tramos_frescura()
+        if queda_fresco > 0:
             return 'fresco'
-        if dias <= settings.FRESCURA_DIAS_NORMAL:
+        if queda_normal > 0:
             return 'normal'
         return 'antiguo'
 
@@ -465,12 +485,15 @@ class Producto(models.Model):
         return {'fresco': 'Fresco', 'normal': 'Normal', 'antiguo': 'Con más días'}[self.nivel_frescura()]
 
     def texto_frescura(self):
-        dias = self.dias_desde_llegada()
-        if dias == 0:
-            return 'Llegó hoy'
-        if dias == 1:
-            return 'Llegó ayer'
-        return f'Llegó hace {dias} días'
+        """Hasta que dia sigue en ese estado, segun el vendedor."""
+        queda_fresco, queda_normal = self.tramos_frescura()
+        queda = queda_fresco or queda_normal
+        if not queda:
+            return 'según el vendedor'
+        if queda == 1:
+            return 'hasta hoy'
+        ultimo = timezone.localdate() + timedelta(days=queda - 1)
+        return f'hasta el {ultimo:%d/%m}'
 
     def descuento_configurado(self):
         """Descuento que puso el vendedor, aunque la oferta todavia no este vigente."""
