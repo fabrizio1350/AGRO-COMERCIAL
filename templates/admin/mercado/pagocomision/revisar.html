@@ -22,6 +22,7 @@
 
     <table style="width:100%;margin-bottom:18px;">
         <tr><th style="width:40%;">Monto que debe aparecer</th><td style="font-size:22px;font-weight:700;">S/ {{ pago.monto }}</td></tr>
+        <tr><th>Mensaje del Yape</th><td style="font-size:22px;font-weight:700;letter-spacing:1px;">Pago MercOfertas {{ pago.codigo_transaccion }}</td></tr>
         <tr><th>N.º de operación</th><td style="font-size:22px;font-weight:700;letter-spacing:1px;">{{ pago.numero_operacion|default:"(sin número)" }}</td></tr>
         <tr><th>Nombre en su Yape o Plin</th><td>{{ pago.nombre_pagador|default:"-" }}</td></tr>
         <tr><th>Pagado al número</th><td>{{ pago.telefono_destino|default:"-" }}</td></tr>
@@ -36,7 +37,7 @@
         <strong>Antes de confirmar:</strong>
         <ol style="margin:6px 0 0;padding-left:20px;">
             <li style="list-style:decimal;">Abre el Yape o Plin del número {{ telefono_pagos }}.</li>
-            <li style="list-style:decimal;">Busca un pago de <strong>S/ {{ pago.monto }}</strong> con el número de operación <strong>{{ pago.numero_operacion }}</strong>.</li>
+            <li style="list-style:decimal;">Busca un pago de <strong>S/ {{ pago.monto }}</strong> con el mensaje <strong>Pago MercOfertas {{ pago.codigo_transaccion }}</strong>{% if pago.numero_operacion %} o el número de operación <strong>{{ pago.numero_operacion }}</strong>{% endif %}.</li>
             <li style="list-style:decimal;">Si está y el monto coincide, confirma. Si no aparece, rechaza.</li>
         </ol>
     </div>
