@@ -1,3 +1,5 @@
+from urllib.parse import quote, urlencode
+
 from django.conf import settings
 from datetime import timedelta
 from django.db.models import Q
@@ -12,6 +14,22 @@ def datos_del_sitio(request):
         'categorias_menu': Categoria.objects.order_by('nombre'),
         'version_estaticos': settings.VERSION_ESTATICOS,
         'correo_contacto': settings.CORREO_CONTACTO,
+        **enlaces_correo(settings.CORREO_CONTACTO),
+    }
+
+
+ASUNTO_CORREO = 'Consulta sobre MercOfertas'
+CUERPO_CORREO = 'Hola, equipo de MercOfertas:\n\nLes escribo porque '
+
+
+def enlaces_correo(correo):
+    """Enlaces que abren un correo ya redactado: el programa de correo del celular/PC o Gmail en el navegador."""
+    if not correo:
+        return {'enlace_correo': '', 'enlace_gmail': ''}
+    return {
+        'enlace_correo': f"mailto:{correo}?subject={quote(ASUNTO_CORREO)}&body={quote(CUERPO_CORREO)}",
+        'enlace_gmail': 'https://mail.google.com/mail/?' + urlencode(
+            {'view': 'cm', 'fs': '1', 'to': correo, 'su': ASUNTO_CORREO, 'body': CUERPO_CORREO}, quote_via=quote),
     }
 
 
