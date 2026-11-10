@@ -247,3 +247,22 @@ class VendedorYaRegistradoTests(Base):
         self.assertEqual(PerfilUsuario.objects.get(usuario=self.vendedor).rol, 'PRODUCTOR')
         self.assertEqual(self.client.get(reverse('crear_producto')).status_code, 200)
         self.assertNotContains(self.client.get(reverse('inicio')), 'Empezar a vender')
+
+    def test_la_ubicacion_del_puesto_se_pide_una_sola_vez(self):
+        nuevo = User.objects.create_user('recien')
+        PerfilUsuario.objects.create(usuario=nuevo, rol='PRODUCTOR')
+        self.client.force_login(nuevo)
+        # Sin puesto, publicar manda a marcarlo
+        self.assertRedirects(self.client.get(reverse('crear_producto')), reverse('configurar_puesto'))
+        # Basta el punto del mapa y una forma de pago (sin foto) para que quede guardado
+        respuesta = self.client.post(reverse('configurar_puesto'), {'latitud': '-16.403200', 'longitud': '-71.534300', 'efectivo': 'on'})
+        self.assertRedirects(respuesta, reverse('crear_producto'))
+        self.assertTrue(Puesto.objects.filter(vendedor=nuevo).exists())
+        # Desde ahora publicar abre directo el formulario del producto, las veces que sea
+        for _ in range(2):
+            self.assertEqual(self.client.get(reverse('crear_producto')).status_code, 200)
+        # Si falta el punto del mapa, avisa arriba que no se guardo
+        otro = User.objects.create_user('sinmapa')
+        PerfilUsuario.objects.create(usuario=otro, rol='PRODUCTOR')
+        self.client.force_login(otro)
+        self.assertContains(self.client.post(reverse('configurar_puesto'), {'efectivo': 'on'}), 'Tu puesto todavía no se guardó')
