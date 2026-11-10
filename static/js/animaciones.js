@@ -1,5 +1,5 @@
 // Comportamiento general de MercOfertas: cabecera al bajar, enlace activo del menu,
-// alertas que se cierran solas y carruseles de la portada. Sin animaciones decorativas.
+// alertas que se cierran solas, carruseles de la portada, aparecer al hacer scroll y barra de carga.
 document.addEventListener('DOMContentLoaded', function () {
     var sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -60,4 +60,59 @@ document.addEventListener('DOMContentLoaded', function () {
     if (categorias && window.Swiper) {
         new Swiper(categorias, { slidesPerView: 'auto', spaceBetween: 16, freeMode: true, grabCursor: true });
     }
+
+    if (sinMovimiento) return;
+
+    // 7. Aparecer al hacer scroll: tarjetas y secciones entran suave cuando llegan a la pantalla
+    var revelables = document.querySelectorAll('.tarjeta-producto, main .seccion, .info-bloque, .barra-tiempo');
+    if ('IntersectionObserver' in window && revelables.length) {
+        var observador = new IntersectionObserver(function (entradas) {
+            entradas.forEach(function (entrada) {
+                if (!entrada.isIntersecting) return;
+                entrada.target.classList.add('revelado');
+                observador.unobserve(entrada.target);
+            });
+        }, { rootMargin: '0px 0px -40px 0px', threshold: 0.08 });
+        var altoPantalla = window.innerHeight;
+        revelables.forEach(function (el) {
+            var caja = el.getBoundingClientRect();
+            if (caja.top < altoPantalla && caja.bottom > 0) {
+                // Lo que ya se ve al abrir la pagina entra escalonado
+                var columna = el.closest('.row > *');
+                var posicion = columna ? Array.prototype.indexOf.call(columna.parentNode.children, columna) : 0;
+                el.style.setProperty('--retraso', Math.min(posicion, 6) * 0.05 + 's');
+            }
+            el.classList.add('revelar');
+            observador.observe(el);
+        });
+    }
+
+    // 8. Barra de carga al ir a otra pagina del sitio
+    var barra = document.createElement('div');
+    barra.className = 'barra-carga';
+    barra.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(barra);
+    document.addEventListener('click', function (evento) {
+        var enlace = evento.target.closest('a[href]');
+        if (!enlace || evento.defaultPrevented || evento.button !== 0 || evento.metaKey || evento.ctrlKey || evento.shiftKey) return;
+        if (enlace.target === '_blank' || enlace.hasAttribute('download') || enlace.hasAttribute('data-bs-toggle')) return;
+        var destino = new URL(enlace.href, window.location.href);
+        if (destino.origin !== window.location.origin || destino.protocol.indexOf('http') !== 0) return;
+        if (destino.pathname === window.location.pathname && destino.hash) return;
+        barra.classList.add('cargando');
+    });
+    document.addEventListener('submit', function (evento) {
+        if (!evento.defaultPrevented && !evento.target.hasAttribute('hx-post')) barra.classList.add('cargando');
+    });
+    // Al volver con el boton atras, la pagina sale de la cache: se quita la barra
+    window.addEventListener('pageshow', function () { barra.classList.remove('cargando'); });
+
+    // 9. El numerito del carrito rebota cuando cambia
+    document.querySelectorAll('.contador-icono').forEach(function (burbuja) {
+        new MutationObserver(function () {
+            burbuja.classList.remove('rebote');
+            void burbuja.offsetWidth;
+            burbuja.classList.add('rebote');
+        }).observe(burbuja, { childList: true, characterData: true, subtree: true });
+    });
 });
