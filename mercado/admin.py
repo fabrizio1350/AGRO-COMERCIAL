@@ -19,6 +19,7 @@ from .models import (
     VerificacionVendedor,
     CuentaSinPagoOferta,
     UbicacionVendedor,
+    CompraTerminada,
 )
 
 
@@ -59,8 +60,39 @@ class PedidoAdmin(admin.ModelAdmin):
 
 @admin.register(PagoComision)
 class PagoComisionAdmin(admin.ModelAdmin):
-    list_display = ('codigo_transaccion', 'producto', 'productor', 'porcentaje', 'monto', 'metodo_pago', 'fecha_pago')
-    list_filter = ('metodo_pago',)
+    """Aqui se revisan los pagos por Yape/Plin: se compara el numero de operacion y el monto con el Yape
+    del numero oficial y recien entonces se confirma. Nadie puede crear ni editar pagos a mano."""
+    list_display = ('fecha_pago', 'estado', 'monto', 'numero_operacion', 'nombre_pagador', 'producto', 'productor', 'tipo_oferta', 'telefono_destino')
+    list_filter = ('estado', 'tipo_oferta')
+    search_fields = ('numero_operacion', 'nombre_pagador', 'productor__username', 'codigo_transaccion')
+    actions = ['confirmar_pagos', 'rechazar_pagos']
+    fields = ('estado', 'monto', 'numero_operacion', 'nombre_pagador', 'telefono_destino', 'producto', 'productor', 'tipo_oferta',
+              'codigo_transaccion', 'fecha_pago', 'revisado_por', 'fecha_revision', 'motivo_rechazo')
+    readonly_fields = ('estado', 'monto', 'numero_operacion', 'nombre_pagador', 'telefono_destino', 'producto', 'productor',
+                       'tipo_oferta', 'codigo_transaccion', 'fecha_pago', 'revisado_por', 'fecha_revision')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @admin.action(description='Confirmar pago (ya vi el dinero en el Yape)')
+    def confirmar_pagos(self, request, queryset):
+        confirmados = sum(1 for pago in queryset.select_related('producto', 'productor') if pago.confirmar(request.user))
+        self.message_user(request, f"{confirmados} pago(s) confirmados. Sus ofertas ya están publicadas.",
+                          messages.SUCCESS if confirmados else messages.WARNING)
+
+    @admin.action(description='Rechazar pago (no aparece en el Yape)')
+    def rechazar_pagos(self, request, queryset):
+        rechazados = sum(1 for pago in queryset.select_related('producto', 'productor') if pago.rechazar(request.user, pago.motivo_rechazo))
+        self.message_user(request, f"{rechazados} pago(s) rechazados. Se avisó a cada vendedor.", messages.INFO)
+
+
+@admin.register(CompraTerminada)
+class CompraTerminadaAdmin(admin.ModelAdmin):
+    list_display = ('comprador', 'fecha', 'total', 'productos', 'puestos')
+    readonly_fields = ('comprador', 'fecha', 'total', 'productos', 'puestos', 'detalle')
 
 
 @admin.register(ResenaProducto)
