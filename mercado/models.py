@@ -438,6 +438,10 @@ class Producto(models.Model):
     def diferencia_premium(self):
         return self.tarifa_oferta('PREMIUM') - self.tarifa_oferta('NORMAL')
 
+    def pago_en_revision(self):
+        """El vendedor ya envio su numero de operacion y falta que el administrador confirme el pago."""
+        return self.pagos_comision.filter(estado='PENDIENTE').exists()
+
     # ---------------------------------------------------------- frescura
     def dias_desde_llegada(self):
         """Dias desde que el producto llego al puesto (fecha_cosecha; se reinicia al marcar Llego)."""
@@ -645,10 +649,17 @@ class Pedido(models.Model):
 
 
 class PagoComision(models.Model):
-    """Registro del pago (demo) que hace el vendedor para publicar un producto como oferta."""
+    """Pago real que hace el vendedor por Yape o Plin para publicar un producto como oferta.
+    El vendedor paga al numero oficial (settings.TELEFONO_PAGOS) y escribe su numero de operacion.
+    La oferta recien sale cuando un administrador revisa el Yape y confirma el pago."""
     METODOS = [
         ('YAPE_PLIN', 'Yape / Plin'),
         ('TARJETA', 'Tarjeta de crédito o débito'),
+    ]
+    ESTADOS = [
+        ('PENDIENTE', 'En revisión'),
+        ('CONFIRMADO', 'Confirmado'),
+        ('RECHAZADO', 'Rechazado'),
     ]
 
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='pagos_comision')
@@ -659,12 +670,69 @@ class PagoComision(models.Model):
     metodo_pago = models.CharField(max_length=20, choices=METODOS, default='YAPE_PLIN')
     codigo_transaccion = models.CharField(max_length=40)
     fecha_pago = models.DateTimeField(auto_now_add=True)
+    estado = models.CharField(max_length=12, choices=ESTADOS, default='PENDIENTE', db_index=True)
+    # Un mismo numero de operacion no puede usarse dos veces (unique); los pagos antiguos lo tienen vacio
+    numero_operacion = models.CharField('N.º de operación', max_length=20, null=True, blank=True, unique=True)
+    telefono_destino = models.CharField('Número al que se pagó', max_length=15, blank=True)
+    nombre_pagador = models.CharField('Nombre en Yape/Plin', max_length=80, blank=True)
+    revisado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='pagos_revisados')
+    fecha_revision = models.DateTimeField(null=True, blank=True)
+    motivo_rechazo = models.CharField(max_length=200, blank=True)
 
     class Meta:
         ordering = ['-fecha_pago']
+        verbose_name = 'Pago de oferta'
+        verbose_name_plural = 'Pagos de ofertas'
 
     def __str__(self):
         return f"Pago de oferta {self.codigo_transaccion} - {self.producto.nombre} (S/ {self.monto})"
+
+    def confirmar(self, revisor=None):
+        """El administrador ya vio el dinero en su Yape: la oferta se publica. Devuelve False si ya estaba revisado."""
+        from django.db import transaction
+        with transaction.atomic():
+            cambiados = PagoComision.objects.filter(pk=self.pk, estado='PENDIENTE').update(
+                estado='CONFIRMADO', revisado_por=revisor, fecha_revision=timezone.now(), motivo_rechazo='')
+            if not cambiados:
+                return False
+            Producto.objects.filter(pk=self.producto_id, en_oferta=True).update(
+                oferta_pendiente_pago=False, tipo_oferta=self.tipo_oferta)
+            Notificacion.avisar(self.productor, f"Confirmamos tu pago de S/ {self.monto}. {self.producto.nombre} ya sale como oferta.",
+                                '/panel-productor/', 'bi-check-circle-fill')
+        self.refresh_from_db()
+        return True
+
+    def rechazar(self, revisor=None, motivo=''):
+        """No se encontro el pago: la oferta sigue sin publicarse y el vendedor puede enviar otro numero."""
+        motivo = (motivo or 'No encontramos ese pago en nuestro Yape. Revisa el número de operación y vuelve a enviarlo.')[:200]
+        cambiados = PagoComision.objects.filter(pk=self.pk, estado='PENDIENTE').update(
+            estado='RECHAZADO', revisado_por=revisor, fecha_revision=timezone.now(), motivo_rechazo=motivo)
+        if not cambiados:
+            return False
+        Notificacion.avisar(self.productor, f"No pudimos confirmar tu pago de {self.producto.nombre}: {motivo}"[:200],
+                            f'/producto/{self.producto_id}/pagar-oferta/', 'bi-exclamation-circle')
+        self.refresh_from_db()
+        return True
+
+
+class CompraTerminada(models.Model):
+    """Lo que el comprador tenia en su lista cuando presiono "Terminar compra". Es solo su historial:
+    el pago se hace en cada puesto y el stock lo baja el vendedor."""
+    comprador = models.ForeignKey(User, on_delete=models.CASCADE, related_name='compras_terminadas')
+    fecha = models.DateTimeField(auto_now_add=True)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    productos = models.PositiveIntegerField(default=0)
+    puestos = models.PositiveIntegerField(default=0)
+    # [{'puesto': 'Mercado San Camilo', 'total': '12.00', 'items': [{'nombre', 'cantidad', 'unidad', 'precio', 'subtotal'}]}]
+    detalle = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ['-fecha']
+        verbose_name = 'Compra terminada'
+        verbose_name_plural = 'Compras terminadas'
+
+    def __str__(self):
+        return f"Compra de {self.comprador.username} ({self.fecha:%d/%m/%Y}) - S/ {self.total}"
 
 
 class ResenaProducto(models.Model):
