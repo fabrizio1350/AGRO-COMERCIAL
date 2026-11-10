@@ -84,7 +84,12 @@ class MercadoPresencialTests(TestCase):
         respuesta = self.client.post(reverse('crear_producto'), dict(datos, nombre='Oca'))
         self.assertRedirects(respuesta, reverse('pagar_comision_oferta', args=[Producto.objects.get(nombre='Oca').pk]))
 
-    def test_oferta_se_publica_despues_del_pago_demo(self):
+    def pagar(self, producto, tipo, numero):
+        """Envia el numero de operacion del Yape; el pago queda en revision."""
+        return self.client.post(reverse('pagar_comision_oferta', args=[producto.pk]),
+                                {'tipo_oferta': tipo, 'numero_operacion': numero, 'nombre_pagador': 'Rosa Quispe'})
+
+    def test_oferta_se_publica_cuando_se_confirma_el_pago(self):
         self.client.force_login(self.vendedor)
         self.assertNotContains(self.client.get(reverse('crear_producto')), 'S/ 2,00')
         datos = {
@@ -99,26 +104,37 @@ class MercadoPresencialTests(TestCase):
         self.assertIn(publicado, Producto.objects.publicados())
         self.assertNotIn(publicado, Producto.objects.ofertas_activas())
         pagina = self.client.get(reverse('pagar_comision_oferta', args=[publicado.pk]))
-        self.assertContains(pagina, 'Tarjeta')
-        self.assertContains(pagina, 'Yape o Plin')
+        self.assertNotContains(pagina, 'Tarjeta')
+        self.assertContains(pagina, '900 817 270')
         self.assertContains(pagina, 'S/ 0,50')
         self.assertContains(pagina, 'S/ 1,00')
         self.assertContains(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]),
-                                             {'metodo_pago': 'BITCOIN', 'tipo_oferta': 'PREMIUM'}),
-                            'Elige si pagas con tarjeta o con QR')
-        self.assertContains(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]),
-                                             {'metodo_pago': 'TARJETA', 'tipo_oferta': 'GRATIS'}),
+                                             {'tipo_oferta': 'GRATIS', 'numero_operacion': '12345678', 'nombre_pagador': 'Rosa Quispe'}),
                             'Elige si tu oferta es normal o premium')
-        self.assertRedirects(self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]),
-                                              {'metodo_pago': 'YAPE_PLIN', 'tipo_oferta': 'PREMIUM'}),
-                             reverse('panel_productor'))
+        self.assertContains(self.pagar(publicado, 'PREMIUM', 'abc'), 'solo tiene números')
+        self.assertFalse(PagoComision.objects.exists())
+        self.assertRedirects(self.pagar(publicado, 'PREMIUM', '1234 5678'),
+                             reverse('pagar_comision_oferta', args=[publicado.pk]), fetch_redirect_response=False)
+        # Enviar el numero no publica nada: falta que el administrador confirme
+        pago = PagoComision.objects.get(producto=publicado)
+        self.assertEqual((pago.estado, pago.numero_operacion, pago.telefono_destino, pago.monto),
+                         ('PENDIENTE', '12345678', '900817270', Decimal('1.00')))
+        publicado.refresh_from_db()
+        self.assertTrue(publicado.oferta_pendiente_pago)
+        self.assertNotIn(publicado, Producto.objects.ofertas_activas())
+        self.assertContains(self.client.get(reverse('pagar_comision_oferta', args=[publicado.pk])), 'Estamos revisando tu pago')
+        self.assertContains(self.client.get(reverse('panel_productor')), 'Pago en revisión')
+        # Mientras esta en revision no se crea un segundo pago
+        self.pagar(publicado, 'PREMIUM', '87654321')
+        self.assertEqual(PagoComision.objects.filter(producto=publicado).count(), 1)
+        self.assertTrue(pago.confirmar())
+        self.assertFalse(pago.confirmar())
         publicado.refresh_from_db()
         self.assertFalse(publicado.oferta_pendiente_pago)
         self.assertEqual(publicado.tipo_oferta, 'PREMIUM')
         self.assertIn(publicado, Producto.objects.ofertas_premium())
-        self.assertEqual(PagoComision.objects.get(producto=publicado).monto, Decimal('1.00'))
         # Pagar otra vez no crea un segundo cobro, y editar una oferta pagada no la vuelve a cobrar
-        self.client.post(reverse('pagar_comision_oferta', args=[publicado.pk]), {'metodo_pago': 'TARJETA', 'tipo_oferta': 'PREMIUM'})
+        self.pagar(publicado, 'PREMIUM', '55554444')
         self.assertRedirects(self.client.post(reverse('editar_producto', args=[publicado.pk]), dict(datos, precio_oferta='3.50')),
                              reverse('panel_productor'))
         self.assertEqual(PagoComision.objects.filter(producto=publicado).count(), 1)
@@ -139,7 +155,8 @@ class MercadoPresencialTests(TestCase):
         }
         self.client.post(reverse('crear_producto'), datos)
         mango = Producto.objects.get(nombre='Mango')
-        self.client.post(reverse('pagar_comision_oferta', args=[mango.pk]), {'metodo_pago': 'TARJETA', 'tipo_oferta': 'NORMAL'})
+        self.pagar(mango, 'NORMAL', '11112222')
+        PagoComision.objects.get(producto=mango).confirmar()
         mango.refresh_from_db()
         self.assertEqual(mango.tipo_oferta, 'NORMAL')
         self.assertEqual(PagoComision.objects.get(producto=mango).monto, Decimal('0.50'))
@@ -153,7 +170,10 @@ class MercadoPresencialTests(TestCase):
         # Pasar a premium cobra solo la diferencia
         pagina = self.client.get(reverse('pagar_comision_oferta', args=[mango.pk]))
         self.assertContains(pagina, 'Pasar a premium')
-        self.client.post(reverse('pagar_comision_oferta', args=[mango.pk]), {'metodo_pago': 'TARJETA', 'tipo_oferta': 'PREMIUM'})
+        self.pagar(mango, 'PREMIUM', '33334444')
+        mango.refresh_from_db()
+        self.assertEqual(mango.tipo_oferta, 'NORMAL')
+        PagoComision.objects.filter(producto=mango).latest('fecha_pago').confirmar()
         mango.refresh_from_db()
         self.assertEqual(mango.tipo_oferta, 'PREMIUM')
         self.assertEqual(PagoComision.objects.filter(producto=mango).latest('fecha_pago').monto, Decimal('0.50'))
