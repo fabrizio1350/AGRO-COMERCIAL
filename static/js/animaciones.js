@@ -115,4 +115,30 @@ document.addEventListener('DOMContentLoaded', function () {
             burbuja.classList.add('rebote');
         }).observe(burbuja, { childList: true, characterData: true, subtree: true });
     });
+
+    // 10. Onda que sale desde donde se toca el boton
+    document.addEventListener('pointerdown', function (evento) {
+        var boton = evento.target.closest('.btn, .boton-comprar, .boton-circular');
+        if (!boton || boton.disabled) return;
+        // Solo mientras dura la onda: asi no se cortan los contadores que sobresalen del boton
+        var estilo = window.getComputedStyle(boton);
+        var antes = { position: boton.style.position, overflow: boton.style.overflow };
+        if (estilo.position === 'static') boton.style.position = 'relative';
+        boton.style.overflow = 'hidden';
+        var caja = boton.getBoundingClientRect();
+        var tamano = Math.max(caja.width, caja.height);
+        var onda = document.createElement('span');
+        onda.className = 'onda-boton';
+        onda.style.width = onda.style.height = tamano + 'px';
+        onda.style.left = (evento.clientX - caja.left - tamano / 2) + 'px';
+        onda.style.top = (evento.clientY - caja.top - tamano / 2) + 'px';
+        boton.appendChild(onda);
+        onda.addEventListener('animationend', function () {
+            onda.remove();
+            if (!boton.querySelector('.onda-boton')) {
+                boton.style.position = antes.position;
+                boton.style.overflow = antes.overflow;
+            }
+        });
+    });
 });
