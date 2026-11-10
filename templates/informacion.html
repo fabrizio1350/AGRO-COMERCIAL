@@ -61,7 +61,11 @@
         <section class="info-bloque" id="contacto">
             <h2 class="h4 fw-bold mb-3">Contacto</h2>
             {% if correo_contacto %}
-                <p class="text-secondary">Escríbenos a <a href="mailto:{{ correo_contacto }}">{{ correo_contacto }}</a>.</p>
+                <p class="text-secondary">Escríbenos a <a href="{{ enlace_correo }}">{{ correo_contacto }}</a>. Te respondemos lo antes posible.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-success boton-correo" href="{{ enlace_correo }}"><i class="bi bi-envelope-paper-fill" aria-hidden="true"></i>Escribir un correo</a>
+                    <a class="btn btn-outline-success boton-correo" href="{{ enlace_gmail }}" target="_blank" rel="noopener"><i class="bi bi-google" aria-hidden="true"></i>Abrir en Gmail</a>
+                </div>
             {% else %}
                 <p class="text-secondary">Pronto publicaremos un correo de contacto.</p>
             {% endif %}
