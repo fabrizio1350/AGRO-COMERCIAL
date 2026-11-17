@@ -686,6 +686,7 @@ class PagoComision(models.Model):
     METODOS = [
         ('YAPE_PLIN', 'Yape / Plin'),
         ('TARJETA', 'Tarjeta de crédito o débito'),
+        ('MERCADOPAGO', 'Mercado Pago'),
     ]
     ESTADOS = [
         ('PENDIENTE', 'En revisión'),
