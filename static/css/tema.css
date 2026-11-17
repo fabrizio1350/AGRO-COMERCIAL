@@ -2406,3 +2406,12 @@ a:hover { color: var(--verde-oscuro); }
     .campos-oferta.abierto { transition: grid-template-rows 0.35s ease, opacity 0.3s ease 0.05s, visibility 0s; }
     .datos-opcionales[open] > .row { animation: mo-desplegar 0.25s ease both; }
 }
+
+/* Interruptor de oferta: perilla gris al estar apagado (sin el azul de Bootstrap al enfocarlo) */
+.interruptor-oferta .form-check-input:not(:checked),
+.interruptor-oferta .form-check-input:focus:not(:checked) {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23a8a29e'/%3e%3c/svg%3e");
+    border-color: #d6d3d1;
+}
+.interruptor-oferta .form-check-input:focus { box-shadow: 0 0 0 4px rgba(239, 108, 26, 0.18); border-color: #ef6c1a; }
+.interruptor-oferta .form-check-input { transition: background-position 0.2s ease, background-color 0.2s ease, border-color 0.2s ease; }
