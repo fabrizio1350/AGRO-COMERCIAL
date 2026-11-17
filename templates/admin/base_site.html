@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:"MercOfertas" }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/admin.css' %}?v={{ version_estaticos }}">
+{% endblock %}
+
+{% block extrahead %}{{ block.super }}
+<meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+    <a href="{% url 'admin:index' %}" class="marca-admin">
+        <span class="marca-admin-icono" aria-hidden="true">M</span>
+        <span>MercOfertas <small>Panel de administración</small></span>
+    </a>
+</div>
+{% if user.is_anonymous %}
+    {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
