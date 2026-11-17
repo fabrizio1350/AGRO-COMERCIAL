@@ -57,3 +57,17 @@ class TiempoPublicacionYContactoTests(TestCase):
     def test_sin_correo_no_hay_botones(self):
         respuesta = self.client.get(reverse('informacion'))
         self.assertContains(respuesta, 'Pronto publicaremos un correo de contacto.')
+
+
+class ClaseRevelarSoloDesdeJsTests(TestCase):
+    """La clase .revelar deja el bloque invisible hasta que el JS lo ve en pantalla.
+    Si una plantilla la escribe a mano, el bloque se queda oculto (asi se perdio la lista de compras)."""
+
+    def test_ninguna_plantilla_escribe_la_clase_revelar(self):
+        import re
+        from pathlib import Path
+        from django.conf import settings
+        for plantilla in (Path(settings.BASE_DIR) / 'templates').rglob('*.html'):
+            texto = plantilla.read_text(encoding='utf-8')
+            for clases in re.findall(r'class="([^"]*)"', texto):
+                self.assertNotIn('revelar', clases.split(), f'{plantilla.name} escribe class="revelar"')
