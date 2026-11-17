@@ -287,7 +287,7 @@ class CuentaSinPagoOfertaAdmin(admin.ModelAdmin):
     fieldsets = [(None, {
         'fields': ('correo', 'nota'),
         'description': 'Escribe el correo con el que esa persona se registró en MercOfertas. Desde que lo guardes, '
-                       'sus ofertas salen como premium sin pasar por el pago, y las que tenía esperando pago se publican al instante.',
+                       'sus ofertas salen sin pasar por el pago (al publicar elige si son normales o premium), y las que tenía esperando pago se publican al instante como premium.',
     })]
 
     def usuario_de(self, obj):
@@ -306,10 +306,10 @@ class CuentaSinPagoOfertaAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         ayuda = {
-            'titulo': 'Cuentas que publican ofertas premium gratis',
+            'titulo': 'Cuentas que publican ofertas gratis (normal o premium)',
             'pasos': [
                 'Toca "Agregar" (arriba a la derecha) y escribe el correo con el que la persona se registró.',
-                'Desde ese momento sus ofertas salen como premium sin pagar, y las que estaban esperando pago se publican solas.',
+                'Desde ese momento, al publicar una oferta esa persona elige si sale normal o premium, y no paga nada. Las que estaban esperando pago se publican solas como premium.',
                 'Para que vuelva a pagar, marca su correo en la lista y elige la acción "Eliminar".',
             ],
         }
@@ -321,7 +321,7 @@ class CuentaSinPagoOfertaAdmin(admin.ModelAdmin):
         if usuario:
             publicadas = Producto.objects.filter(productor=usuario, en_oferta=True, oferta_pendiente_pago=True).update(
                 oferta_pendiente_pago=False, tipo_oferta='PREMIUM')
-            self.message_user(request, f'{obj.correo} ya publica ofertas premium gratis. Ofertas publicadas ahora: {publicadas}.', messages.SUCCESS)
+            self.message_user(request, f'{obj.correo} ya publica ofertas gratis. Ofertas publicadas ahora: {publicadas}.', messages.SUCCESS)
         else:
             self.message_user(request, f'Guardado. Todavía nadie se registró con {obj.correo}; cuando lo haga, sus ofertas saldrán gratis.', messages.WARNING)
 
