@@ -83,6 +83,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'mercado.seguridad.CabecerasSeguridadMiddleware',
+    'mercado.seguridad.ProteccionAdminMiddleware',
 ]
 
 ROOT_URLCONF = 'agro_comercial.urls'
@@ -149,6 +150,8 @@ SESSION_COOKIE_AGE = 7 * 24 * 60 * 60
 
 # Ruta del panel de administracion (cambiala en .env, ej. ADMIN_URL=gestion-agro/, para que no sea /admin/)
 ADMIN_URL = os.environ.get('ADMIN_URL', 'admin/').strip('/') + '/'
+# Minutos sin moverse en el admin antes de pedir la contraseña otra vez
+ADMIN_MINUTOS_INACTIVO = int(os.environ.get('ADMIN_MINUTOS_INACTIVO', '30'))
 
 LANGUAGE_CODE = 'es-pe'
 
@@ -203,6 +206,7 @@ LOGGING = {
     'loggers': {
         'django.security': {'handlers': ['consola'], 'level': 'WARNING', 'propagate': False},
         'mercado.pagos': {'handlers': ['consola'], 'level': 'INFO', 'propagate': False},
+        'mercado.admin': {'handlers': ['consola'], 'level': 'INFO', 'propagate': False},
     },
 }
 
