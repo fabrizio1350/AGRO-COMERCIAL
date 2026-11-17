@@ -52,7 +52,17 @@
                     {% endfor %}
                 </div>
 
-                <h2><span class="numero">2</span>Yapea o plinea a este número</h2>
+                {% if mercadopago_activo %}
+                <h2><span class="numero">2</span>Paga y tu oferta sale al instante</h2>
+                <button type="submit" class="btn btn-mercadopago btn-lg w-100 mb-1" formaction="{% url 'pagar_con_mercadopago' producto.pk %}" formnovalidate data-boton-pagar>
+                    <i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Pagar S/ <span data-monto>{{ monto }}</span> con Yape o tarjeta
+                </button>
+                <p class="small text-muted mb-4">Te llevamos a Mercado Pago. Cuando el pago se aprueba, tu oferta se publica sola, sin esperar revisión.</p>
+                <details class="otra-forma-pago mb-2">
+                    <summary class="small fw-semibold">Prefiero yapear directo al número (lo revisamos a mano)</summary>
+                    <div class="pt-3">
+                {% endif %}
+                <h2><span class="numero">{% if mercadopago_activo %}a{% else %}2{% endif %}</span>Yapea o plinea a este número</h2>
                 <div class="numero-pago mb-2">
                     <div>
                         <span class="small text-muted d-block">Único número de MercOfertas</span>
@@ -76,7 +86,7 @@
                     <div>Paga <strong>solo</strong> al {{ telefono_pagos }}. Antes de confirmar en tu Yape o Plin revisa que el número sea ese. MercOfertas nunca te pide tu clave, tu código de aprobación ni pagos a otro número.</div>
                 </div>
 
-                <h2><span class="numero">3</span>Toca "Ya yapeé"</h2>
+                <h2><span class="numero">{% if mercadopago_activo %}b{% else %}3{% endif %}</span>Toca "Ya yapeé"</h2>
                 <p class="small text-muted mb-2">No tienes que llenar nada: con el mensaje encontramos tu pago.</p>
                 <details class="datos-opcionales mb-2"{% if form.errors.numero_operacion %} open{% endif %}>
                     <summary class="small fw-semibold">¿Olvidaste poner el mensaje? Agrega tu N.º de operación (opcional)</summary>
@@ -96,6 +106,7 @@
                 <button type="submit" class="btn btn-success btn-lg w-100 mt-3" data-boton-pagar>
                     <i class="bi bi-send-check me-1" aria-hidden="true"></i>Ya yapeé
                 </button>
+                {% if mercadopago_activo %}</div></details>{% endif %}
                 <a href="{% url 'panel_productor' %}" class="btn btn-link text-muted w-100 mt-1">Pagar después</a>
                 <p class="small text-muted mb-0">Tu oferta se publica cuando confirmamos el pago. Hasta entonces tu producto se ve con su precio normal.</p>
             </form>
@@ -138,7 +149,10 @@
         if (donde) donde.textContent = plan.value === 'PREMIUM' ? 'Productos, carrusel, Ofertas e inicio' : 'Productos, con la etiqueta Oferta';
     }
     form.addEventListener('change', actualizar);
-    form.addEventListener('submit', function () { form.querySelector('[data-boton-pagar]').disabled = true; });
+    form.addEventListener('submit', function () {
+        // Se desactivan un instante despues para que el boton presionado alcance a enviar su destino
+        setTimeout(function () { form.querySelectorAll('[data-boton-pagar]').forEach(function (b) { b.disabled = true; }); }, 0);
+    });
     form.querySelectorAll('[data-copiar]').forEach(function (copiar) {
         if (!navigator.clipboard) { copiar.hidden = true; return; }
         var etiqueta = copiar.querySelector('span');
