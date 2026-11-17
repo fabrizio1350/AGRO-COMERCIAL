@@ -300,8 +300,13 @@ class PruebasDatosDemo(TestCase):
         call_command('crear_datos_demo', stdout=StringIO())
         call_command('crear_datos_demo', stdout=StringIO())
         bots = PerfilUsuario.objects.filter(es_demo=True, usuario__username__startswith='demo_')
-        self.assertEqual(bots.count(), 17)
-        self.assertEqual(Producto.objects.filter(productor__perfil__es_demo=True).count(), 19)
+        self.assertEqual(bots.count(), 23)
+        self.assertEqual(Producto.objects.filter(productor__perfil__es_demo=True).count(), 42)
+        # Todas las categorias tienen al menos un producto Demo publicado
+        from .models import Categoria
+        vacias = [c.nombre for c in Categoria.objects.all() if not c.productos.filter(productor__perfil__es_demo=True).exists()]
+        self.assertEqual(vacias, [])
+        self.assertContains(self.client.get(reverse('informacion')), 'Créditos de las fotos')
         from .models import Conversacion, VentaPuesto
         self.assertEqual(Conversacion.objects.filter(comprador__perfil__es_demo=True).count(), 4)
         self.assertTrue(VentaPuesto.objects.filter(vendedor__perfil__es_demo=True).exists())
