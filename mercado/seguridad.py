@@ -62,7 +62,9 @@ class CabecerasSeguridadMiddleware:
             "object-src 'none'",
             "base-uri 'self'",
             "frame-ancestors 'none'",
-            "form-action 'self' https://accounts.google.com",
+            # Mercado Pago: al tocar "Pagar" el formulario redirige a su pagina de pago
+            "form-action 'self' https://accounts.google.com https://www.mercadopago.com.pe https://*.mercadopago.com.pe "
+            "https://www.mercadopago.com https://*.mercadopago.com https://*.mercadolibre.com",
         ]
         if not settings.DEBUG:
             politica.append('upgrade-insecure-requests')
