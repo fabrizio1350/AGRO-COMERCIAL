@@ -1,6 +1,7 @@
 """Vistas del mercado presencial: el vendedor publica lo que tiene en su puesto y el comprador
 arma su lista, ve el stock en tiempo real y va al puesto a comprar (la compra se paga en el puesto).
 El unico pago en la web es el de la publicidad de ofertas, por Yape/Plin al numero oficial."""
+import json
 import logging
 import re
 from datetime import datetime, time, timedelta
@@ -15,11 +16,12 @@ from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, F, Q, Sum
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 
@@ -28,6 +30,7 @@ from .models import (
     UbicacionVendedor, VentaPuesto,
     fecha_vencimiento_por_defecto,
 )
+from . import mercadopago
 from .forms import ResenaForm
 from .seguridad import renombrar_imagen, tipo_de_imagen
 from .views import asegurar_datos_iniciales, obtener_o_crear_perfil, ofertas_destacadas, con_precio_vigente
@@ -734,7 +737,7 @@ def pagar_oferta(request, producto_id):
         messages.success(request, f'{producto.nombre} ya sale en Ofertas. Tu cuenta no paga la publicidad.')
         return redirect('panel_productor')
     base = {'producto': producto, 'telefono_pagos': telefono_pagos_legible(), 'titular_pagos': settings.TITULAR_PAGOS}
-    en_revision = PagoComision.objects.filter(producto=producto, estado='PENDIENTE').first()
+    en_revision = PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exclude(metodo_pago='MERCADOPAGO').first()
     if en_revision:
         return render(request, 'pagar_oferta.html', dict(base, en_revision=en_revision, monto=en_revision.monto,
                                                          mensaje_yape=mensaje_yape(en_revision.codigo_transaccion)))
@@ -772,7 +775,7 @@ def pagar_oferta(request, producto_id):
             try:
                 with transaction.atomic():
                     # Si se presiona dos veces, la segunda encuentra el pago ya en revision y no crea otro
-                    if PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exists():
+                    if PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exclude(metodo_pago='MERCADOPAGO').exists():
                         return redirect('pagar_comision_oferta', producto_id=producto.pk)
                     pago = PagoComision.objects.create(
                         producto=producto, productor=request.user, porcentaje=Decimal('0'), monto=plan['monto'],
@@ -796,9 +799,108 @@ def pagar_oferta(request, producto_id):
     rechazado = ultimo if ultimo and ultimo.estado == 'RECHAZADO' else None
     return render(request, 'pagar_oferta.html', dict(
         base, planes=planes, plan=plan, monto=plan['monto'], mejora=mejora, error=error, form=form,
-        mensaje_yape=mensaje_yape(codigo_pago(producto)),
+        mensaje_yape=mensaje_yape(codigo_pago(producto)), mercadopago_activo=mercadopago.activo(),
         rechazado=rechazado if rechazado and not error else None,
     ))
+
+
+@login_required
+@require_POST
+def pagar_con_mercadopago(request, producto_id):
+    """Crea el pago y manda al vendedor a Mercado Pago. La oferta se publica sola cuando Mercado Pago lo aprueba."""
+    if not es_vendedor(request.user) or not mercadopago.activo():
+        raise Http404()
+    producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
+    volver = redirect('pagar_comision_oferta', producto_id=producto.pk)
+    mejora = producto.puede_pasar_a_premium()
+    if not (producto.en_oferta and producto.oferta_pendiente_pago) and not mejora:
+        messages.info(request, f'La oferta de {producto.nombre} no tiene pagos pendientes.')
+        return redirect('panel_productor')
+    if PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exclude(metodo_pago='MERCADOPAGO').exists():
+        return volver
+    if mejora:
+        tipo, monto = 'PREMIUM', producto.diferencia_premium()
+    else:
+        tipo = request.POST.get('tipo_oferta') if request.POST.get('tipo_oferta') in ('NORMAL', 'PREMIUM') else 'PREMIUM'
+        monto = Producto.tarifa_oferta(tipo)
+    desde = timezone.now() - timedelta(hours=24)
+    if PagoComision.objects.filter(productor=request.user, fecha_pago__gte=desde).count() >= settings.PAGOS_MAXIMO_POR_DIA:
+        messages.warning(request, 'Ya intentaste pagar varias veces hoy. Espera un rato o escríbenos.')
+        return volver
+    with transaction.atomic():
+        # Si dejo un pago de Mercado Pago a medias, ese se cierra y se empieza uno nuevo
+        PagoComision.objects.filter(producto=producto, estado='PENDIENTE', metodo_pago='MERCADOPAGO').update(
+            estado='RECHAZADO', fecha_revision=timezone.now(), motivo_rechazo='Pago no terminado en Mercado Pago.')
+        pago = PagoComision.objects.create(
+            producto=producto, productor=request.user, porcentaje=Decimal('0'), monto=monto, tipo_oferta=tipo,
+            metodo_pago='MERCADOPAGO', estado='PENDIENTE', codigo_transaccion=codigo_pago(producto),
+        )
+    try:
+        url = mercadopago.crear_preferencia(
+            pago,
+            url_vuelta=request.build_absolute_uri(reverse('mercadopago_vuelta')),
+            url_aviso=request.build_absolute_uri(reverse('mercadopago_aviso')),
+        )
+    except mercadopago.ErrorMercadoPago:
+        PagoComision.objects.filter(pk=pago.pk).update(estado='RECHAZADO', motivo_rechazo='Mercado Pago no respondió.')
+        messages.error(request, 'Mercado Pago no respondió. Intenta otra vez en un momento o paga por Yape al número de abajo.')
+        return volver
+    registro_pagos.info('Pago %s enviado a Mercado Pago por el usuario %s (S/ %s)', pago.codigo_transaccion, request.user.pk, pago.monto)
+    return redirect(url)
+
+
+@login_required
+@never_cache
+@require_GET
+def mercadopago_vuelta(request):
+    """Mercado Pago devuelve aqui al vendedor. Se vuelve a consultar el pago: no se confia en los parametros."""
+    pago_mp = request.GET.get('payment_id') or request.GET.get('collection_id') or ''
+    pago = None
+    if pago_mp.isdigit() and mercadopago.activo():
+        try:
+            pago = mercadopago.aplicar_pago(pago_mp)
+        except mercadopago.ErrorMercadoPago:
+            pago = None
+    if pago is None:
+        pago = PagoComision.objects.filter(codigo_transaccion=request.GET.get('external_reference', ''),
+                                           productor=request.user, metodo_pago='MERCADOPAGO').first()
+    if not pago or pago.productor_id != request.user.id:
+        messages.info(request, 'Si completaste el pago, tu oferta se publicará en cuanto Mercado Pago lo confirme.')
+        return redirect('panel_productor')
+    if pago.estado == 'CONFIRMADO':
+        messages.success(request, f'¡Pago aprobado! {pago.producto.nombre} ya sale como oferta.')
+        return redirect('panel_productor')
+    if request.GET.get('status') in ('pending', 'in_process'):
+        messages.info(request, 'Mercado Pago está procesando tu pago. Cuando se apruebe, tu oferta se publica sola y te avisamos.')
+        return redirect('panel_productor')
+    messages.warning(request, 'El pago no se completó. Puedes intentarlo otra vez.')
+    return redirect('pagar_comision_oferta', producto_id=pago.producto_id)
+
+
+@csrf_exempt
+@require_http_methods(['POST', 'GET'])
+def mercadopago_aviso(request):
+    """Webhook de Mercado Pago. Solo trae el id del pago: con ese id se consulta la API y recien ahi se confirma."""
+    try:
+        cuerpo = json.loads(request.body or b'{}') if request.method == 'POST' else {}
+    except ValueError:
+        cuerpo = {}
+    tipo = request.GET.get('type') or request.GET.get('topic') or cuerpo.get('type') or cuerpo.get('topic') or ''
+    dato_id = request.GET.get('data.id') or (cuerpo.get('data') or {}).get('id') or request.GET.get('id') or ''
+    dato_id = str(dato_id)
+    if tipo != 'payment' or not dato_id.isdigit():
+        return HttpResponse(status=200)
+    if not mercadopago.firma_valida(request, dato_id):
+        # No se corta: el aviso solo dispara una consulta a la API con nuestra llave, que es la que decide
+        registro_pagos.warning('Aviso de Mercado Pago sin firma valida (pago %s); se verifica igual con la API', dato_id)
+    if not mercadopago.activo():
+        return HttpResponse(status=200)
+    try:
+        mercadopago.aplicar_pago(dato_id)
+    except mercadopago.ErrorMercadoPago:
+        # 500 hace que Mercado Pago vuelva a intentar mas tarde
+        return HttpResponse(status=502)
+    return HttpResponse(status=200)
 
 
 @login_required
