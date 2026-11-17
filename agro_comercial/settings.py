@@ -188,6 +188,10 @@ TARIFA_OFERTA_PREMIUM = float(os.environ.get('TARIFA_OFERTA_PREMIUM', '1.00'))
 TELEFONO_PAGOS = '900817270'
 # Nombre que le sale al vendedor en Yape al pagar, para que confirme que es la cuenta correcta (opcional)
 TITULAR_PAGOS = os.environ.get('TITULAR_PAGOS', '')
+# Mercado Pago (Yape, tarjeta): con la llave puesta, la oferta se publica sola cuando el pago se aprueba.
+# Sin llave se usa el Yape al numero de arriba con confirmacion manual en el admin.
+MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '').strip()
+MERCADOPAGO_WEBHOOK_SECRET = os.environ.get('MERCADOPAGO_WEBHOOK_SECRET', '').strip()
 # Maximo de pagos que una cuenta puede enviar a revision en 24 horas (evita que prueben numeros al azar)
 PAGOS_MAXIMO_POR_DIA = int(os.environ.get('PAGOS_MAXIMO_POR_DIA', '6'))
 
