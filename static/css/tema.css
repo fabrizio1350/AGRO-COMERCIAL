@@ -2415,3 +2415,9 @@ a:hover { color: var(--verde-oscuro); }
 }
 .interruptor-oferta .form-check-input:focus { box-shadow: 0 0 0 4px rgba(239, 108, 26, 0.18); border-color: #ef6c1a; }
 .interruptor-oferta .form-check-input { transition: background-position 0.2s ease, background-color 0.2s ease, border-color 0.2s ease; }
+
+/* Boton de Mercado Pago */
+.btn-mercadopago { background: #009ee3; border-color: #009ee3; color: #ffffff; font-weight: 700; }
+.btn-mercadopago:hover, .btn-mercadopago:focus { background: #007eb5; border-color: #007eb5; color: #ffffff; }
+.otra-forma-pago { border-top: 1px solid #e7e2d8; padding-top: 0.75rem; }
+.otra-forma-pago summary { cursor: pointer; color: var(--verde-oscuro); }
