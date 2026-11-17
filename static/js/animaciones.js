@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (sinMovimiento) return;
 
     // 7. Aparecer al hacer scroll: tarjetas y secciones entran suave cuando llegan a la pantalla
-    var revelables = document.querySelectorAll('.tarjeta-producto, main .seccion, .info-bloque, .barra-tiempo');
+    var revelables = document.querySelectorAll('.tarjeta-producto, main .seccion, .info-bloque, .barra-tiempo, [data-revelar]');
     if ('IntersectionObserver' in window && revelables.length) {
         var observador = new IntersectionObserver(function (entradas) {
             entradas.forEach(function (entrada) {
