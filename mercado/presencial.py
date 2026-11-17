@@ -134,7 +134,7 @@ class PublicacionForm(forms.ModelForm):
     class Meta:
         model = Producto
         fields = ('nombre', 'categoria', 'descripcion', 'imagen', 'unidad', 'stock', 'precio',
-                  'precio_oferta', 'disponible')
+                  'precio_oferta')
         labels = {'nombre': '¿Qué vendes?', 'imagen': 'Foto del producto', 'precio': 'Precio normal (S/)',
                   'precio_oferta': 'Precio de oferta (S/)', 'disponible': 'Mostrar en la web',
                   'stock': 'Cantidad que tienes', 'unidad': 'Se vende por', 'descripcion': 'Descripción corta'}
@@ -159,7 +159,6 @@ class PublicacionForm(forms.ModelForm):
         self.fields['unidad'].choices = [c for c in Producto.UNIDADES if c[0] in UNIDADES_MERCADO or c[0] == actual]
         if not self.instance.pk:
             self.initial.setdefault('unidad', 'KG')
-            self.initial.setdefault('disponible', True)
         self.initial.setdefault('activar_oferta', bool(self.instance.pk and self.instance.precio_oferta))
         # Al editar se muestra como esta HOY y lo que le queda; si el vendedor no lo toca, no cambia nada
         if self.instance.pk:
