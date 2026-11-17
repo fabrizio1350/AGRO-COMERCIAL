@@ -16,7 +16,7 @@
 <div class="row g-4">
     <div class="col-lg-8" data-stock-url="{% url 'stock_publico' %}">
         {% for grupo in grupos %}
-        <section class="grupo-lista revelar" aria-label="{{ grupo.puesto.nombre|default:'Puesto' }}">
+        <section class="grupo-lista" data-revelar aria-label="{{ grupo.puesto.nombre|default:'Puesto' }}">
             <header class="grupo-lista-cabecera">
                 <img src="{% if grupo.puesto %}{{ grupo.puesto.url_foto }}{% else %}/static/imagenes/finca_productor.jpg{% endif %}" alt="" class="foto-puesto">
                 <div class="flex-grow-1 min-w-0">
