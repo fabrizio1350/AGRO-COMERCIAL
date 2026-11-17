@@ -1,8 +1,11 @@
 """Protecciones generales de la web: limite de intentos de login, cabeceras de seguridad
 y revision de las fotos que suben los usuarios."""
+import logging
+import time
 import uuid
 
 from django.conf import settings
+from django.contrib.auth import logout
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth.signals import user_logged_in, user_login_failed
 from django.core.cache import cache
@@ -10,6 +13,8 @@ from django.dispatch import receiver
 
 INTENTOS_MAXIMOS = getattr(settings, 'LOGIN_INTENTOS_MAXIMOS', 5)
 MINUTOS_BLOQUEO = getattr(settings, 'LOGIN_MINUTOS_BLOQUEO', 15)
+
+registro_admin = logging.getLogger('mercado.admin')
 
 
 # ---------------------------------------------------------------- intentos de login
@@ -46,8 +51,21 @@ def contar_intento_fallido(sender, credentials, **kwargs):
 
 
 @receiver(user_logged_in)
-def limpiar_intentos(sender, user, **kwargs):
+def limpiar_intentos(sender, user, request=None, **kwargs):
     cache.delete(_clave_intentos(user.get_username()))
+    if request is not None and request.path.startswith('/' + settings.ADMIN_URL):
+        registro_admin.info('Ingreso al admin: %s desde %s', user.get_username(), _ip(request))
+
+
+def _ip(request):
+    return request.META.get('HTTP_X_REAL_IP') or request.META.get('REMOTE_ADDR', '?')
+
+
+@receiver(user_login_failed)
+def avisar_fallo_admin(sender, credentials, request=None, **kwargs):
+    if request is not None and request.path.startswith('/' + settings.ADMIN_URL):
+        registro_admin.warning('Contraseña incorrecta en el admin para "%s" desde %s',
+                               (credentials.get('username') or '')[:150], _ip(request))
 
 
 # ---------------------------------------------------------------- cabeceras
@@ -75,6 +93,37 @@ class CabecerasSeguridadMiddleware:
         respuesta.headers.setdefault('Content-Security-Policy', self.csp)
         respuesta.headers.setdefault(
             'Permissions-Policy', 'camera=(), microphone=(), payment=(), usb=(), geolocation=(self)')
+        return respuesta
+
+
+class ProteccionAdminMiddleware:
+    """Cuida el panel de administracion:
+    - si el administrador deja el panel quieto un rato, se cierra su sesion;
+    - el navegador no guarda copias de las paginas del panel (nadie las ve con "atras");
+    - los buscadores no lo muestran en Google."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.prefijo = '/' + settings.ADMIN_URL
+        self.segundos = getattr(settings, 'ADMIN_MINUTOS_INACTIVO', 30) * 60
+
+    def __call__(self, request):
+        if not request.path.startswith(self.prefijo):
+            return self.get_response(request)
+
+        usuario = getattr(request, 'user', None)
+        if usuario is not None and usuario.is_authenticated and usuario.is_staff:
+            ahora = int(time.time())
+            ultimo = request.session.get('admin_ultimo_movimiento')
+            if ultimo and ahora - ultimo > self.segundos:
+                registro_admin.info('Sesion del admin cerrada por inactividad: %s', usuario.get_username())
+                logout(request)
+            else:
+                request.session['admin_ultimo_movimiento'] = ahora
+
+        respuesta = self.get_response(request)
+        respuesta.headers['Cache-Control'] = 'no-store, private'
+        respuesta.headers['X-Robots-Tag'] = 'noindex, nofollow'
         return respuesta
 
 
