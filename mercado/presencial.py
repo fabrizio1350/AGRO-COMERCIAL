@@ -124,6 +124,12 @@ class PublicacionForm(forms.ModelForm):
     activar_oferta = forms.BooleanField(
         label='Poner en oferta', required=False,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch', 'data-interruptor-oferta': ''}))
+    # Solo para las cuentas de la lista "sin pago": eligen si su oferta gratis sale normal o premium
+    tipo_oferta_gratis = forms.ChoiceField(
+        label='¿Cómo quieres que salga tu oferta?', required=False, initial='PREMIUM',
+        choices=[('NORMAL', 'Normal: etiqueta "Oferta" en Productos'),
+                 ('PREMIUM', 'Premium: también en el carrusel, Ofertas y el inicio')],
+        widget=forms.RadioSelect)
     # Frescura: la dice el vendedor, que conoce su producto. No se calcula sola ni vuelve a "fresco" por su cuenta
     frescura = forms.ChoiceField(label='¿Cómo está tu producto hoy?', choices=Producto.FRESCURAS, required=False,
                                  widget=forms.RadioSelect(attrs={'class': 'btn-check'}))
@@ -163,6 +169,8 @@ class PublicacionForm(forms.ModelForm):
         if not self.instance.pk:
             self.initial.setdefault('unidad', 'KG')
         self.initial.setdefault('activar_oferta', bool(self.instance.pk and self.instance.precio_oferta))
+        if self.instance.pk and self.instance.en_oferta:
+            self.initial.setdefault('tipo_oferta_gratis', self.instance.tipo_oferta)
         # Al editar se muestra como esta HOY y lo que le queda; si el vendedor no lo toca, no cambia nada
         if self.instance.pk:
             queda_fresco, queda_normal = self.instance.tramos_frescura()
@@ -645,7 +653,7 @@ def publicar(request, producto_id=None):
             producto.tipo_oferta = 'NORMAL'
         elif oferta_gratis:
             producto.oferta_pendiente_pago = False
-            producto.tipo_oferta = 'PREMIUM'
+            producto.tipo_oferta = form.cleaned_data.get('tipo_oferta_gratis') or 'PREMIUM'
         elif not antes.get('en_oferta'):
             # Oferta nueva: sale como oferta cuando el vendedor paga la publicidad (normal o premium)
             producto.oferta_pendiente_pago = True
