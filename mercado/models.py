@@ -183,7 +183,15 @@ class Categoria(models.Model):
             return '/static/imagenes/mandarina.jpg'
         if 'grano' in nombre_low or 'cereal' in nombre_low:
             return '/static/imagenes/quinua_blanca.jpg'
-        # Para las categorias nuevas se usa la foto que subio algun vendedor
+        # Categorias sin foto propia: una foto libre de Wikimedia Commons (ver mercado/fotos_demo.py)
+        from .fotos_demo import foto
+        por_palabra = [('aj', 'rocoto'), ('hierba', 'huacatay'), ('lácteo', 'queso'), ('lacteo', 'queso'),
+                       ('legumbre', 'menestras'), ('forraje', 'alfalfa'), ('semilla', 'plantones'),
+                       ('seco', 'pasas'), ('flor', 'rosas'), ('huevo', 'huevos')]
+        for palabra, clave in por_palabra:
+            if palabra in nombre_low:
+                return foto(clave)
+        # Para otras categorias se usa la foto que subio algun vendedor
         con_foto = self.productos.exclude(imagen='').exclude(imagen__isnull=True).first()
         if con_foto:
             return con_foto.imagen.url
