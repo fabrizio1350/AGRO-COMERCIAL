@@ -1,0 +1,227 @@
+/* Estilo del panel de administracion con los colores de MercOfertas.
+   Django arma el admin con estas variables; aqui solo cambiamos los valores. */
+html[data-theme="light"],
+:root {
+    --primary: #167a3e;
+    --secondary: #0f4a30;
+    --accent: #f4b938;
+    --primary-fg: #ffffff;
+
+    --body-fg: #1c2a21;
+    --body-bg: #faf8f4;
+    --body-quiet-color: #5b6b60;
+    --body-loud-color: #0f1a13;
+
+    --header-color: #e8f3ec;
+    --header-branding-color: #ffffff;
+    --header-bg: #0f4a30;
+    --header-link-color: #ffffff;
+
+    --breadcrumbs-fg: #d8eadf;
+    --breadcrumbs-link-fg: #ffffff;
+    --breadcrumbs-bg: #167a3e;
+
+    --link-fg: #167a3e;
+    --link-hover-color: #0f4a30;
+    --link-selected-fg: #0f4a30;
+
+    --hairline-color: #e7e2d8;
+    --border-color: #e7e2d8;
+
+    --error-fg: #b42318;
+    --message-success-bg: #e3f3e8;
+    --message-warning-bg: #fdf3ea;
+    --message-error-bg: #fdecea;
+
+    --darkened-bg: #f3efe7;
+    --selected-bg: #eef7f0;
+    --selected-row: #fff7de;
+
+    --button-fg: #ffffff;
+    --button-bg: #167a3e;
+    --button-hover-bg: #0f4a30;
+    --default-button-bg: #ef6c1a;
+    --default-button-hover-bg: #dd5a10;
+    --close-button-bg: #7a857e;
+    --close-button-hover-bg: #5b6b60;
+    --delete-button-bg: #b42318;
+    --delete-button-hover-bg: #8f1c13;
+
+    --object-tools-fg: #ffffff;
+    --object-tools-bg: #167a3e;
+    --object-tools-hover-bg: #0f4a30;
+
+    --font-family-primary: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --primary: #3fae6a;
+        --secondary: #0c2c1e;
+        --body-fg: #e7ece8;
+        --body-bg: #121814;
+        --body-quiet-color: #a3b0a7;
+        --body-loud-color: #ffffff;
+        --header-bg: #0c2c1e;
+        --breadcrumbs-bg: #14432b;
+        --link-fg: #6fcf94;
+        --link-hover-color: #a6e6bf;
+        --link-selected-fg: #a6e6bf;
+        --hairline-color: #26312a;
+        --border-color: #33413a;
+        --darkened-bg: #1a221d;
+        --selected-bg: #1d3326;
+        --selected-row: #2e2a17;
+        --button-bg: #2a9552;
+        --button-hover-bg: #167a3e;
+        --object-tools-bg: #2a9552;
+        --object-tools-hover-bg: #167a3e;
+        --message-success-bg: #173523;
+        --message-warning-bg: #3a2a16;
+        --message-error-bg: #3a1a17;
+    }
+}
+html[data-theme="dark"] {
+    --primary: #3fae6a;
+    --secondary: #0c2c1e;
+    --body-fg: #e7ece8;
+    --body-bg: #121814;
+    --body-quiet-color: #a3b0a7;
+    --body-loud-color: #ffffff;
+    --header-bg: #0c2c1e;
+    --breadcrumbs-bg: #14432b;
+    --link-fg: #6fcf94;
+    --link-hover-color: #a6e6bf;
+    --link-selected-fg: #a6e6bf;
+    --hairline-color: #26312a;
+    --border-color: #33413a;
+    --darkened-bg: #1a221d;
+    --selected-bg: #1d3326;
+    --selected-row: #2e2a17;
+    --button-bg: #2a9552;
+    --button-hover-bg: #167a3e;
+    --object-tools-bg: #2a9552;
+    --object-tools-hover-bg: #167a3e;
+    --message-success-bg: #173523;
+    --message-warning-bg: #3a2a16;
+    --message-error-bg: #3a1a17;
+}
+
+/* Cabecera */
+#header {
+    padding: 12px 24px;
+    box-shadow: 0 2px 0 var(--accent);
+}
+.marca-admin {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    text-decoration: none;
+}
+.marca-admin small {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    opacity: .8;
+}
+.marca-admin-icono {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: var(--accent);
+    color: #0f4a30;
+    font-size: 18px;
+    font-weight: 800;
+}
+div.breadcrumbs {
+    padding: 10px 24px;
+}
+
+/* Tarjetas de cada seccion */
+#content-main .module,
+#nav-sidebar .module,
+.dashboard .module {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--body-bg);
+}
+.module h2,
+.module caption,
+.inline-group h2 {
+    background: var(--primary);
+    font-size: 13px;
+    letter-spacing: .02em;
+    padding: 10px 12px;
+}
+.module table {
+    width: 100%;
+}
+#changelist .results,
+#changelist-filter {
+    border-radius: 10px;
+}
+#changelist-filter {
+    border: 1px solid var(--border-color);
+}
+
+/* Botones */
+.button,
+input[type=submit],
+input[type=button],
+.submit-row input,
+a.button {
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-weight: 600;
+}
+.object-tools a:link,
+.object-tools a:visited {
+    border-radius: 999px;
+    padding: 6px 14px;
+}
+
+/* Campos */
+input[type=text],
+input[type=password],
+input[type=email],
+input[type=url],
+input[type=number],
+input[type=tel],
+textarea,
+select,
+.vTextField {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 7px 9px;
+}
+input:focus,
+textarea:focus,
+select:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+    border-color: var(--primary);
+}
+
+/* Login */
+.login #container {
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 12px 30px rgba(15, 74, 48, .12);
+    overflow: hidden;
+}
+.login #header {
+    padding: 16px 20px;
+}
+.login .submit-row input {
+    width: 100%;
+}
+
+/* Filas de las listas */
+#result_list tbody tr:hover td,
+#result_list tbody tr:hover th {
+    background: var(--selected-bg);
+}
