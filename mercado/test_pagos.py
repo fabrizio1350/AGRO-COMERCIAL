@@ -275,7 +275,7 @@ class PanelDeAdministracionTests(Base):
         self.client.force_login(self.admin)
         portada = self.client.get(reverse('admin:index'))
         self.assertContains(portada, 'por Yape/Plin por confirmar')
-        self.assertContains(portada, 'Cuentas con ofertas premium gratis')
+        self.assertContains(portada, 'Cuentas que publican ofertas gratis')
         lista = self.client.get(reverse('admin:mercado_pagocomision_changelist'))
         self.assertContains(lista, '1 pago(s) por confirmar')
         self.assertContains(lista, 'Revisar y confirmar')
