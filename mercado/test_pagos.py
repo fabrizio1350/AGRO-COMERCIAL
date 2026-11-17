@@ -361,3 +361,13 @@ class PagoConUnToqueTests(TestCase):
         form = PublicacionForm(data=dict(base, activar_oferta='on', precio_oferta=''), vendedor=self.vendedor)
         self.assertFalse(form.is_valid())
         self.assertIn('precio_oferta', form.errors)
+
+
+class FormularioPublicarTests(PagoConUnToqueTests):
+    def test_oferta_solo_trae_el_interruptor_y_no_hay_mostrar_en_la_web(self):
+        html = self.client.get(reverse('crear_producto')).content.decode()
+        self.assertNotIn('Mostrar en la web', html)
+        oferta = html.split('Oferta (opcional)')[1].split('</section>')[0]
+        self.assertIn('data-interruptor-oferta', oferta)
+        self.assertNotIn('name="descripcion"', oferta)
+        self.assertIn('name="descripcion"', html)
