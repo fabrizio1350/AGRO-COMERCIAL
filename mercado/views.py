@@ -648,8 +648,9 @@ def inicio(request):
 
 
 def informacion(request):
-    """Preguntas frecuentes, terminos, privacidad y contacto."""
-    return render(request, 'informacion.html')
+    """Preguntas frecuentes, terminos, privacidad, contacto y creditos de las fotos."""
+    from .fotos_demo import creditos
+    return render(request, 'informacion.html', {'creditos_fotos': creditos()})
 
 
 def catalogo(request):
