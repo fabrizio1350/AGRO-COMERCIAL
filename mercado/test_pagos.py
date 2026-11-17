@@ -314,7 +314,7 @@ class PanelDeAdministracionTests(Base):
         self.vendedor.email = 'puesto@gmail.com'
         self.vendedor.save()
         self.client.force_login(self.admin)
-        self.assertContains(self.client.get(reverse('admin:mercado_cuentasinpagooferta_changelist')), 'publican ofertas premium gratis')
+        self.assertContains(self.client.get(reverse('admin:mercado_cuentasinpagooferta_changelist')), 'publican ofertas gratis')
         self.client.post(reverse('admin:mercado_cuentasinpagooferta_add'), {'correo': 'Puesto@Gmail.com', 'nota': 'socio'})
         self.oferta.refresh_from_db()
         self.assertFalse(self.oferta.oferta_pendiente_pago)
@@ -371,3 +371,24 @@ class FormularioPublicarTests(PagoConUnToqueTests):
         self.assertIn('data-interruptor-oferta', oferta)
         self.assertNotIn('name="descripcion"', oferta)
         self.assertIn('name="descripcion"', html)
+
+
+class OfertaGratisEligeTipoTests(PagoConUnToqueTests):
+    def test_cuenta_gratis_elige_normal_o_premium_sin_pagar(self):
+        from .models import CuentaSinPagoOferta
+        self.vendedor.email = 'prueba@ejemplo.com'
+        self.vendedor.save()
+        CuentaSinPagoOferta.objects.create(correo='prueba@ejemplo.com')
+        self.assertContains(self.client.get(reverse('crear_producto')), 'Gratis para tu cuenta')
+        datos = {'nombre': 'Lima', 'categoria': self.producto.categoria_id, 'unidad': 'KG', 'stock': 5, 'precio': '4.00',
+                 'oferta_con_interruptor': '1', 'activar_oferta': 'on', 'precio_oferta': '3.00', 'tipo_oferta_gratis': 'NORMAL'}
+        self.client.post(reverse('crear_producto'), datos)
+        nuevo = Producto.objects.get(nombre='Lima')
+        self.assertEqual((nuevo.en_oferta, nuevo.oferta_pendiente_pago, nuevo.tipo_oferta), (True, False, 'NORMAL'))
+        self.client.post(reverse('editar_producto', args=[nuevo.pk]), dict(datos, tipo_oferta_gratis='PREMIUM'))
+        nuevo.refresh_from_db()
+        self.assertEqual(nuevo.tipo_oferta, 'PREMIUM')
+        self.assertFalse(PagoComision.objects.exists())
+
+    def test_cuenta_normal_no_ve_la_opcion(self):
+        self.assertNotContains(self.client.get(reverse('crear_producto')), 'Gratis para tu cuenta')
