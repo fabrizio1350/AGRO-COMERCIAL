@@ -58,6 +58,16 @@
             </ul>
         </section>
 
+        <section class="info-bloque mb-5" id="creditos-fotos">
+            <h2 class="h4 fw-bold mb-3">Créditos de las fotos</h2>
+            <p class="text-secondary small">Las fotos de los productos de ejemplo (Demo) son de Wikimedia Commons y tienen licencia libre. Gracias a sus autores:</p>
+            <ul class="small text-secondary creditos-fotos">
+                {% for c in creditos_fotos %}
+                <li><a href="{{ c.enlace }}" target="_blank" rel="noopener">{{ c.titulo }}</a>: {{ c.autor }} ({{ c.licencia }})</li>
+                {% endfor %}
+            </ul>
+        </section>
+
         <section class="info-bloque" id="contacto">
             <h2 class="h4 fw-bold mb-3">Contacto</h2>
             {% if correo_contacto %}
@@ -77,6 +87,7 @@
             <nav class="d-grid gap-2 small">
                 <a href="#preguntas" class="enlace-ver-todo">Preguntas frecuentes</a>
                 <a href="#terminos" class="enlace-ver-todo">Términos y condiciones</a>
+                <a href="#creditos-fotos" class="enlace-ver-todo">Créditos de las fotos</a>
                 <a href="#privacidad" class="enlace-ver-todo">Privacidad</a>
                 <a href="#contacto" class="enlace-ver-todo">Contacto</a>
             </nav>
