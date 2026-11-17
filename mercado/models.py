@@ -965,8 +965,8 @@ class CuentaSinPagoOferta(models.Model):
     agregado = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Cuenta con ofertas premium gratis'
-        verbose_name_plural = 'Cuentas con ofertas premium gratis'
+        verbose_name = 'Cuenta que publica ofertas gratis'
+        verbose_name_plural = 'Cuentas que publican ofertas gratis'
         ordering = ['correo']
 
     def __str__(self):
