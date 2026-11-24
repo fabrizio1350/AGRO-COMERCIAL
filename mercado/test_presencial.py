@@ -9,7 +9,7 @@ class MercadoPresencialTests(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('puesto')
         self.comprador = User.objects.create_user('visita')
-        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', ofertas_premium_regalo=0)
         PerfilUsuario.objects.create(usuario=self.comprador)
         self.puesto = Puesto.objects.create(
             vendedor=self.vendedor, nombre='Mercado de prueba', referencia='Puesto 12',
@@ -247,7 +247,7 @@ class PanelYListaTests(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('vende', password='clave12345')
         self.comprador = User.objects.create_user('compra', password='clave12345')
-        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', ofertas_premium_regalo=0)
         PerfilUsuario.objects.create(usuario=self.comprador, rol='COMPRADOR')
         self.producto = Producto.objects.create(
             productor=self.vendedor, nombre='Choclo', descripcion='Tierno', precio=Decimal('1.50'), stock=10,
@@ -371,7 +371,7 @@ class PanelYListaTests(TestCase):
         self.assertContains(lista, 'Mercado San Camilo')
         # Otra persona no puede usar ni quitar esa ubicacion
         otro = User.objects.create_user('otro_puesto')
-        PerfilUsuario.objects.create(usuario=otro, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=otro, rol='PRODUCTOR', ofertas_premium_regalo=0)
         Puesto.objects.create(vendedor=otro, nombre='Otro mercado', latitud=Decimal('-16.4'), longitud=Decimal('-71.5'))
         self.client.force_login(otro)
         self.client.post(reverse('crear_producto'), dict(base, nombre='Ajeno', donde=str(feria.pk)))
