@@ -6,7 +6,7 @@
 <div class="pago-oferta mx-auto">
     <div class="mb-3 entrar">
         <span class="antetitulo"><i class="bi bi-megaphone-fill" aria-hidden="true"></i>Publicidad de tu oferta</span>
-        <h1 class="h3 fw-bold mb-1">{% if en_revision %}Estamos revisando tu pago{% elif premium_regalo %}Tu oferta premium es gratis{% elif mejora %}Pasa tu oferta a premium{% else %}Paga la publicidad de tu oferta{% endif %}</h1>
+        <h1 class="h3 fw-bold mb-1">{% if en_revision %}Estamos revisando tu pago{% elif hay_regalo %}Tu oferta es gratis{% elif mejora %}Pasa tu oferta a premium{% else %}Paga la publicidad de tu oferta{% endif %}</h1>
         <p class="text-muted mb-0">Este pago es para MercOfertas por mostrar tu oferta a los compradores. Lo que vendas en tu puesto no paga comisión.</p>
     </div>
 
@@ -33,14 +33,14 @@
                 <a href="{% url 'panel_productor' %}" class="btn btn-success w-100">Volver a mi puesto</a>
             </div>
             {% else %}
-            <form method="post" class="bloque-verificacion entrar entrar-2{% if premium_regalo %} modo-regalo{% endif %}" data-pago-oferta novalidate>
+            <form method="post" class="bloque-verificacion entrar entrar-2{% if hay_regalo %} modo-regalo{% endif %}" data-pago-oferta novalidate>
                 {% csrf_token %}
-                {% if premium_regalo %}
+                {% if hay_regalo %}
                 <div class="aviso-regalo-premium regalo-aparece mb-3" role="status">
                     <i class="bi bi-gift-fill" aria-hidden="true"></i>
                     <div>
-                        <strong class="d-block">Tienes {{ premium_regalo }} de {{ regalo_total }} ofertas premium gratis</strong>
-                        <span class="small">Regalo de bienvenida de MercOfertas. Esta oferta no te cuesta nada.</span>
+                        <strong class="d-block">Tienes ofertas gratis de regalo</strong>
+                        <span class="small">{% if regalos.PREMIUM %}{{ regalos.PREMIUM }} premium{% endif %}{% if regalos.PREMIUM and regalos.NORMAL %} y {% endif %}{% if regalos.NORMAL %}{{ regalos.NORMAL }} normal{{ regalos.NORMAL|pluralize:"es" }}{% endif %}. Elige cuál usar: esta oferta no te cuesta nada.</span>
                     </div>
                 </div>
                 {% endif %}
@@ -50,27 +50,32 @@
                 <h2><span class="numero">1</span>{% if mejora %}Tu nueva oferta{% else %}Tipo de oferta{% endif %}</h2>
                 <div class="planes-oferta mb-4" role="radiogroup" aria-label="Tipo de oferta">
                     {% for p in planes %}
-                    <input type="radio" class="btn-check" name="tipo_oferta" id="plan{{ p.tipo }}" value="{{ p.tipo }}" data-monto="{{ p.monto }}" {% if p.tipo == plan.tipo %}checked{% endif %}>
-                    <label class="plan-oferta {% if p.tipo == 'PREMIUM' %}premium{% endif %}" for="plan{{ p.tipo }}">
+                    <input type="radio" class="btn-check" name="tipo_oferta" id="plan{{ p.tipo }}" value="{{ p.tipo }}" data-monto="{{ p.monto }}" data-gratis="{% if p.gratis %}1{% else %}0{% endif %}" {% if p.tipo == plan.tipo %}checked{% endif %}>
+                    <label class="plan-oferta {% if p.tipo == 'PREMIUM' %}premium{% endif %}{% if p.gratis %} con-corte{% endif %}" for="plan{{ p.tipo }}" style="--retraso:{% if forloop.first %}.35s{% else %}.75s{% endif %}">
                         <span class="d-flex justify-content-between align-items-baseline gap-2">
                             <strong>{% if p.tipo == 'PREMIUM' %}<i class="bi bi-star-fill me-1" aria-hidden="true"></i>{% else %}<i class="bi bi-tag-fill me-1" aria-hidden="true"></i>{% endif %}{{ p.nombre }}</strong>
-                            <span class="precio-plan">{% if premium_regalo %}<span class="tachado" style="--retraso:{% if forloop.first %}.35s{% else %}.6s{% endif %}">S/ {{ p.monto }}</span> <span class="gratis-aparece">Gratis</span>{% else %}S/ {{ p.monto }}{% endif %}</span>
+                            <span class="precio-plan">{% if p.gratis %}{% include "includes/precio_cortado.html" with texto=p.monto %} <span class="gratis-aparece">Gratis</span>{% else %}S/ {{ p.monto }}{% endif %}</span>
                         </span>
                         <small>{{ p.detalle }}</small>
+                        {% if p.gratis %}<small class="queda-gratis gratis-aparece"><i class="bi bi-gift" aria-hidden="true"></i> Te queda{{ p.gratis|pluralize:"n" }} {{ p.gratis }} gratis</small>{% endif %}
                     </label>
                     {% endfor %}
                 </div>
 
-                {% if premium_regalo %}
-                <h2><span class="numero">2</span>Publica tu oferta gratis</h2>
-                <div class="boton-tachado mb-2" aria-hidden="true">
-                    <span class="tachado tachado-boton" style="--retraso:.9s"><i class="bi bi-lightning-charge-fill me-1"></i>Pagar S/ {{ monto }} con Yape o tarjeta</span>
+                {% if hay_regalo %}
+                <div data-seccion-gratis{% if not plan.gratis %} hidden{% endif %}>
+                    <h2><span class="numero">2</span>Publica tu oferta gratis</h2>
+                    <div class="boton-tachado mb-2" aria-hidden="true" style="--retraso:1.1s">
+                        <span class="corte corte-boton"><span class="corte-arriba"><i class="bi bi-lightning-charge-fill me-1"></i>Pagar S/ <span data-monto>{{ monto }}</span> con Yape o tarjeta</span><span class="corte-abajo"><i class="bi bi-lightning-charge-fill me-1"></i>Pagar S/ <span data-monto>{{ monto }}</span> con Yape o tarjeta</span></span>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-lg w-100 boton-gratis gratis-aparece" formaction="{% url 'publicar_oferta_gratis' producto.pk %}" formnovalidate data-boton-pagar>
+                        <i class="bi bi-gift-fill me-1" aria-hidden="true"></i>Publicar gratis
+                    </button>
+                    <p class="small text-muted mt-2 mb-0">Tu oferta sale al instante, sin pagar nada.</p>
                 </div>
-                <button type="submit" class="btn btn-success btn-lg w-100 boton-gratis gratis-aparece" formaction="{% url 'publicar_oferta_gratis' producto.pk %}" formnovalidate data-boton-pagar>
-                    <i class="bi bi-gift-fill me-1" aria-hidden="true"></i>Publicar gratis como premium
-                </button>
-                <p class="small text-muted mt-2 mb-0">Usas 1 de tus {{ premium_regalo }} gratis. Tu oferta sale al instante en el carrusel, en Ofertas y en el inicio.</p>
-                {% elif mercadopago_activo %}
+                {% endif %}
+                <div data-seccion-pago{% if hay_regalo and plan.gratis %} hidden{% endif %}>
+                {% if mercadopago_activo %}
                 <h2><span class="numero">2</span>Paga y tu oferta sale al instante</h2>
                 <button type="submit" class="btn btn-mercadopago btn-lg w-100 mb-1" formaction="{% url 'pagar_con_mercadopago' producto.pk %}" formnovalidate data-boton-pagar>
                     <i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Pagar S/ <span data-monto>{{ monto }}</span> con Yape o tarjeta
@@ -123,6 +128,7 @@
                 </button>
                 <p class="small text-muted mt-2 mb-0">Tu oferta se publica cuando confirmamos el pago.</p>
                 {% endif %}
+                </div>
             </form>
             {% endif %}
         </div>
@@ -142,13 +148,14 @@
                 <div class="d-flex justify-content-between small mb-1"><span>Stock en oferta</span><span>{{ producto.stock }} {{ producto.nombre_unidad_stock }}</span></div>
                 {% if producto.oferta_inicio %}<div class="d-flex justify-content-between small mb-1"><span>La oferta empieza</span><span>{{ producto.oferta_inicio|date:"d/m/Y" }}</span></div>{% endif %}
                 {% if producto.fecha_vencimiento %}<div class="d-flex justify-content-between small mb-1"><span>El producto vence</span><span>{{ producto.fecha_vencimiento|date:"d/m/Y" }}</span></div>{% endif %}
-                {% if not en_revision %}<div class="d-flex justify-content-between small mb-1 gap-2"><span>Se muestra en</span><span class="text-end" data-donde>{% if premium_regalo or plan.tipo == 'PREMIUM' %}Productos, carrusel, Ofertas e inicio{% else %}Productos, con la etiqueta Oferta{% endif %}</span></div>{% endif %}
+                {% if not en_revision %}<div class="d-flex justify-content-between small mb-1 gap-2"><span>Se muestra en</span><span class="text-end" data-donde>{% if plan.tipo == 'PREMIUM' %}Productos, carrusel, Ofertas e inicio{% else %}Productos, con la etiqueta Oferta{% endif %}</span></div>{% endif %}
                 <hr>
-                {% if premium_regalo and not en_revision %}
-                <div class="d-flex justify-content-between align-items-baseline"><span class="fw-semibold">Total a pagar</span><span class="text-end"><span class="tachado text-muted" style="--retraso:.75s">S/ {{ monto }}</span> <strong class="fs-4 text-success gratis-aparece">S/ 0.00</strong></span></div>
-                {% else %}
-                <div class="d-flex justify-content-between align-items-baseline"><span class="fw-semibold">Total a pagar</span><strong class="fs-4 text-success">S/ <span data-monto>{{ monto }}</span></strong></div>
-                {% endif %}
+                <div class="d-flex justify-content-between align-items-baseline"><span class="fw-semibold">Total a pagar</span>
+                    <span class="text-end">
+                        <span data-total-gratis{% if en_revision or not plan.gratis %} hidden{% endif %} style="--retraso:1s"><span class="text-muted">{% include "includes/precio_cortado.html" with texto=monto vivo=True %}</span> <strong class="fs-4 text-success gratis-aparece">S/ 0.00</strong></span>
+                        <strong class="fs-4 text-success" data-total-pago{% if not en_revision and plan.gratis %} hidden{% endif %}>S/ <span data-monto>{{ monto }}</span></strong>
+                    </span>
+                </div>
             </aside>
         </div>
     </div>
@@ -159,18 +166,21 @@
 (function () {
     var form = document.querySelector('[data-pago-oferta]');
     if (!form) return;
-    if (form.classList.contains('modo-regalo')) {
-        // Regalo: queda en premium, gratis
-        var premium = form.querySelector('#planPREMIUM');
-        if (premium) premium.checked = true;
-        form.querySelectorAll('input[name="tipo_oferta"]').forEach(function (r) { r.disabled = r !== premium; });
-    }
+    var seccionGratis = form.querySelector('[data-seccion-gratis]');
+    var seccionPago = form.querySelector('[data-seccion-pago]');
+    var totalGratis = document.querySelector('[data-total-gratis]');
+    var totalPago = document.querySelector('[data-total-pago]');
     var donde = document.querySelector('[data-donde]');
     function actualizar() {
         var plan = form.querySelector('input[name="tipo_oferta"]:checked');
         if (!plan) return;
         document.querySelectorAll('span[data-monto]').forEach(function (m) { m.textContent = plan.getAttribute('data-monto'); });
         if (donde) donde.textContent = plan.value === 'PREMIUM' ? 'Productos, carrusel, Ofertas e inicio' : 'Productos, con la etiqueta Oferta';
+        // Si el plan elegido le sale gratis, se ve el boton de pago cortado; si no, el pago normal
+        var gratis = plan.getAttribute('data-gratis') === '1';
+        if (seccionGratis) seccionGratis.hidden = !gratis;
+        if (seccionPago) seccionPago.hidden = gratis && !!seccionGratis;
+        if (totalGratis && totalPago) { totalGratis.hidden = !gratis; totalPago.hidden = gratis; }
     }
     form.addEventListener('change', actualizar);
     form.addEventListener('submit', function () {
