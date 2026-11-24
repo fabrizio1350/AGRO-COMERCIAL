@@ -84,9 +84,24 @@ class PerfilUsuario(models.Model):
     estado_verificacion = models.CharField(max_length=12, choices=ESTADOS_VERIFICACION, default='SIN_ENVIAR')
     fecha_verificacion = models.DateTimeField(null=True, blank=True)
     organico_verificado = models.BooleanField(default=False, help_text="Tiene certificado orgánico revisado por el administrador")
+    # Regalo de bienvenida: cada cuenta nueva publica sus primeras ofertas como premium sin pagar
+    ofertas_premium_regalo = models.PositiveSmallIntegerField(
+        'Ofertas premium gratis que le quedan', default=3,
+        help_text='Regalo de bienvenida: cada cuenta nueva empieza con 3. Se descuenta una por cada oferta nueva.')
 
     def vendedor_verificado(self):
         return self.estado_verificacion == 'VERIFICADO'
+
+    @staticmethod
+    def premium_regalo_restantes(usuario):
+        return PerfilUsuario.objects.filter(usuario=usuario).values_list('ofertas_premium_regalo', flat=True).first() or 0
+
+    @staticmethod
+    def usar_premium_regalo(usuario):
+        """Descuenta una oferta premium de regalo. Devuelve False si ya no le quedan.
+        Se hace en un solo UPDATE para que dos clics seguidos no usen la misma."""
+        return PerfilUsuario.objects.filter(usuario=usuario, ofertas_premium_regalo__gt=0).update(
+            ofertas_premium_regalo=models.F('ofertas_premium_regalo') - 1) == 1
 
     def puede_vender_publicamente(self):
         # Las cuentas Demo se muestran (con su etiqueta) para la version de prueba
