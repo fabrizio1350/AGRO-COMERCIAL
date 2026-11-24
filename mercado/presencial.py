@@ -683,7 +683,7 @@ def publicar(request, producto_id=None):
             producto.stock_actualizado = timezone.now()
         producto.save()
         if producto.oferta_pendiente_pago:
-            if PerfilUsuario.premium_regalo_restantes(request.user):
+            if any(PerfilUsuario.regalos_de(request.user).values()):
                 messages.info(request, f'Guardaste {producto.nombre}. Publica tu oferta gratis con tu regalo de bienvenida.')
             else:
                 messages.info(request, f'Guardaste {producto.nombre}. Para que salga como oferta, paga la publicidad por Yape o Plin.')
@@ -695,7 +695,7 @@ def publicar(request, producto_id=None):
         'form': form, 'producto': producto, 'puesto': puesto,
         'foto_actual': producto.imagen.url if producto.imagen else '',
         'oferta_gratis': oferta_gratis,
-        'premium_regalo': 0 if oferta_gratis else PerfilUsuario.premium_regalo_restantes(request.user),
+        'regalos': None if oferta_gratis else PerfilUsuario.regalos_de(request.user),
         'maps_key': settings.GOOGLE_MAPS_API_KEY,
     })
 
@@ -810,43 +810,58 @@ def pagar_oferta(request, producto_id):
                 return redirect('pagar_comision_oferta', producto_id=producto.pk)
     ultimo = PagoComision.objects.filter(producto=producto).first()
     rechazado = ultimo if ultimo and ultimo.estado == 'RECHAZADO' else None
+    regalos = PerfilUsuario.regalos_de(request.user)
+    for p in planes:
+        p['gratis'] = regalos[p['tipo']]
+    if request.method == 'GET' and not request.GET.get('tipo') and not regalos[plan['tipo']]:
+        # Se marca de entrada el plan que le sale gratis
+        plan = next((p for p in planes if p['gratis']), plan)
     return render(request, 'pagar_oferta.html', dict(
         base, planes=planes, plan=plan, monto=plan['monto'], mejora=mejora, error=error, form=form,
         mensaje_yape=mensaje_yape(codigo_pago(producto)), mercadopago_activo=mercadopago.activo(),
-        premium_regalo=PerfilUsuario.premium_regalo_restantes(request.user), regalo_total=REGALO_PREMIUM_TOTAL,
+        regalos=regalos, hay_regalo=any(regalos[p['tipo']] for p in planes),
         rechazado=rechazado if rechazado and not error else None,
     ))
-
-
-REGALO_PREMIUM_TOTAL = 3
 
 
 @login_required
 @require_POST
 def publicar_oferta_gratis(request, producto_id):
-    """Regalo de bienvenida: cada cuenta publica 3 ofertas premium sin pagar.
+    """Regalo de bienvenida: cada cuenta publica 1 oferta premium y 2 normales sin pagar.
     Sirve para una oferta nueva que espera pago o para pasar una normal a premium."""
     if not es_vendedor(request.user):
         raise Http404()
     producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
     pendiente = producto.en_oferta and producto.oferta_pendiente_pago
-    if not (pendiente or producto.puede_pasar_a_premium()):
+    mejora = producto.puede_pasar_a_premium()
+    if not (pendiente or mejora):
         messages.info(request, f'La oferta de {producto.nombre} no tiene pagos pendientes.')
         return redirect('panel_productor')
+    volver = redirect('pagar_comision_oferta', producto_id=producto.pk)
     if PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exclude(metodo_pago='MERCADOPAGO').exists():
-        return redirect('pagar_comision_oferta', producto_id=producto.pk)
+        return volver
+    tipo = 'PREMIUM' if mejora else request.POST.get('tipo_oferta')
+    if tipo not in ('NORMAL', 'PREMIUM'):
+        return volver
+    nombre_tipo = 'premium' if tipo == 'PREMIUM' else 'normal'
     with transaction.atomic():
-        if not PerfilUsuario.usar_premium_regalo(request.user):
-            messages.warning(request, 'Ya usaste tus ofertas premium gratis. Esta se paga con Yape o tarjeta.')
-            return redirect('pagar_comision_oferta', producto_id=producto.pk)
+        if not PerfilUsuario.usar_regalo(request.user, tipo):
+            messages.warning(request, f'Ya usaste tu oferta {nombre_tipo} gratis. Esta se paga con Yape o tarjeta.')
+            return volver
         # Si dejo un pago de Mercado Pago a medias, ya no hace falta
         PagoComision.objects.filter(producto=producto, estado='PENDIENTE', metodo_pago='MERCADOPAGO').update(
-            estado='RECHAZADO', fecha_revision=timezone.now(), motivo_rechazo='Se publicó con una oferta premium gratis.')
-        Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False, tipo_oferta='PREMIUM')
-    quedan = PerfilUsuario.premium_regalo_restantes(request.user)
-    registro_pagos.info('Oferta %s publicada con regalo premium por el usuario %s (le quedan %s)', producto.pk, request.user.pk, quedan)
-    messages.success(request, f'¡Listo! {producto.nombre} ya sale como oferta premium gratis. '
-                              + (f'Te quedan {quedan} de {REGALO_PREMIUM_TOTAL}.' if quedan else 'Ya usaste tus ofertas gratis.'))
+            estado='RECHAZADO', fecha_revision=timezone.now(), motivo_rechazo='Se publicó con una oferta gratis de regalo.')
+        Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False, tipo_oferta=tipo)
+    quedan = PerfilUsuario.regalos_de(request.user)
+    registro_pagos.info('Oferta %s publicada gratis (%s) por el usuario %s; le quedan %s', producto.pk, tipo, request.user.pk, quedan)
+    partes = []
+    if quedan['PREMIUM']:
+        partes.append(f"{quedan['PREMIUM']} premium")
+    if quedan['NORMAL']:
+        partes.append(f"{quedan['NORMAL']} normal{'es' if quedan['NORMAL'] > 1 else ''}")
+    messages.success(request, f'¡Listo! {producto.nombre} ya sale como oferta {nombre_tipo} gratis. '
+                              + (f"Te queda{'n' if sum(quedan.values()) > 1 else ''} {' y '.join(partes)} gratis." if partes
+                                 else 'Ya usaste todas tus ofertas gratis.'))
     return redirect('panel_productor')
 
 
