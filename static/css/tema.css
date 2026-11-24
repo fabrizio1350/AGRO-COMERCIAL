@@ -2437,29 +2437,40 @@ a:hover { color: var(--verde-oscuro); }
 .regalo-premium { display: inline-flex; gap: 6px; align-items: baseline; color: #1c2a21; }
 .regalo-premium .bi { color: #ef6c1a; }
 
-/* Pagina de pago en modo regalo: precios y boton de pago tachados, "Gratis" aparece */
-.tachado {
+/* Pagina de pago en modo regalo: el precio y el boton de pago se "cortan" y aparece "Gratis".
+   Dos copias del texto: la de arriba muestra la mitad superior y la de abajo la inferior;
+   la cuchilla pasa por el medio y las dos mitades se separan como si se partiera. */
+.corte {
     position: relative;
     display: inline-block;
-    color: #7a857e;
     white-space: nowrap;
+    color: #7a857e;
+    --tono-corte: #c2410c;
 }
-.tachado::after {
+.corte-arriba {
+    display: inline-block;
+    clip-path: inset(0 0 50% 0);
+    transform: translate(-2px, -3px) rotate(-3deg);
+}
+.corte-abajo {
+    position: absolute;
+    inset: 0;
+    clip-path: inset(50% 0 0 0);
+    transform: translate(3px, 3px) rotate(3deg);
+}
+.corte::after {
     content: "";
     position: absolute;
-    left: -6%;
-    top: 52%;
-    width: 112%;
+    left: -8%;
+    top: calc(50% - 1.5px);
+    width: 116%;
     height: 3px;
     border-radius: 3px;
-    background: #c2410c;
-    transform: rotate(-8deg);
-    transform-origin: left center;
+    background: var(--tono-corte);
+    box-shadow: 0 0 6px rgba(239, 108, 26, .7);
+    opacity: .9;
 }
-.gratis-aparece {
-    color: #167a3e;
-    font-weight: 800;
-}
+.gratis-aparece { color: #167a3e; font-weight: 800; }
 .precio-plan .gratis-aparece {
     display: inline-block;
     margin-left: 4px;
@@ -2467,6 +2478,11 @@ a:hover { color: var(--verde-oscuro); }
     border-radius: 999px;
     background: #e3f3e8;
     font-size: .9em;
+}
+.queda-gratis {
+    display: block;
+    margin-top: 6px;
+    font-size: .78rem;
 }
 .boton-tachado {
     display: flex;
@@ -2479,35 +2495,50 @@ a:hover { color: var(--verde-oscuro); }
     font-size: 1.05rem;
     cursor: not-allowed;
     user-select: none;
+    overflow: hidden;
 }
-.tachado-boton::after { top: 50%; transform: rotate(-3deg); }
-.boton-gratis {
-    font-weight: 800;
-    box-shadow: 0 8px 22px rgba(22, 122, 62, .28);
-}
-.modo-regalo .plan-oferta { cursor: default; }
-.modo-regalo .btn-check:disabled + .plan-oferta { opacity: .75; filter: none; pointer-events: none; }
+.corte-boton .corte-arriba { transform: translate(-6px, -4px) rotate(-2deg); }
+.corte-boton .corte-abajo { transform: translate(8px, 4px) rotate(2deg); }
+.boton-gratis { font-weight: 800; box-shadow: 0 8px 22px rgba(22, 122, 62, .28); }
 
 @media (prefers-reduced-motion: no-preference) {
-    .tachado::after {
-        transform: rotate(-8deg) scaleX(0);
-        animation: mo-tachar .5s cubic-bezier(.6, .05, .3, 1) forwards;
-        animation-delay: var(--retraso, .3s);
+    /* 1. La cuchilla cruza el precio */
+    .corte::after {
+        transform: scaleX(0);
+        transform-origin: left center;
+        animation: mo-cuchilla .38s cubic-bezier(.7, 0, .3, 1) var(--retraso, .3s) forwards,
+                   mo-chispa .5s ease calc(var(--retraso, .3s) + .38s) forwards;
     }
-    .tachado-boton::after { animation-name: mo-tachar-boton; }
-    .gratis-aparece {
-        opacity: 0;
-        animation: mo-gratis .55s cubic-bezier(.2, .9, .3, 1.3) forwards;
-        animation-delay: 1.3s;
-    }
+    /* 2. Las dos mitades se separan con un pequeno rebote */
+    .corte-arriba, .corte-abajo { transform: none; }
+    .corte-arriba { animation: mo-mitad-arriba .55s cubic-bezier(.2, 1.4, .4, 1) calc(var(--retraso, .3s) + .3s) forwards; }
+    .corte-abajo { animation: mo-mitad-abajo .55s cubic-bezier(.2, 1.4, .4, 1) calc(var(--retraso, .3s) + .3s) forwards; }
+    .corte-boton .corte-arriba { animation-name: mo-mitad-arriba-boton; }
+    .corte-boton .corte-abajo { animation-name: mo-mitad-abajo-boton; }
+    /* 3. La tarjeta y el boton tiemblan cuando los corta */
+    .plan-oferta.con-corte { animation: mo-sacudir .4s ease calc(var(--retraso, .3s) + .3s); }
+    .boton-tachado { animation: mo-sacudir .4s ease calc(var(--retraso, 1s) + .3s); }
+    /* 4. Aparece "Gratis" */
+    .gratis-aparece { opacity: 0; animation: mo-gratis .55s cubic-bezier(.2, .9, .3, 1.4) 1.35s forwards; }
+    .boton-gratis.gratis-aparece { animation-delay: 1.7s; }
     .regalo-aparece { animation: mo-gratis .6s cubic-bezier(.2, .9, .3, 1.3) both; }
-    .regalo-aparece .bi-gift-fill { animation: mo-regalo-salta 1s ease 1.9s 2; }
-    .boton-gratis.gratis-aparece { animation-delay: 1.5s; }
+    .regalo-aparece .bi-gift-fill { animation: mo-regalo-salta 1s ease 2s 2; }
 }
-@keyframes mo-tachar { to { transform: rotate(-8deg) scaleX(1); } }
-@keyframes mo-tachar-boton {
-    from { transform: rotate(-3deg) scaleX(0); }
-    to { transform: rotate(-3deg) scaleX(1); }
+@keyframes mo-cuchilla { to { transform: scaleX(1); } }
+@keyframes mo-chispa {
+    0% { box-shadow: 0 0 14px 3px rgba(244, 185, 56, .95); }
+    100% { box-shadow: 0 0 6px rgba(239, 108, 26, .7); }
+}
+@keyframes mo-mitad-arriba { to { transform: translate(-2px, -3px) rotate(-3deg); } }
+@keyframes mo-mitad-abajo { to { transform: translate(3px, 3px) rotate(3deg); } }
+@keyframes mo-mitad-arriba-boton { to { transform: translate(-6px, -4px) rotate(-2deg); } }
+@keyframes mo-mitad-abajo-boton { to { transform: translate(8px, 4px) rotate(2deg); } }
+@keyframes mo-sacudir {
+    0%, 100% { transform: none; }
+    20% { transform: translateX(-4px) rotate(-.6deg); }
+    40% { transform: translateX(4px) rotate(.6deg); }
+    60% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
 }
 @keyframes mo-gratis {
     from { opacity: 0; transform: translateY(6px) scale(.85); }
