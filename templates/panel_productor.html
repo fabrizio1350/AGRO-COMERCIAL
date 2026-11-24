@@ -33,6 +33,16 @@
     </div>
 </section>
 
+{% if perfil_global.ofertas_premium_regalo and not perfil_global.es_demo %}
+<div class="aviso-regalo-premium mt-3" role="status">
+    <i class="bi bi-gift-fill" aria-hidden="true"></i>
+    <div>
+        <strong>Tienes {{ perfil_global.ofertas_premium_regalo }} oferta{{ perfil_global.ofertas_premium_regalo|pluralize }} premium gratis</strong>
+        <span class="d-block small">Regalo de bienvenida. Al publicar un producto, activa la palanquita de Oferta: sale en el carrusel, en Ofertas y en el inicio sin pagar nada.</span>
+    </div>
+</div>
+{% endif %}
+
 {% if not perfil_global.es_demo %}
 {% with estado=perfil_global.estado_verificacion %}
 {% if estado == 'VERIFICADO' %}
