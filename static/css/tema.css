@@ -2437,57 +2437,83 @@ a:hover { color: var(--verde-oscuro); }
 .regalo-premium { display: inline-flex; gap: 6px; align-items: baseline; color: #1c2a21; }
 .regalo-premium .bi { color: #ef6c1a; }
 
-/* Pagina de pago en modo regalo: el precio y el boton de pago se "cortan" y aparece "Gratis".
-   Dos copias del texto: la de arriba muestra la mitad superior y la de abajo la inferior;
-   la cuchilla pasa por el medio y las dos mitades se separan como si se partiera. */
+/* Pagina de pago en modo regalo: el precio y el boton de pago se "cortan" con una linea quebrada
+   (cada uno con su propia forma), las dos mitades salen disparadas y se acomodan, saltan esquirlas
+   y aparece "Gratis". Dos copias del texto: una muestra lo de arriba del corte y otra lo de abajo. */
 .corte {
     position: relative;
     display: inline-block;
     white-space: nowrap;
     color: #7a857e;
-    --tono-corte: #c2410c;
+    --tono-corte: #e4570f;
 }
-.corte-arriba {
-    display: inline-block;
-    clip-path: inset(0 0 50% 0);
-    transform: translate(-2px, -3px) rotate(-3deg);
-}
-.corte-abajo {
+.corte-arriba { display: inline-block; }
+.corte-abajo { position: absolute; inset: 0; }
+.corte-f1 .corte-arriba { clip-path: polygon(0% 0%, 100% 0%, 100% 52%, 90% 42%, 80% 60%, 68% 36%, 58% 64%, 47% 38%, 36% 58%, 27% 34%, 17% 60%, 9% 40%, 0% 56%); }
+.corte-f1 .corte-abajo { clip-path: polygon(0% 56%, 9% 40%, 17% 60%, 27% 34%, 36% 58%, 47% 38%, 58% 64%, 68% 36%, 80% 60%, 90% 42%, 100% 52%, 100% 100%, 0% 100%); }
+.corte-f2 .corte-arriba { clip-path: polygon(0% 0%, 100% 0%, 100% 40%, 84% 64%, 70% 48%, 60% 72%, 46% 46%, 38% 68%, 22% 30%, 14% 50%, 0% 38%); }
+.corte-f2 .corte-abajo { clip-path: polygon(0% 38%, 14% 50%, 22% 30%, 38% 68%, 46% 46%, 60% 72%, 70% 48%, 84% 64%, 100% 40%, 100% 100%, 0% 100%); }
+.corte-f3 .corte-arriba { clip-path: polygon(0% 0%, 100% 0%, 100% 30%, 82% 24%, 66% 40%, 58% 32%, 42% 54%, 34% 46%, 20% 68%, 12% 60%, 0% 72%); }
+.corte-f3 .corte-abajo { clip-path: polygon(0% 72%, 12% 60%, 20% 68%, 34% 46%, 42% 54%, 58% 32%, 66% 40%, 82% 24%, 100% 30%, 100% 100%, 0% 100%); }
+.corte-f4 .corte-arriba { clip-path: polygon(0% 0%, 100% 0%, 100% 58%, 88% 40%, 78% 74%, 64% 50%, 56% 66%, 44% 28%, 30% 52%, 22% 36%, 10% 62%, 0% 48%); }
+.corte-f4 .corte-abajo { clip-path: polygon(0% 48%, 10% 62%, 22% 36%, 30% 52%, 44% 28%, 56% 66%, 64% 50%, 78% 74%, 88% 40%, 100% 58%, 100% 100%, 0% 100%); }
+/* Posicion final de cada mitad: cada forma se abre distinto */
+.corte-f1 { --ax: -3px; --ay: -5px; --ar: -5deg; --bx: 3px; --by: 4px; --br: 4deg; }
+.corte-f2 { --ax: 2px; --ay: -6px; --ar: 4deg; --bx: -3px; --by: 5px; --br: -5deg; }
+.corte-f3 { --ax: -7px; --ay: -5px; --ar: -2deg; --bx: 9px; --by: 5px; --br: 2.5deg; }
+.corte-f4 { --ax: -2px; --ay: -6px; --ar: -7deg; --bx: 4px; --by: 4px; --br: 6deg; }
+.corte-arriba { transform: translate(var(--ax), var(--ay)) rotate(var(--ar)); transform-origin: 30% 100%; }
+.corte-abajo { transform: translate(var(--bx), var(--by)) rotate(var(--br)); transform-origin: 70% 0%; }
+
+/* La cuchilla: linea quebrada dibujada encima, con brillo */
+.corte-trazo {
     position: absolute;
-    inset: 0;
-    clip-path: inset(50% 0 0 0);
-    transform: translate(3px, 3px) rotate(3deg);
+    left: -4%;
+    top: -10%;
+    width: 108%;
+    height: 120%;
+    overflow: visible;
+    pointer-events: none;
 }
-.corte::after {
-    content: "";
+.corte-trazo path {
+    fill: none;
+    stroke: var(--tono-corte);
+    stroke-width: 2.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 3px rgba(244, 185, 56, .9));
+    opacity: .85;
+}
+/* Esquirlas: pedacitos que saltan del corte */
+.esquirla {
     position: absolute;
-    left: -8%;
-    top: calc(50% - 1.5px);
-    width: 116%;
-    height: 3px;
-    border-radius: 3px;
+    top: 50%;
+    width: 5px;
+    height: 5px;
     background: var(--tono-corte);
-    box-shadow: 0 0 6px rgba(239, 108, 26, .7);
-    opacity: .9;
+    clip-path: polygon(50% 0, 100% 60%, 30% 100%, 0 40%);
+    opacity: 0;
+    pointer-events: none;
 }
+.esquirla.e1 { left: 18%; --ex: -14px; --ey: -18px; --er: 220deg; }
+.esquirla.e2 { left: 42%; --ex: 6px; --ey: -22px; --er: -160deg; background: #f4b938; }
+.esquirla.e3 { left: 66%; --ex: 12px; --ey: 16px; --er: 300deg; }
+.esquirla.e4 { left: 88%; --ex: 18px; --ey: -10px; --er: -240deg; background: #f4b938; width: 4px; height: 4px; }
+
 .gratis-aparece { color: #167a3e; font-weight: 800; }
 .precio-plan .gratis-aparece {
     display: inline-block;
-    margin-left: 4px;
+    margin-left: 6px;
     padding: 1px 8px;
     border-radius: 999px;
     background: #e3f3e8;
     font-size: .9em;
 }
-.queda-gratis {
-    display: block;
-    margin-top: 6px;
-    font-size: .78rem;
-}
+.queda-gratis { display: block; margin-top: 6px; font-size: .78rem; }
 .boton-tachado {
     display: flex;
     justify-content: center;
-    padding: 12px 16px;
+    padding: 14px 16px;
     border-radius: 10px;
     border: 2px dashed #c9cfc9;
     background: #f3f1ec;
@@ -2497,52 +2523,65 @@ a:hover { color: var(--verde-oscuro); }
     user-select: none;
     overflow: hidden;
 }
-.corte-boton .corte-arriba { transform: translate(-6px, -4px) rotate(-2deg); }
-.corte-boton .corte-abajo { transform: translate(8px, 4px) rotate(2deg); }
 .boton-gratis { font-weight: 800; box-shadow: 0 8px 22px rgba(22, 122, 62, .28); }
 
 @media (prefers-reduced-motion: no-preference) {
-    /* 1. La cuchilla cruza el precio */
-    .corte::after {
-        transform: scaleX(0);
-        transform-origin: left center;
-        animation: mo-cuchilla .38s cubic-bezier(.7, 0, .3, 1) var(--retraso, .3s) forwards,
-                   mo-chispa .5s ease calc(var(--retraso, .3s) + .38s) forwards;
+    /* 1. La cuchilla dibuja el corte quebrado y deja un destello */
+    .corte-trazo {
+        clip-path: inset(-20% 100% -20% 0);
+        animation: mo-trazo .42s cubic-bezier(.7, 0, .3, 1) var(--retraso, .3s) forwards;
     }
-    /* 2. Las dos mitades se separan con un pequeno rebote */
+    .corte-trazo path { animation: mo-destello .7s ease calc(var(--retraso, .3s) + .42s) forwards; }
+    /* 2. Las mitades: al principio enteras; despues del corte salen disparadas, rebotan y se acomodan */
     .corte-arriba, .corte-abajo { transform: none; }
-    .corte-arriba { animation: mo-mitad-arriba .55s cubic-bezier(.2, 1.4, .4, 1) calc(var(--retraso, .3s) + .3s) forwards; }
-    .corte-abajo { animation: mo-mitad-abajo .55s cubic-bezier(.2, 1.4, .4, 1) calc(var(--retraso, .3s) + .3s) forwards; }
-    .corte-boton .corte-arriba { animation-name: mo-mitad-arriba-boton; }
-    .corte-boton .corte-abajo { animation-name: mo-mitad-abajo-boton; }
-    /* 3. La tarjeta y el boton tiemblan cuando los corta */
-    .plan-oferta.con-corte { animation: mo-sacudir .4s ease calc(var(--retraso, .3s) + .3s); }
-    .boton-tachado { animation: mo-sacudir .4s ease calc(var(--retraso, 1s) + .3s); }
-    /* 4. Aparece "Gratis" */
-    .gratis-aparece { opacity: 0; animation: mo-gratis .55s cubic-bezier(.2, .9, .3, 1.4) 1.35s forwards; }
-    .boton-gratis.gratis-aparece { animation-delay: 1.7s; }
+    .corte-arriba { animation: mo-mitad-arriba .9s cubic-bezier(.2, .9, .25, 1) calc(var(--retraso, .3s) + .36s) forwards; }
+    .corte-abajo { animation: mo-mitad-abajo .9s cubic-bezier(.2, .9, .25, 1) calc(var(--retraso, .3s) + .36s) forwards; }
+    /* 3. Esquirlas */
+    .esquirla { animation: mo-esquirla .75s cubic-bezier(.15, .7, .3, 1) calc(var(--retraso, .3s) + .34s) forwards; }
+    .esquirla.e2 { animation-delay: calc(var(--retraso, .3s) + .38s); }
+    .esquirla.e3 { animation-delay: calc(var(--retraso, .3s) + .42s); }
+    .esquirla.e4 { animation-delay: calc(var(--retraso, .3s) + .46s); }
+    /* 4. La tarjeta y el boton reciben el golpe */
+    .plan-oferta.con-corte { animation: mo-golpe .55s ease calc(var(--retraso, .3s) + .34s); }
+    .boton-tachado { animation: mo-golpe .55s ease calc(var(--retraso, 1s) + .34s); }
+    /* 5. Aparece "Gratis" con rebote */
+    .gratis-aparece { opacity: 0; animation: mo-gratis .6s cubic-bezier(.2, .9, .3, 1.5) 1.55s forwards; }
+    .boton-gratis.gratis-aparece { animation-delay: 1.95s; }
     .regalo-aparece { animation: mo-gratis .6s cubic-bezier(.2, .9, .3, 1.3) both; }
-    .regalo-aparece .bi-gift-fill { animation: mo-regalo-salta 1s ease 2s 2; }
+    .regalo-aparece .bi-gift-fill { animation: mo-regalo-salta 1s ease 2.2s 2; }
 }
-@keyframes mo-cuchilla { to { transform: scaleX(1); } }
-@keyframes mo-chispa {
-    0% { box-shadow: 0 0 14px 3px rgba(244, 185, 56, .95); }
-    100% { box-shadow: 0 0 6px rgba(239, 108, 26, .7); }
+@keyframes mo-trazo { to { clip-path: inset(-20% -5% -20% -5%); } }
+@keyframes mo-destello {
+    0% { stroke-width: 4px; filter: drop-shadow(0 0 7px rgba(255, 214, 102, 1)); }
+    100% { stroke-width: 2.5px; filter: drop-shadow(0 0 3px rgba(244, 185, 56, .9)); }
 }
-@keyframes mo-mitad-arriba { to { transform: translate(-2px, -3px) rotate(-3deg); } }
-@keyframes mo-mitad-abajo { to { transform: translate(3px, 3px) rotate(3deg); } }
-@keyframes mo-mitad-arriba-boton { to { transform: translate(-6px, -4px) rotate(-2deg); } }
-@keyframes mo-mitad-abajo-boton { to { transform: translate(8px, 4px) rotate(2deg); } }
-@keyframes mo-sacudir {
+@keyframes mo-mitad-arriba {
+    0% { transform: none; }
+    35% { transform: translate(calc(var(--ax) * 2.4), calc(var(--ay) * 2.2)) rotate(calc(var(--ar) * 2.2)); }
+    65% { transform: translate(calc(var(--ax) * .8), calc(var(--ay) * .8)) rotate(calc(var(--ar) * .7)); }
+    100% { transform: translate(var(--ax), var(--ay)) rotate(var(--ar)); }
+}
+@keyframes mo-mitad-abajo {
+    0% { transform: none; }
+    35% { transform: translate(calc(var(--bx) * 2.4), calc(var(--by) * 2.6)) rotate(calc(var(--br) * 2.2)); }
+    65% { transform: translate(calc(var(--bx) * .8), calc(var(--by) * .8)) rotate(calc(var(--br) * .7)); }
+    100% { transform: translate(var(--bx), var(--by)) rotate(var(--br)); }
+}
+@keyframes mo-esquirla {
+    0% { opacity: 1; transform: translate(0, -50%) scale(1.3) rotate(0); }
+    100% { opacity: 0; transform: translate(var(--ex), calc(var(--ey) - 50%)) scale(.4) rotate(var(--er)); }
+}
+@keyframes mo-golpe {
     0%, 100% { transform: none; }
-    20% { transform: translateX(-4px) rotate(-.6deg); }
-    40% { transform: translateX(4px) rotate(.6deg); }
-    60% { transform: translateX(-2px); }
-    80% { transform: translateX(2px); }
+    15% { transform: scale(.97) rotate(-.8deg); }
+    35% { transform: translateX(5px) rotate(.8deg); }
+    55% { transform: translateX(-4px) rotate(-.4deg); }
+    75% { transform: translateX(2px); }
 }
 @keyframes mo-gratis {
-    from { opacity: 0; transform: translateY(6px) scale(.85); }
-    to { opacity: 1; transform: none; }
+    0% { opacity: 0; transform: translateY(8px) scale(.6) rotate(-6deg); }
+    60% { opacity: 1; transform: translateY(-2px) scale(1.12) rotate(2deg); }
+    100% { opacity: 1; transform: none; }
 }
 @keyframes mo-regalo-salta {
     0%, 100% { transform: none; }
