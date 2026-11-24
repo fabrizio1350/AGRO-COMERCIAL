@@ -37,6 +37,7 @@ urlpatterns = [
     path('venta/<int:venta_id>/quitar/', presencial.quitar_venta, name='quitar_venta'),
     path('producto/<int:producto_id>/pagar-oferta/', presencial.pagar_oferta, name='pagar_comision_oferta'),
     path('producto/<int:producto_id>/pagar-mercadopago/', presencial.pagar_con_mercadopago, name='pagar_con_mercadopago'),
+    path('producto/<int:producto_id>/publicar-gratis/', presencial.publicar_oferta_gratis, name='publicar_oferta_gratis'),
     path('pagos/mercadopago/vuelta/', presencial.mercadopago_vuelta, name='mercadopago_vuelta'),
     path('pagos/mercadopago/aviso/', presencial.mercadopago_aviso, name='mercadopago_aviso'),
     path('producto/<int:producto_id>/pagar-comision/', RedirectView.as_view(pattern_name='pagar_comision_oferta')),

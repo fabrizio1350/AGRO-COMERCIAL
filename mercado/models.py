@@ -84,10 +84,11 @@ class PerfilUsuario(models.Model):
     estado_verificacion = models.CharField(max_length=12, choices=ESTADOS_VERIFICACION, default='SIN_ENVIAR')
     fecha_verificacion = models.DateTimeField(null=True, blank=True)
     organico_verificado = models.BooleanField(default=False, help_text="Tiene certificado orgánico revisado por el administrador")
-    # Regalo de bienvenida: cada cuenta nueva publica sus primeras ofertas como premium sin pagar
+    # Cada cuenta publica sus primeras ofertas sin pagar la publicidad (se usan en la pagina de pago de la oferta)
+    OFERTAS_GRATIS_POR_CUENTA = 3
     ofertas_premium_regalo = models.PositiveSmallIntegerField(
-        'Ofertas premium gratis que le quedan', default=3,
-        help_text='Regalo de bienvenida: cada cuenta nueva empieza con 3. Se descuenta una por cada oferta nueva.')
+        'Publicaciones de oferta gratis que le quedan', default=OFERTAS_GRATIS_POR_CUENTA,
+        help_text='Cada cuenta empieza con 3. Se descuenta una cada vez que publica una oferta con "Publicar gratis".')
 
     def vendedor_verificado(self):
         return self.estado_verificacion == 'VERIFICADO'

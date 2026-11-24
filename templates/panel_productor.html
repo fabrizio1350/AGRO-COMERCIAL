@@ -37,8 +37,8 @@
 <div class="aviso-regalo-premium mt-3" role="status">
     <i class="bi bi-gift-fill" aria-hidden="true"></i>
     <div>
-        <strong>Tienes {{ perfil_global.ofertas_premium_regalo }} oferta{{ perfil_global.ofertas_premium_regalo|pluralize }} premium gratis</strong>
-        <span class="d-block small">Regalo de bienvenida. Al publicar un producto, activa la palanquita de Oferta: sale en el carrusel, en Ofertas y en el inicio sin pagar nada.</span>
+        <strong>Tienes {{ perfil_global.ofertas_premium_regalo }} publicaci{{ perfil_global.ofertas_premium_regalo|pluralize:"ón,ones" }} de oferta gratis</strong>
+        <span class="d-block small">Al publicar un producto, activa la palanquita de Oferta y en el siguiente paso toca <strong>Publicar gratis</strong>: no pagas la publicidad.</span>
     </div>
 </div>
 {% endif %}
@@ -83,7 +83,7 @@
             <div class="info flex-grow-1 min-w-0">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <strong class="text-truncate">{{ producto.nombre }}</strong>
-                    {% if producto.oferta_activa %}<span class="chip chip-descuento chico">-{{ producto.porcentaje_descuento }}%</span>{% if producto.es_premium %}<span class="chip chip-oferta premium chico"><i class="bi bi-star-fill" aria-hidden="true"></i>Premium</span>{% else %}<span class="chip chip-oferta chico">Oferta normal</span> <a href="{% url 'pagar_comision_oferta' producto.id %}" class="small">Pasar a premium</a>{% endif %}{% elif producto.en_oferta and producto.oferta_pendiente_pago %}<a href="{% url 'pagar_comision_oferta' producto.id %}" class="chip-pendiente">{% if producto.pago_en_revision %}<i class="bi bi-hourglass-split" aria-hidden="true"></i>Pago en revisión{% else %}<i class="bi bi-phone" aria-hidden="true"></i>Oferta sin publicar · Pagar por Yape{% endif %}</a>{% elif producto.oferta_programada %}<span class="chip-pendiente"><i class="bi bi-calendar-event" aria-hidden="true"></i>Oferta desde el {{ producto.oferta_inicio|date:"d/m" }}</span>{% endif %}
+                    {% if producto.oferta_activa %}<span class="chip chip-descuento chico">-{{ producto.porcentaje_descuento }}%</span>{% if producto.es_premium %}<span class="chip chip-oferta premium chico"><i class="bi bi-star-fill" aria-hidden="true"></i>Premium</span>{% else %}<span class="chip chip-oferta chico">Oferta normal</span> <a href="{% url 'pagar_comision_oferta' producto.id %}" class="small">Pasar a premium</a>{% endif %}{% elif producto.en_oferta and producto.oferta_pendiente_pago %}<a href="{% url 'pagar_comision_oferta' producto.id %}" class="chip-pendiente">{% if producto.pago_en_revision %}<i class="bi bi-hourglass-split" aria-hidden="true"></i>Pago en revisión{% elif perfil_global.ofertas_premium_regalo %}<i class="bi bi-gift-fill" aria-hidden="true"></i>Oferta sin publicar · Publicar gratis{% else %}<i class="bi bi-phone" aria-hidden="true"></i>Oferta sin publicar · Pagar con Yape o tarjeta{% endif %}</a>{% elif producto.oferta_programada %}<span class="chip-pendiente"><i class="bi bi-calendar-event" aria-hidden="true"></i>Oferta desde el {{ producto.oferta_inicio|date:"d/m" }}</span>{% endif %}
                     {% if not producto.disponible %}<span class="badge text-bg-secondary">Oculto</span>{% endif %}
                 </div>
                 <div class="small text-muted"><span class="chip-frescura {{ producto.nivel_frescura }}">{{ producto.nombre_frescura }}</span> {{ producto.texto_frescura }} · S/ {{ producto.precio_actual }} / {{ producto.unidad_corta }}{% if producto.interesados %} · <i class="bi bi-people" aria-hidden="true"></i> {{ producto.interesados }} en su lista{% endif %}</div>

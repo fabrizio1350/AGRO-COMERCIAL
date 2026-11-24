@@ -6,7 +6,7 @@
 <div class="pago-oferta mx-auto">
     <div class="mb-3 entrar">
         <span class="antetitulo"><i class="bi bi-megaphone-fill" aria-hidden="true"></i>Publicidad de tu oferta</span>
-        <h1 class="h3 fw-bold mb-1">{% if en_revision %}Estamos revisando tu pago{% elif mejora %}Pasa tu oferta a premium{% else %}Paga la publicidad de tu oferta{% endif %}</h1>
+        <h1 class="h3 fw-bold mb-1">{% if en_revision %}Estamos revisando tu pago{% elif mejora %}Pasa tu oferta a premium{% elif gratis_restantes %}Publica tu oferta gratis{% else %}Paga la publicidad de tu oferta{% endif %}</h1>
         <p class="text-muted mb-0">Este pago es para MercOfertas por mostrar tu oferta a los compradores. Lo que vendas en tu puesto no paga comisión.</p>
     </div>
 
@@ -33,8 +33,17 @@
                 <a href="{% url 'panel_productor' %}" class="btn btn-success w-100">Volver a mi puesto</a>
             </div>
             {% else %}
-            <form method="post" class="bloque-verificacion entrar entrar-2" data-pago-oferta novalidate>
+            <form method="post" class="bloque-verificacion entrar entrar-2{% if gratis_restantes %} pago-gratis{% endif %}" data-pago-oferta novalidate>
                 {% csrf_token %}
+                {% if gratis_restantes %}
+                <div class="aviso-regalo-premium mb-3" role="status">
+                    <i class="bi bi-gift-fill" aria-hidden="true"></i>
+                    <div>
+                        <strong>Te quedan {{ gratis_restantes }} de {{ gratis_total }} publicaciones gratis</strong>
+                        <span class="d-block small">Esta oferta no paga publicidad: se publica al instante. Cuando uses las {{ gratis_total }}, las siguientes se pagan con Yape o tarjeta.</span>
+                    </div>
+                </div>
+                {% endif %}
                 {% if error %}<div class="alert alert-danger small" role="alert">{{ error }}</div>{% endif %}
                 {% if rechazado %}<div class="alert alert-warning small" role="alert"><strong>No pudimos confirmar tu pago anterior</strong> ({{ rechazado.codigo_transaccion }}). {{ rechazado.motivo_rechazo }}</div>{% endif %}
 
@@ -45,24 +54,36 @@
                     <label class="plan-oferta {% if p.tipo == 'PREMIUM' %}premium{% endif %}" for="plan{{ p.tipo }}">
                         <span class="d-flex justify-content-between align-items-baseline gap-2">
                             <strong>{% if p.tipo == 'PREMIUM' %}<i class="bi bi-star-fill me-1" aria-hidden="true"></i>{% else %}<i class="bi bi-tag-fill me-1" aria-hidden="true"></i>{% endif %}{{ p.nombre }}</strong>
+                            {% if gratis_restantes %}
+                            <span class="precio-plan"><span class="tachado-animado">S/ {{ p.monto }}</span> <span class="etiqueta-gratis aparece-gratis">Gratis</span></span>
+                            {% else %}
                             <span class="precio-plan">S/ {{ p.monto }}</span>
+                            {% endif %}
                         </span>
                         <small>{{ p.detalle }}</small>
                     </label>
                     {% endfor %}
                 </div>
 
+                {% if gratis_restantes %}
+                <h2><span class="numero">2</span>Publica tu oferta sin pagar</h2>
                 {% if mercadopago_activo %}
+                <div class="btn btn-mercadopago btn-lg w-100 mb-2 boton-tachado" aria-hidden="true">
+                    <span class="tachado-animado grueso"><i class="bi bi-lightning-charge-fill me-1"></i>Pagar S/ <span data-monto>{{ monto }}</span> con Yape o tarjeta</span>
+                </div>
+                {% endif %}
+                <button type="submit" class="btn btn-success btn-lg w-100 mb-1 aparece-gratis boton-gratis" formaction="{% url 'publicar_oferta_gratis' producto.pk %}" formnovalidate data-boton-pagar>
+                    <i class="bi bi-gift-fill me-1" aria-hidden="true"></i>Publicar gratis
+                </button>
+                <p class="small text-muted mb-0">Tu oferta sale al instante y se descuenta 1 de tus publicaciones gratis.</p>
+                {% elif mercadopago_activo %}
                 <h2><span class="numero">2</span>Paga y tu oferta sale al instante</h2>
                 <button type="submit" class="btn btn-mercadopago btn-lg w-100 mb-1" formaction="{% url 'pagar_con_mercadopago' producto.pk %}" formnovalidate data-boton-pagar>
                     <i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>Pagar S/ <span data-monto>{{ monto }}</span> con Yape o tarjeta
                 </button>
-                <p class="small text-muted mb-4">Te llevamos a Mercado Pago. Cuando el pago se aprueba, tu oferta se publica sola, sin esperar revisión.</p>
-                <details class="otra-forma-pago mb-2">
-                    <summary class="small fw-semibold">Prefiero yapear directo al número (lo revisamos a mano)</summary>
-                    <div class="pt-3">
-                {% endif %}
-                <h2><span class="numero">{% if mercadopago_activo %}a{% else %}2{% endif %}</span>Yapea o plinea a este número</h2>
+                <p class="small text-muted mb-0">Te llevamos a Mercado Pago. Cuando el pago se aprueba, tu oferta se publica sola, sin esperar revisión.</p>
+                {% else %}
+                <h2><span class="numero">2</span>Yapea o plinea a este número</h2>
                 <div class="numero-pago mb-2">
                     <div>
                         <span class="small text-muted d-block">Único número de MercOfertas</span>
@@ -86,7 +107,7 @@
                     <div>Paga <strong>solo</strong> al {{ telefono_pagos }}. Antes de confirmar en tu Yape o Plin revisa que el número sea ese. MercOfertas nunca te pide tu clave, tu código de aprobación ni pagos a otro número.</div>
                 </div>
 
-                <h2><span class="numero">{% if mercadopago_activo %}b{% else %}3{% endif %}</span>Toca "Ya yapeé"</h2>
+                <h2><span class="numero">3</span>Toca "Ya yapeé"</h2>
                 <p class="small text-muted mb-2">No tienes que llenar nada: con el mensaje encontramos tu pago.</p>
                 <details class="datos-opcionales mb-2"{% if form.errors.numero_operacion %} open{% endif %}>
                     <summary class="small fw-semibold">¿Olvidaste poner el mensaje? Agrega tu N.º de operación (opcional)</summary>
@@ -103,12 +124,11 @@
                     </div>
                 </details>
 
-                <button type="submit" class="btn btn-success btn-lg w-100 mt-3" data-boton-pagar>
+                <button type="submit" class="btn btn-success btn-lg w-100 mt-3 mb-2" data-boton-pagar>
                     <i class="bi bi-send-check me-1" aria-hidden="true"></i>Ya yapeé
                 </button>
-                {% if mercadopago_activo %}</div></details>{% endif %}
-                <a href="{% url 'panel_productor' %}" class="btn btn-link text-muted w-100 mt-1">Pagar después</a>
                 <p class="small text-muted mb-0">Tu oferta se publica cuando confirmamos el pago. Hasta entonces tu producto se ve con su precio normal.</p>
+                {% endif %}
             </form>
             {% endif %}
         </div>
@@ -130,7 +150,11 @@
                 {% if producto.fecha_vencimiento %}<div class="d-flex justify-content-between small mb-1"><span>El producto vence</span><span>{{ producto.fecha_vencimiento|date:"d/m/Y" }}</span></div>{% endif %}
                 {% if not en_revision %}<div class="d-flex justify-content-between small mb-1 gap-2"><span>Se muestra en</span><span class="text-end" data-donde>{% if plan.tipo == 'PREMIUM' %}Productos, carrusel, Ofertas e inicio{% else %}Productos, con la etiqueta Oferta{% endif %}</span></div>{% endif %}
                 <hr>
+                {% if gratis_restantes and not en_revision %}
+                <div class="d-flex justify-content-between align-items-baseline gap-2"><span class="fw-semibold">Total a pagar</span><span class="text-end"><span class="tachado-animado text-muted">S/ <span data-monto>{{ monto }}</span></span> <strong class="fs-4 text-success aparece-gratis d-inline-block">S/ 0,00</strong></span></div>
+                {% else %}
                 <div class="d-flex justify-content-between align-items-baseline"><span class="fw-semibold">Total a pagar</span><strong class="fs-4 text-success">S/ <span data-monto>{{ monto }}</span></strong></div>
+                {% endif %}
             </aside>
         </div>
     </div>

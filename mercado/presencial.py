@@ -647,7 +647,6 @@ def publicar(request, producto_id=None):
     if request.method == 'POST' and form.is_valid():
         antes = Producto.objects.filter(pk=producto.pk).values('stock', 'en_oferta').first() or {}
         stock_antes = antes.get('stock')
-        usada_regalo = False
         producto = form.save(commit=False)
         producto.en_oferta = producto.precio_oferta is not None
         if not producto.en_oferta:
@@ -656,13 +655,8 @@ def publicar(request, producto_id=None):
         elif oferta_gratis:
             producto.oferta_pendiente_pago = False
             producto.tipo_oferta = form.cleaned_data.get('tipo_oferta_gratis') or 'PREMIUM'
-        elif not antes.get('en_oferta') and PerfilUsuario.usar_premium_regalo(request.user):
-            # Regalo de bienvenida: las primeras ofertas de una cuenta nueva salen premium sin pagar
-            producto.oferta_pendiente_pago = False
-            producto.tipo_oferta = 'PREMIUM'
-            usada_regalo = True
         elif not antes.get('en_oferta'):
-            # Oferta nueva: sale como oferta cuando el vendedor paga la publicidad (normal o premium)
+            # Oferta nueva: sale en la pagina de pago, gratis (si le quedan) o pagando la publicidad
             producto.oferta_pendiente_pago = True
         # La oferta dura hasta que el producto se vence; solo se guarda el inicio si es un dia que todavia no llega
         hoy = timezone.localdate()
@@ -689,13 +683,11 @@ def publicar(request, producto_id=None):
             producto.stock_actualizado = timezone.now()
         producto.save()
         if producto.oferta_pendiente_pago:
-            messages.info(request, f'Guardaste {producto.nombre}. Para que salga como oferta, paga la publicidad por Yape o Plin.')
+            if PerfilUsuario.premium_regalo_restantes(request.user):
+                messages.info(request, f'Guardaste {producto.nombre}. Publica tu oferta gratis en este paso.')
+            else:
+                messages.info(request, f'Guardaste {producto.nombre}. Para que salga como oferta, paga la publicidad.')
             return redirect('pagar_comision_oferta', producto_id=producto.pk)
-        if usada_regalo:
-            quedan = PerfilUsuario.premium_regalo_restantes(request.user)
-            messages.success(request, f'{producto.nombre} sale como oferta premium gratis (regalo de bienvenida). '
-                                      + (f'Te quedan {quedan}.' if quedan else 'Ya usaste tus 3 ofertas de regalo.'))
-            return redirect('panel_productor')
         messages.success(request, f'Guardaste {producto.nombre}. Ya se ve en la web.' if producto.esta_publicado()
                          else f'Guardaste {producto.nombre}.')
         return redirect('panel_productor')
@@ -757,15 +749,7 @@ def pagar_oferta(request, producto_id):
         Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False, tipo_oferta='PREMIUM')
         messages.success(request, f'{producto.nombre} ya sale en Ofertas. Tu cuenta no paga la publicidad.')
         return redirect('panel_productor')
-    # Una oferta que quedo esperando pago tambien puede usar el regalo de bienvenida (si no hay un pago en revision)
-    if (producto.en_oferta and producto.oferta_pendiente_pago
-            and not PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exists()
-            and PerfilUsuario.usar_premium_regalo(request.user)):
-        Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False, tipo_oferta='PREMIUM')
-        messages.success(request, f'{producto.nombre} sale como oferta premium gratis (regalo de bienvenida). '
-                                  f'Te quedan {PerfilUsuario.premium_regalo_restantes(request.user)}.')
-        return redirect('panel_productor')
-    base = {'producto': producto, 'telefono_pagos': telefono_pagos_legible(), 'titular_pagos': settings.TITULAR_PAGOS}
+    base ={'producto': producto, 'telefono_pagos': telefono_pagos_legible(), 'titular_pagos': settings.TITULAR_PAGOS}
     en_revision = PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exclude(metodo_pago='MERCADOPAGO').first()
     if en_revision:
         return render(request, 'pagar_oferta.html', dict(base, en_revision=en_revision, monto=en_revision.monto,
@@ -826,11 +810,49 @@ def pagar_oferta(request, producto_id):
                 return redirect('pagar_comision_oferta', producto_id=producto.pk)
     ultimo = PagoComision.objects.filter(producto=producto).first()
     rechazado = ultimo if ultimo and ultimo.estado == 'RECHAZADO' else None
+    # Mientras le queden publicaciones gratis, una oferta nueva se publica sin pagar (no aplica a pasar a premium)
+    gratis_restantes = 0 if mejora else PerfilUsuario.premium_regalo_restantes(request.user)
     return render(request, 'pagar_oferta.html', dict(
         base, planes=planes, plan=plan, monto=plan['monto'], mejora=mejora, error=error, form=form,
         mensaje_yape=mensaje_yape(codigo_pago(producto)), mercadopago_activo=mercadopago.activo(),
         rechazado=rechazado if rechazado and not error else None,
+        gratis_restantes=gratis_restantes, gratis_total=PerfilUsuario.OFERTAS_GRATIS_POR_CUENTA,
     ))
+
+
+@login_required
+@require_POST
+def publicar_oferta_gratis(request, producto_id):
+    """Publica al instante una oferta nueva usando una de las publicaciones gratis de la cuenta, sin Mercado Pago."""
+    if not es_vendedor(request.user):
+        raise Http404()
+    producto = get_object_or_404(Producto, pk=producto_id, productor=request.user)
+    volver = redirect('pagar_comision_oferta', producto_id=producto.pk)
+    if not (producto.en_oferta and producto.oferta_pendiente_pago):
+        messages.info(request, f'La oferta de {producto.nombre} no tiene pagos pendientes.')
+        return redirect('panel_productor')
+    if PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exclude(metodo_pago='MERCADOPAGO').exists():
+        return volver
+    tipo = request.POST.get('tipo_oferta') if request.POST.get('tipo_oferta') in ('NORMAL', 'PREMIUM') else 'PREMIUM'
+    with transaction.atomic():
+        # Primero se publica la oferta solo si seguia pendiente: dos clics seguidos no gastan dos gratis
+        publicada = Producto.objects.filter(pk=producto.pk, en_oferta=True, oferta_pendiente_pago=True).update(
+            oferta_pendiente_pago=False, tipo_oferta=tipo)
+        if publicada and not PerfilUsuario.usar_premium_regalo(request.user):
+            transaction.set_rollback(True)
+            messages.warning(request, 'Ya usaste tus publicaciones gratis. Para publicar esta oferta, paga la publicidad.')
+            return volver
+    if not publicada:
+        return redirect('panel_productor')
+    # Si dejo un pago de Mercado Pago a medias para esta oferta, ya no hace falta
+    PagoComision.objects.filter(producto=producto, estado='PENDIENTE', metodo_pago='MERCADOPAGO').update(
+        estado='RECHAZADO', fecha_revision=timezone.now(), motivo_rechazo='Se publicó gratis.')
+    quedan = PerfilUsuario.premium_regalo_restantes(request.user)
+    registro_pagos.info('Oferta del producto %s publicada gratis por el usuario %s (quedan %s)', producto.pk, request.user.pk, quedan)
+    messages.success(request, f'¡Listo! {producto.nombre} ya sale como oferta, gratis. '
+                              + (f'Te quedan {quedan} de {PerfilUsuario.OFERTAS_GRATIS_POR_CUENTA} publicaciones gratis.'
+                                 if quedan else 'Ya usaste tus publicaciones gratis: las siguientes ofertas se pagan.'))
+    return redirect('panel_productor')
 
 
 @login_required

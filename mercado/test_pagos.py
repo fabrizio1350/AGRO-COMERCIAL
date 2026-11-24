@@ -394,39 +394,127 @@ class OfertaGratisEligeTipoTests(PagoConUnToqueTests):
         self.assertNotContains(self.client.get(reverse('crear_producto')), 'Gratis para tu cuenta')
 
 
-class RegaloPremiumBienvenidaTests(PagoConUnToqueTests):
-    """Cada cuenta nueva publica sus 3 primeras ofertas como premium sin pagar."""
+@override_settings(MERCADOPAGO_ACCESS_TOKEN='TEST-123')
+class OfertasGratisTests(TestCase):
+    """Cada cuenta publica sus 3 primeras ofertas gratis desde la pagina de pago, sin pasar por Mercado Pago."""
+
+    def setUp(self):
+        PagoConUnToqueTests.setUp(self)
 
     def datos(self, nombre):
         return {'nombre': nombre, 'categoria': self.producto.categoria_id, 'unidad': 'KG', 'stock': 5, 'precio': '4.00',
                 'oferta_con_interruptor': '1', 'activar_oferta': 'on', 'precio_oferta': '3.00'}
 
+    def dar_gratis(self, cantidad=3):
+        PerfilUsuario.objects.filter(usuario=self.vendedor).update(ofertas_premium_regalo=cantidad)
+
+    def oferta_pendiente(self, nombre):
+        return Producto.objects.create(
+            productor=self.vendedor, nombre=nombre, descripcion='x', precio=Decimal('4'), precio_oferta=Decimal('3'),
+            en_oferta=True, oferta_pendiente_pago=True, stock=5, categoria=self.producto.categoria)
+
+    def publicar_gratis(self, producto, tipo='PREMIUM'):
+        return self.client.post(reverse('publicar_oferta_gratis', args=[producto.pk]), {'tipo_oferta': tipo})
+
     def test_cuenta_nueva_empieza_con_3(self):
         nuevo = User.objects.create_user('recien')
         self.assertEqual(PerfilUsuario.objects.create(usuario=nuevo).ofertas_premium_regalo, 3)
 
-    def test_tres_ofertas_premium_gratis_y_la_cuarta_se_paga(self):
-        PerfilUsuario.objects.filter(usuario=self.vendedor).update(ofertas_premium_regalo=3)
-        self.assertContains(self.client.get(reverse('panel_productor')), 'Tienes 3 ofertas premium gratis')
+    def test_migracion_devuelve_las_3_gratis_a_todas_las_cuentas(self):
+        import importlib
+        from django.apps import apps
+        migracion = importlib.import_module('mercado.migrations.0025_resetear_ofertas_gratis')
+        otro = User.objects.create_user('gasto_todas')
+        PerfilUsuario.objects.create(usuario=otro, rol='PRODUCTOR', ofertas_premium_regalo=1)
+        migracion.dar_tres_gratis_a_todas(apps, None)
+        self.assertEqual(set(PerfilUsuario.objects.values_list('ofertas_premium_regalo', flat=True)), {3})
+
+    def test_crear_oferta_lleva_a_la_pagina_de_pago_sin_gastar_ninguna(self):
+        self.dar_gratis()
+        self.assertContains(self.client.get(reverse('panel_productor')), 'Tienes 3 publicaciones de oferta gratis')
         self.assertContains(self.client.get(reverse('crear_producto')), 'Te quedan 3 de 3')
-        for numero, nombre in enumerate(['Lima', 'Pera', 'Kiwi'], start=1):
-            respuesta = self.client.post(reverse('crear_producto'), self.datos(nombre))
-            self.assertRedirects(respuesta, reverse('panel_productor'), fetch_redirect_response=False)
-            producto = Producto.objects.get(nombre=nombre)
-            self.assertEqual((producto.en_oferta, producto.oferta_pendiente_pago, producto.tipo_oferta), (True, False, 'PREMIUM'))
-            self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 3 - numero)
-        # Editar una oferta ya publicada no gasta otra
-        kiwi = Producto.objects.get(nombre='Kiwi')
-        self.client.post(reverse('editar_producto', args=[kiwi.pk]), dict(self.datos('Kiwi'), precio_oferta='2.50'))
-        self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 0)
-        respuesta = self.client.post(reverse('crear_producto'), self.datos('Coco'))
-        coco = Producto.objects.get(nombre='Coco')
-        self.assertTrue(coco.oferta_pendiente_pago)
-        self.assertRedirects(respuesta, reverse('pagar_comision_oferta', args=[coco.pk]), fetch_redirect_response=False)
+        respuesta = self.client.post(reverse('crear_producto'), self.datos('Lima'))
+        lima = Producto.objects.get(nombre='Lima')
+        self.assertRedirects(respuesta, reverse('pagar_comision_oferta', args=[lima.pk]), fetch_redirect_response=False)
+        self.assertTrue(lima.oferta_pendiente_pago)
+        self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 3)
+
+    def test_pagina_de_pago_muestra_precios_tachados_y_boton_gratis(self):
+        self.dar_gratis()
+        pagina = self.client.get(reverse('pagar_comision_oferta', args=[self.producto.pk]))
+        self.assertContains(pagina, 'Te quedan 3 de 3 publicaciones gratis')
+        self.assertContains(pagina, 'Publicar gratis')
+        self.assertContains(pagina, reverse('publicar_oferta_gratis', args=[self.producto.pk]))
+        self.assertContains(pagina, 'class="tachado-animado"', count=2)  # los dos planes
+        self.assertContains(pagina, 'S/ 0,00')
+        self.assertContains(pagina, 'boton-tachado')
+        self.assertNotContains(pagina, reverse('pagar_con_mercadopago', args=[self.producto.pk]))
+        self.assertNotContains(pagina, 'Prefiero yapear')
+        self.assertNotContains(pagina, 'Pagar después')
+        # Solo con abrir la pagina no se gasta ninguna
+        self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 3)
+
+    def test_publicar_gratis_publica_al_instante_y_descuenta_una(self):
+        self.dar_gratis()
+        respuesta = self.publicar_gratis(self.producto, 'NORMAL')
+        self.assertRedirects(respuesta, reverse('panel_productor'), fetch_redirect_response=False)
+        self.producto.refresh_from_db()
+        self.assertEqual((self.producto.oferta_pendiente_pago, self.producto.tipo_oferta), (False, 'NORMAL'))
+        self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 2)
         self.assertFalse(PagoComision.objects.exists())
 
-    def test_producto_sin_oferta_no_gasta_el_regalo(self):
-        PerfilUsuario.objects.filter(usuario=self.vendedor).update(ofertas_premium_regalo=3)
+    def test_tres_gratis_y_la_cuarta_vuelve_a_pedir_pago(self):
+        self.dar_gratis()
+        for numero, nombre in enumerate(['Lima', 'Pera', 'Kiwi'], start=1):
+            producto = self.oferta_pendiente(nombre)
+            self.publicar_gratis(producto)
+            producto.refresh_from_db()
+            self.assertEqual((producto.oferta_pendiente_pago, producto.tipo_oferta), (False, 'PREMIUM'))
+            self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 3 - numero)
+        coco = self.oferta_pendiente('Coco')
+        pagina = self.client.get(reverse('pagar_comision_oferta', args=[coco.pk]))
+        self.assertNotContains(pagina, 'Publicar gratis')
+        self.assertNotContains(pagina, 'tachado-animado')
+        self.assertContains(pagina, reverse('pagar_con_mercadopago', args=[coco.pk]))
+        self.assertContains(pagina, 'con Yape o tarjeta')
+        # Aunque se fuerce el envio, la cuarta no sale gratis
+        respuesta = self.publicar_gratis(coco)
+        self.assertRedirects(respuesta, reverse('pagar_comision_oferta', args=[coco.pk]), fetch_redirect_response=False)
+        coco.refresh_from_db()
+        self.assertTrue(coco.oferta_pendiente_pago)
+        self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 0)
+
+    def test_dos_clics_seguidos_gastan_una_sola(self):
+        self.dar_gratis()
+        self.publicar_gratis(self.producto)
+        respuesta = self.publicar_gratis(self.producto)
+        self.assertRedirects(respuesta, reverse('panel_productor'), fetch_redirect_response=False)
+        self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 2)
+
+    def test_editar_oferta_publicada_no_gasta_otra(self):
+        self.dar_gratis()
+        self.publicar_gratis(self.producto)
+        self.client.post(reverse('editar_producto', args=[self.producto.pk]), dict(self.datos('Tomate'), precio_oferta='2.50'))
+        self.producto.refresh_from_db()
+        self.assertFalse(self.producto.oferta_pendiente_pago)
+        self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 2)
+
+    def test_no_se_puede_usar_en_producto_ajeno(self):
+        self.dar_gratis()
+        otro = User.objects.create_user('ajeno')
+        PerfilUsuario.objects.create(usuario=otro, rol='PRODUCTOR')
+        self.client.force_login(otro)
+        self.assertEqual(self.publicar_gratis(self.producto).status_code, 404)
+        self.producto.refresh_from_db()
+        self.assertTrue(self.producto.oferta_pendiente_pago)
+
+    def test_solo_acepta_post(self):
+        self.dar_gratis()
+        self.assertEqual(self.client.get(reverse('publicar_oferta_gratis', args=[self.producto.pk])).status_code, 405)
+        self.assertEqual(PerfilUsuario.premium_regalo_restantes(self.vendedor), 3)
+
+    def test_producto_sin_oferta_no_gasta_ninguna(self):
+        self.dar_gratis()
         datos = self.datos('Lima')
         datos.pop('activar_oferta')
         datos.pop('precio_oferta')
