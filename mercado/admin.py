@@ -29,7 +29,7 @@ from .models import (
 
 @admin.register(PerfilUsuario)
 class PerfilUsuarioAdmin(admin.ModelAdmin):
-    list_display = ('usuario', 'rol', 'estado_verificacion', 'organico_verificado', 'es_demo', 'ofertas_premium_regalo', 'ubicacion', 'telefono', 'nombre_finca')
+    list_display = ('usuario', 'rol', 'estado_verificacion', 'organico_verificado', 'es_demo', 'ofertas_premium_regalo', 'ofertas_normal_regalo', 'ubicacion', 'telefono', 'nombre_finca')
     list_filter = ('rol', 'estado_verificacion', 'es_demo')
 
 
