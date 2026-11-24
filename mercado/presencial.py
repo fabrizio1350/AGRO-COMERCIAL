@@ -26,7 +26,8 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 
 from .models import (
-    Categoria, CompraTerminada, CuentaSinPagoOferta, ItemCarrito, Notificacion, PagoComision, Producto, Puesto, ResenaProducto,
+    Categoria, CompraTerminada, CuentaSinPagoOferta, ItemCarrito, Notificacion, PagoComision, PerfilUsuario, Producto, Puesto,
+    ResenaProducto,
     UbicacionVendedor, VentaPuesto,
     fecha_vencimiento_por_defecto,
 )
@@ -646,6 +647,7 @@ def publicar(request, producto_id=None):
     if request.method == 'POST' and form.is_valid():
         antes = Producto.objects.filter(pk=producto.pk).values('stock', 'en_oferta').first() or {}
         stock_antes = antes.get('stock')
+        usada_regalo = False
         producto = form.save(commit=False)
         producto.en_oferta = producto.precio_oferta is not None
         if not producto.en_oferta:
@@ -654,6 +656,11 @@ def publicar(request, producto_id=None):
         elif oferta_gratis:
             producto.oferta_pendiente_pago = False
             producto.tipo_oferta = form.cleaned_data.get('tipo_oferta_gratis') or 'PREMIUM'
+        elif not antes.get('en_oferta') and PerfilUsuario.usar_premium_regalo(request.user):
+            # Regalo de bienvenida: las primeras ofertas de una cuenta nueva salen premium sin pagar
+            producto.oferta_pendiente_pago = False
+            producto.tipo_oferta = 'PREMIUM'
+            usada_regalo = True
         elif not antes.get('en_oferta'):
             # Oferta nueva: sale como oferta cuando el vendedor paga la publicidad (normal o premium)
             producto.oferta_pendiente_pago = True
@@ -684,6 +691,11 @@ def publicar(request, producto_id=None):
         if producto.oferta_pendiente_pago:
             messages.info(request, f'Guardaste {producto.nombre}. Para que salga como oferta, paga la publicidad por Yape o Plin.')
             return redirect('pagar_comision_oferta', producto_id=producto.pk)
+        if usada_regalo:
+            quedan = PerfilUsuario.premium_regalo_restantes(request.user)
+            messages.success(request, f'{producto.nombre} sale como oferta premium gratis (regalo de bienvenida). '
+                                      + (f'Te quedan {quedan}.' if quedan else 'Ya usaste tus 3 ofertas de regalo.'))
+            return redirect('panel_productor')
         messages.success(request, f'Guardaste {producto.nombre}. Ya se ve en la web.' if producto.esta_publicado()
                          else f'Guardaste {producto.nombre}.')
         return redirect('panel_productor')
@@ -691,6 +703,7 @@ def publicar(request, producto_id=None):
         'form': form, 'producto': producto, 'puesto': puesto,
         'foto_actual': producto.imagen.url if producto.imagen else '',
         'oferta_gratis': oferta_gratis,
+        'premium_regalo': 0 if oferta_gratis else PerfilUsuario.premium_regalo_restantes(request.user),
         'maps_key': settings.GOOGLE_MAPS_API_KEY,
     })
 
@@ -743,6 +756,14 @@ def pagar_oferta(request, producto_id):
     if CuentaSinPagoOferta.incluye(request.user) and producto.en_oferta and producto.oferta_pendiente_pago:
         Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False, tipo_oferta='PREMIUM')
         messages.success(request, f'{producto.nombre} ya sale en Ofertas. Tu cuenta no paga la publicidad.')
+        return redirect('panel_productor')
+    # Una oferta que quedo esperando pago tambien puede usar el regalo de bienvenida (si no hay un pago en revision)
+    if (producto.en_oferta and producto.oferta_pendiente_pago
+            and not PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exists()
+            and PerfilUsuario.usar_premium_regalo(request.user)):
+        Producto.objects.filter(pk=producto.pk).update(oferta_pendiente_pago=False, tipo_oferta='PREMIUM')
+        messages.success(request, f'{producto.nombre} sale como oferta premium gratis (regalo de bienvenida). '
+                                  f'Te quedan {PerfilUsuario.premium_regalo_restantes(request.user)}.')
         return redirect('panel_productor')
     base = {'producto': producto, 'telefono_pagos': telefono_pagos_legible(), 'titular_pagos': settings.TITULAR_PAGOS}
     en_revision = PagoComision.objects.filter(producto=producto, estado='PENDIENTE').exclude(metodo_pago='MERCADOPAGO').first()
