@@ -2421,3 +2421,18 @@ a:hover { color: var(--verde-oscuro); }
 .btn-mercadopago:hover, .btn-mercadopago:focus { background: #007eb5; border-color: #007eb5; color: #ffffff; }
 .otra-forma-pago { border-top: 1px solid #e7e2d8; padding-top: 0.75rem; }
 .otra-forma-pago summary { cursor: pointer; color: var(--verde-oscuro); }
+
+/* Regalo de bienvenida: ofertas premium gratis */
+.aviso-regalo-premium {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #fff7de;
+    border: 1px solid #f4b938;
+    color: #1c2a21;
+}
+.aviso-regalo-premium .bi { font-size: 1.4rem; color: #ef6c1a; line-height: 1; }
+.regalo-premium { display: inline-flex; gap: 6px; align-items: baseline; color: #1c2a21; }
+.regalo-premium .bi { color: #ef6c1a; }
