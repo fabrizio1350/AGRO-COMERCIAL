@@ -84,24 +84,35 @@ class PerfilUsuario(models.Model):
     estado_verificacion = models.CharField(max_length=12, choices=ESTADOS_VERIFICACION, default='SIN_ENVIAR')
     fecha_verificacion = models.DateTimeField(null=True, blank=True)
     organico_verificado = models.BooleanField(default=False, help_text="Tiene certificado orgánico revisado por el administrador")
-    # Regalo de bienvenida: cada cuenta nueva publica sus primeras ofertas como premium sin pagar
+    # Regalo de bienvenida: cada cuenta publica 1 oferta premium y 2 normales sin pagar
     ofertas_premium_regalo = models.PositiveSmallIntegerField(
-        'Ofertas premium gratis que le quedan', default=3,
-        help_text='Regalo de bienvenida: cada cuenta nueva empieza con 3. Se descuenta una por cada oferta nueva.')
+        'Ofertas premium gratis que le quedan', default=1,
+        help_text='Regalo de bienvenida: cada cuenta empieza con 1.')
+    ofertas_normal_regalo = models.PositiveSmallIntegerField(
+        'Ofertas normales gratis que le quedan', default=2,
+        help_text='Regalo de bienvenida: cada cuenta empieza con 2.')
 
     def vendedor_verificado(self):
         return self.estado_verificacion == 'VERIFICADO'
 
-    @staticmethod
-    def premium_regalo_restantes(usuario):
-        return PerfilUsuario.objects.filter(usuario=usuario).values_list('ofertas_premium_regalo', flat=True).first() or 0
+    def regalos_restantes(self):
+        return self.ofertas_premium_regalo + self.ofertas_normal_regalo
 
     @staticmethod
-    def usar_premium_regalo(usuario):
-        """Descuenta una oferta premium de regalo. Devuelve False si ya no le quedan.
+    def regalos_de(usuario):
+        """Cuantas ofertas gratis le quedan de cada tipo, ej. {'PREMIUM': 1, 'NORMAL': 2}."""
+        fila = PerfilUsuario.objects.filter(usuario=usuario).values('ofertas_premium_regalo', 'ofertas_normal_regalo').first() or {}
+        return {'PREMIUM': fila.get('ofertas_premium_regalo') or 0, 'NORMAL': fila.get('ofertas_normal_regalo') or 0}
+
+    @staticmethod
+    def usar_regalo(usuario, tipo):
+        """Descuenta una oferta gratis del tipo pedido. Devuelve False si ya no le quedan de ese tipo.
         Se hace en un solo UPDATE para que dos clics seguidos no usen la misma."""
-        return PerfilUsuario.objects.filter(usuario=usuario, ofertas_premium_regalo__gt=0).update(
-            ofertas_premium_regalo=models.F('ofertas_premium_regalo') - 1) == 1
+        campo = {'PREMIUM': 'ofertas_premium_regalo', 'NORMAL': 'ofertas_normal_regalo'}.get(tipo)
+        if not campo:
+            return False
+        return PerfilUsuario.objects.filter(usuario=usuario, **{f'{campo}__gt': 0}).update(
+            **{campo: models.F(campo) - 1}) == 1
 
     def puede_vender_publicamente(self):
         # Las cuentas Demo se muestran (con su etiqueta) para la version de prueba
