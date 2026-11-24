@@ -16,7 +16,7 @@ from .models import Categoria, PagoComision, PerfilUsuario, Producto, Puesto
 class MercadoPagoTests(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('mp_vendedor', email='v@ejemplo.com')
-        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR')
+        PerfilUsuario.objects.create(usuario=self.vendedor, rol='PRODUCTOR', ofertas_premium_regalo=0)
         Puesto.objects.create(vendedor=self.vendedor, nombre='Mercado', latitud=Decimal('-16.4'), longitud=Decimal('-71.5'))
         self.producto = Producto.objects.create(
             productor=self.vendedor, nombre='Palta', descripcion='x', precio=Decimal('8'), precio_oferta=Decimal('6'),
