@@ -1,6 +1,6 @@
 from decimal import Decimal
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from .models import Categoria, ItemCarrito, PagoComision, PerfilUsuario, Producto, Puesto, Pedido
 
@@ -89,6 +89,8 @@ class MercadoPresencialTests(TestCase):
         return self.client.post(reverse('pagar_comision_oferta', args=[producto.pk]),
                                 {'tipo_oferta': tipo, 'numero_operacion': numero, 'nombre_pagador': 'Rosa Quispe'})
 
+    # Prueba el pago por Yape: sin token de Mercado Pago aunque el .env del servidor lo tenga
+    @override_settings(MERCADOPAGO_ACCESS_TOKEN='')
     def test_oferta_se_publica_cuando_se_confirma_el_pago(self):
         self.client.force_login(self.vendedor)
         self.assertNotContains(self.client.get(reverse('crear_producto')), 'S/ 2,00')
