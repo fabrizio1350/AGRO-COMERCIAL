@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
@@ -28,8 +29,14 @@ ALLOWED_HOSTS = [
 if not DEBUG and (not ALLOWED_HOSTS or '*' in ALLOWED_HOSTS):
     raise ImproperlyConfigured('Configura ALLOWED_HOSTS con los dominios del sitio.')
 
+# El cliente de pruebas de Django habla http: con la redireccion activa cada POST recibe un 301
+# y la vista nunca se ejecuta, asi que "manage.py test" no redirige aunque DEBUG sea False
+EJECUTANDO_TESTS = len(sys.argv) > 1 and sys.argv[1] == 'test'
 # REDIRIGIR_HTTPS=False si el proxy ya fuerza https y Django entra en bucle de redirecciones
-SECURE_SSL_REDIRECT = not DEBUG and os.environ.get('REDIRIGIR_HTTPS', 'True').lower() == 'true'
+SECURE_SSL_REDIRECT = (
+    not DEBUG and not EJECUTANDO_TESTS
+    and os.environ.get('REDIRIGIR_HTTPS', 'True').lower() == 'true'
+)
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
