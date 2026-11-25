@@ -11,6 +11,8 @@ from django.utils import timezone
 from .models import Categoria, CompraTerminada, ItemCarrito, Notificacion, PagoComision, PerfilUsuario, Producto, Puesto
 
 
+# Estos tests prueban el pago por Yape: sin token de Mercado Pago aunque el .env del servidor lo tenga
+@override_settings(MERCADOPAGO_ACCESS_TOKEN='')
 class Base(TestCase):
     def setUp(self):
         self.vendedor = User.objects.create_user('puesto')
@@ -321,6 +323,8 @@ class PanelDeAdministracionTests(Base):
         self.assertIn(self.oferta, Producto.objects.ofertas_premium())
 
 
+# Estos tests prueban el pago por Yape: sin token de Mercado Pago aunque el .env del servidor lo tenga
+@override_settings(MERCADOPAGO_ACCESS_TOKEN='')
 class PagoConUnToqueTests(TestCase):
     """El vendedor yapea con el mensaje "Pago MercOfertas MO<id>-<n>" y solo toca "Ya yapeé"."""
 
